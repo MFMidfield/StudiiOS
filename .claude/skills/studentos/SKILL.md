@@ -140,18 +140,44 @@ UI ทั้งหมดเป็น **ภาษาไทย** · วันท�
 ### เกณฑ์ตัดสินความสวย
 ยังไม่มีไฟล์ดีไซน์เป็นต้นฉบับ — ตัดสินจากภาพจริงที่ Few เห็น + มาตรฐาน Apple HIG (iOS 26)
 
-### Figma naming convention
-ถ้าทำไฟล์ Figma ให้ใช้ชื่อตามนี้ เพื่อให้แมปกับโค้ดได้ทันทีโดยไม่ต้องเดา:
+### ไฟล์ Figma อ้างอิง
+
+**Student OS — UI Frames** · fileKey `7qTFOazJhInRwMm7viQbGr`
+https://www.figma.com/design/7qTFOazJhInRwMm7viQbGr
+
+อ่านด้วย `get_design_context` (ส่ง `clientLanguages: "swift"`, `clientFrameworks: "swiftui"`) เขียนด้วย `use_figma` (โหลด skill `figma-use` + `figma-swiftui` ก่อนทุกครั้ง)
+
+โครงไฟล์ — **แพลน Starter จำกัด 3 pages** จึงจัดกลุ่มด้วย Section แทน:
 
 ```
-Page:      01 Onboarding · 02 Dashboard · 03 Calendar · 04 Schedule ·
-           05 Smart Capture · 06 Settings · 07 Sub-screens · 99 Design Tokens
-Frame:     <ชื่อ View ในโค้ดตรงตัว>  เช่น  DashboardView, CalendarView, SmartCaptureView
-           ถ้าเป็น state ต่อท้ายด้วยจุด:  DashboardView.empty · CalendarView.dayDetail
-Component: Card/Default · Badge/Pro · Badge/Plus · Button/Primary
-Variable:  color/primary · color/danger · space/lg · radius/card   (ตรงกับ Theme.swift)
+01 Screens        § Onboarding (5)  § Main Tabs (5)
+02 Sub-screens    § จาก Dashboard (6)  § Overlays & Sheets (2)
+99 Design Tokens  § สี  § ระยะห่าง & มุมโค้ง  § Components (ios/TabBar)
 ```
+
+ทุกเฟรมเป็น iPhone 16 Pro **402×874** ตอนนี้ยังเปล่า มีแค่ status bar / tab bar จางๆ + label กำกับ
+
+### กฎการตั้งชื่อ
+
+```
+Frame:     <ชื่อ struct ใน Swift ตรงตัว>   เช่น DashboardView, CalendarView
+           state ต่อท้ายด้วยจุด:            DashboardView.empty · CalendarView.dayDetail
+Component: ios/TabBar · Card/Default · Badge/Pro · Button/Primary
+Variable:  color/primary · space/lg · radius/card   (ผูกกับ Theme.swift 1:1 แล้ว 19 ตัว)
+Section:   ชื่อกลุ่มเป็นภาษาไทยได้
+```
+
 กฎเดียวที่ต้องจำ: **ชื่อ frame = ชื่อ struct ใน Swift** ไม่มีข้อยกเว้น
+เพิ่ม View ใหม่ในโค้ด → เพิ่มเฟรมชื่อเดียวกันในไฟล์นี้
+
+### ข้อจำกัดที่เจอมาแล้วในไฟล์นี้ (อย่าเสียเวลาซ้ำ)
+
+- **ฟอนต์ `SF Pro` ใช้ไม่ได้** — `listAvailableFontsAsync()` บอกว่ามี แต่ node ที่ใช้จะได้ `hasMissingFont: true` และ width 0
+  ใช้ **`Inter`** (Latin, style ชื่อ `Semi Bold` มีเว้นวรรค) และ **`Noto Sans Thai`** (ไทย) แทน
+- **SF Symbols ใช้ไม่ได้** เพราะ `figma.util.getSfSymbolCharacter()` ต้องพึ่ง SF Pro — ใช้รูปทรงแทนไปก่อน
+- **TEXT ใน auto-layout**: ต้อง `textAutoResize='HEIGHT'` → `layoutSizingHorizontal='FIXED'` → `resize(w, h)` → ค่อย `'FILL'`
+  ถ้าตั้ง `'FILL'` เฉยๆ node จะยุบเหลือกว้าง 0 (ตัวอักษรเรียงลงมาทีละตัว)
+- **`figma.createPage()` เกิน 3 หน้าจะ error** ทั้งสคริปต์ (atomic — ไม่มีอะไรถูกสร้างเลย)
 
 ---
 
