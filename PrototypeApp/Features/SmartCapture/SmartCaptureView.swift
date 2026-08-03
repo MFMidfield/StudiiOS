@@ -84,12 +84,14 @@ private struct CaptureDetailSheet: View {
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Query(sort: \Subject.createdAt) private var subjects: [Subject]
 
     @State private var title = ""
     @State private var detail = ""
     @State private var noteBody = ""
 
     @State private var dueDate = Date.now
+    @State private var assignmentSubjectName = ""
 
     @State private var startDate = Date.now
     @State private var endDate = Date.now.addingTimeInterval(3600)
@@ -176,6 +178,12 @@ private struct CaptureDetailSheet: View {
             Section("งาน / การบ้าน") {
                 DatePicker("วันส่งงาน", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
                 TextField("รายละเอียด", text: $detail, axis: .vertical)
+                Picker("วิชา", selection: $assignmentSubjectName) {
+                    Text("ไม่ระบุ").tag("")
+                    ForEach(subjects) { subject in
+                        Text(subject.name).tag(subject.name)
+                    }
+                }
             }
         }
     }
@@ -250,10 +258,11 @@ private struct CaptureDetailSheet: View {
     }
 
     private func save() {
+        var scheduledEvent: CalendarEvent?
         do {
             switch mode {
             case .assignment:
-                context.insert(Assignment(title: detailTitle, detail: detail, dueDate: dueDate))
+                context.insert(Assignment(title: detailTitle, detail: detail, dueDate: dueDate, subjectName: assignmentSubjectName))
             case .calendar:
                 let event = CalendarEvent(
                     title: detailTitle,
@@ -268,12 +277,16 @@ private struct CaptureDetailSheet: View {
                     colorHex: "4A7DFF"
                 )
                 context.insert(event)
+                scheduledEvent = event
             case .note:
                 context.insert(Note(title: title, content: noteBody))
             case .portfolio:
                 context.insert(PortfolioItem(title: title, detail: detail, category: portfolioCategory, date: portfolioCreatedAt))
             }
             try context.save()
+            if let scheduledEvent {
+                Task { await NotificationManager.shared.schedule(for: scheduledEvent) }
+            }
             dismiss()
             onSaved()
         } catch {
@@ -310,5 +323,5 @@ extension CaptureDetailSheet.AlertOption {
 
 #Preview {
     SmartCaptureView()
-        .modelContainer(for: [Assignment.self, Note.self, CalendarEvent.self, PortfolioItem.self], inMemory: true)
+        .modelContainer(for: [Assignment.self, Note.self, CalendarEvent.self, PortfolioItem.self, Subject.self], inMemory: true)
 }

@@ -6,14 +6,18 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
+import UIKit
 
 struct SettingsView: View {
     @State private var entitlements = EntitlementStore.shared
     @State private var profile = StudentProfileStore.shared
+    @State private var notifications = NotificationManager.shared
     @State private var isPresentingWelcome = false
     @State private var isConfirmingReset = false
     @State private var isPresentingSetupTest = false
     @State private var isPresentingEditProfile = false
+    @State private var showTestNotificationHint = false
     @State private var savedSetupFlags: (profile: Bool, schedule: Bool, grade: Bool, summary: Bool)?
     @Environment(\.modelContext) private var context
 
@@ -76,6 +80,38 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("การแจ้งเตือน") {
+                LabeledContent("สถานะสิทธิ์", value: authorizationStatusLabel)
+
+                if notifications.authorizationStatus == .notDetermined {
+                    Button("ขอสิทธิ์แจ้งเตือน") {
+                        Task { await notifications.requestAuthorization() }
+                    }
+                }
+
+                if notifications.authorizationStatus == .denied {
+                    Button("เปิดตั้งค่าแจ้งเตือนของเครื่อง") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                }
+
+                Button("ทดสอบแจ้งเตือน (5 วินาที)") {
+                    Task {
+                        await notifications.sendTestNotification()
+                        showTestNotificationHint = true
+                    }
+                }
+                Text("กดแล้วสลับออกจากแอปหรือรออยู่หน้านี้ก็ได้ จะเด้งใน 5 วินาที")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                NavigationLink("การแจ้งเตือนที่ตั้งไว้") {
+                    PendingNotificationsView()
+                }
+            }
+
             Section("เกี่ยวกับ") {
                 LabeledContent("เวอร์ชัน", value: "1.0.0 (Prototype)")
                 LabeledContent("โหมด", value: "Offline-first")
@@ -88,6 +124,14 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("ตั้งค่า")
+        .task {
+            await notifications.refreshStatus()
+        }
+        .alert("ส่งแจ้งเตือนทดสอบแล้ว", isPresented: $showTestNotificationHint) {
+            Button("ตกลง", role: .cancel) { }
+        } message: {
+            Text("จะเด้งใน 5 วินาที ลองสลับออกจากแอปดูก็ได้")
+        }
         .fullScreenCover(isPresented: $isPresentingWelcome) {
             WelcomeView()
         }
@@ -108,6 +152,15 @@ struct SettingsView: View {
             Button("ยกเลิก", role: .cancel) {}
         } message: {
             Text("ข้อมูลทั้งหมดในแอป (วิชา, งาน, โน้ต, ตารางเรียน, เกรด, โปรไฟล์ ฯลฯ) จะถูกลบถาวร แล้วพาคุณกลับไปหน้า Welcome ใหม่")
+        }
+    }
+
+    private var authorizationStatusLabel: String {
+        switch notifications.authorizationStatus {
+        case .authorized, .provisional, .ephemeral: return "อนุญาตแล้ว"
+        case .denied: return "ปิดอยู่"
+        case .notDetermined: return "ยังไม่ได้ขอ"
+        @unknown default: return "ไม่ทราบสถานะ"
         }
     }
 
@@ -147,8 +200,13 @@ struct SettingsView: View {
         deleteAll(CalendarEvent.self)
         deleteAll(CalendarTag.self)
         deleteAll(CalendarAttachmentItem.self)
+        deleteAll(Subject.self)
+        deleteAll(DayScheduleOverride.self)
 
+        NotificationManager.shared.cancelAll()
         StudentProfileStore.shared.reset()
+
+        PrototypeAppApp.seedBuiltInSubjects(in: context)
 
         hasCompletedOnboarding = false
         hasCompletedProfileSetup = false
@@ -354,4 +412,43 @@ private struct SetupFlowTestContainer: View {
 
 #Preview {
     NavigationStack { SettingsView() }
+}
+
+// MARK: - Pending Notifications
+
+private struct PendingNotificationsView: View {
+    @State private var requests: [UNNotificationRequest] = []
+
+    var body: some View {
+        List {
+            if requests.isEmpty {
+                Text("ยังไม่มีการแจ้งเตือนที่ตั้งไว้")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(requests, id: \.identifier) { request in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(request.content.title)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        if let trigger = request.trigger as? UNCalendarNotificationTrigger,
+                           let date = trigger.nextTriggerDate() {
+                            Text(date.thaiFullString)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Button("ล้างการแจ้งเตือนทั้งหมด", role: .destructive) {
+                    NotificationManager.shared.cancelAll()
+                    requests = []
+                }
+            }
+        }
+        .navigationTitle("การแจ้งเตือนที่ตั้งไว้")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            requests = await NotificationManager.shared.pendingRequests()
+        }
+    }
 }

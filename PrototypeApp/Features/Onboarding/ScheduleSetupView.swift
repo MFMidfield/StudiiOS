@@ -29,8 +29,6 @@ struct ScheduleSetupView: View {
     @State private var isAnalyzingPhoto = false
     @State private var ocrFoundNothing = false
 
-    private let dayLabels = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"]
-
     var body: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 0) {
@@ -102,10 +100,10 @@ struct ScheduleSetupView: View {
 
     private var manualSection: some View {
         List {
-            ForEach(1...7, id: \.self) { day in
-                let entries = draftEntries.filter { $0.dayOfWeek == day }.sorted { $0.startTime < $1.startTime }
+            ForEach(ScheduleConstants.visibleDays, id: \.self) { day in
+                let entries = draftEntries.filter { $0.dayOfWeek == day }.sorted { $0.startMinute < $1.startMinute }
                 if !entries.isEmpty {
-                    Section(dayLabels[day - 1]) {
+                    Section(ScheduleConstants.dayLabels[day] ?? "") {
                         ForEach(entries) { entry in
                             entryRow(entry)
                         }
@@ -159,10 +157,10 @@ struct ScheduleSetupView: View {
             }
 
             List {
-                ForEach(1...7, id: \.self) { day in
-                    let entries = draftEntries.filter { $0.dayOfWeek == day }.sorted { $0.startTime < $1.startTime }
+                ForEach(ScheduleConstants.visibleDays, id: \.self) { day in
+                    let entries = draftEntries.filter { $0.dayOfWeek == day }.sorted { $0.startMinute < $1.startMinute }
                     if !entries.isEmpty {
-                        Section(dayLabels[day - 1]) {
+                        Section(ScheduleConstants.dayLabels[day] ?? "") {
                             ForEach(entries) { entry in
                                 entryRow(entry)
                             }
@@ -177,7 +175,7 @@ struct ScheduleSetupView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.subjectName).font(.system(size: 14, weight: .medium))
-                Text("\(entry.startTime.formatted(date: .omitted, time: .shortened)) - \(entry.endTime.formatted(date: .omitted, time: .shortened))")
+                Text("\(entry.startMinute.asClockString) - \(entry.endMinute.asClockString)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -206,17 +204,25 @@ struct ScheduleSetupView: View {
     }
 
     private func saveAndContinue() {
+        let subjectCountBefore = (try? context.fetch(FetchDescriptor<Subject>()))?.count ?? 0
+
         for draft in draftEntries {
+            let subject = ScheduleConstants.findOrCreateSubject(named: draft.subjectName, in: context)
             context.insert(
                 ScheduleEntry(
                     dayOfWeek: draft.dayOfWeek,
-                    startTime: draft.startTime,
-                    endTime: draft.endTime,
-                    kind: .classPeriod,
-                    subjectName: draft.subjectName
+                    startMinute: draft.startMinute,
+                    endMinute: draft.endMinute,
+                    periodNumber: 0,
+                    subjectName: draft.subjectName,
+                    subject: subject
                 )
             )
         }
+
+        let subjectCountAfter = (try? context.fetch(FetchDescriptor<Subject>()))?.count ?? subjectCountBefore
+        AppLog.action("Onboarding", "บันทึกตาราง \(draftEntries.count) คาบ · สร้างวิชาใหม่ \(subjectCountAfter - subjectCountBefore) รายการ")
+
         hasCompletedScheduleSetup = true
     }
 }
@@ -225,18 +231,16 @@ private struct ManualScheduleEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
     let onAdd: (ScheduleDraftEntry) -> Void
 
-    @State private var dayOfWeek = 1
+    @State private var dayOfWeek = ScheduleConstants.visibleDays.first ?? 1
     @State private var subjectName = ""
     @State private var startTime = Date.now
     @State private var endTime = Date.now.addingTimeInterval(3000)
-
-    private let dayLabels = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"]
 
     var body: some View {
         NavigationStack {
             Form {
                 Picker("วัน", selection: $dayOfWeek) {
-                    ForEach(1...7, id: \.self) { Text(dayLabels[$0 - 1]).tag($0) }
+                    ForEach(ScheduleConstants.visibleDays, id: \.self) { Text(ScheduleConstants.dayLabels[$0] ?? "").tag($0) }
                 }
                 TextField("ชื่อวิชา", text: $subjectName)
                 DatePicker("เริ่ม", selection: $startTime, displayedComponents: .hourAndMinute)
@@ -248,13 +252,23 @@ private struct ManualScheduleEntrySheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("ยกเลิก") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("เพิ่ม") {
-                        onAdd(ScheduleDraftEntry(dayOfWeek: dayOfWeek, startTime: startTime, endTime: endTime, subjectName: subjectName.trimmingCharacters(in: .whitespaces)))
+                        onAdd(ScheduleDraftEntry(
+                            dayOfWeek: dayOfWeek,
+                            startMinute: minutesFromMidnight(startTime),
+                            endMinute: minutesFromMidnight(endTime),
+                            subjectName: subjectName.trimmingCharacters(in: .whitespaces)
+                        ))
                         dismiss()
                     }
                     .disabled(subjectName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }
+    }
+
+    private func minutesFromMidnight(_ date: Date) -> Int {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
     }
 }
 

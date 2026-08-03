@@ -5,6 +5,8 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
+import UserNotifications
 
 // ══════════════════════════════════════════════════════════════
 // MARK: - Models
@@ -139,6 +141,7 @@ struct CalendarView: View {
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
     @State private var activeSheet: CalendarSheet?
+    @State private var showTestNotificationHint = false
 
     private let cal = Calendar(identifier: .gregorian)
     private let thaiMonths = [
@@ -218,6 +221,11 @@ struct CalendarView: View {
                 EventFormSheet(event: event)
             }
         }
+        .alert("ส่งแจ้งเตือนทดสอบแล้ว", isPresented: $showTestNotificationHint) {
+            Button("ตกลง", role: .cancel) { }
+        } message: {
+            Text("จะเด้งใน 5 วินาที ลองสลับออกจากแอปดูก็ได้")
+        }
     }
 
     // ── Calendar Card ─────────────────────────────────────
@@ -251,6 +259,18 @@ struct CalendarView: View {
             Spacer()
 
             HStack(spacing: 8) {
+                Button {
+                    Task {
+                        await NotificationManager.shared.sendTestNotification()
+                        showTestNotificationHint = true
+                    }
+                } label: {
+                    Image(systemName: "bell.badge")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .frame(width: 36, height: 36)
+                }
+
                 Button { } label: {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 18))
@@ -426,10 +446,17 @@ struct CalendarView: View {
                         .frame(width: 4, height: 40)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(event.title)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Theme.Colors.textPrimary)
-                            .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Text(event.title)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Theme.Colors.textPrimary)
+                                .lineLimit(1)
+                            if event.alert != .none {
+                                Image(systemName: "bell.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(Color(.systemGray))
+                            }
+                        }
                         if !event.location.isEmpty {
                             Text(event.location)
                                 .font(.system(size: 12))
@@ -487,7 +514,11 @@ struct EventFormSheet: View {
     @State private var startDate: Date
     @State private var endDate: Date
     @State private var selectedColorHex: String
+    @State private var alert: EventAlert
+    @State private var customAlertMinutes: Int
     @State private var showDeleteConfirm = false
+
+    private var notifications = NotificationManager.shared
 
     private let cal = Calendar(identifier: .gregorian)
     private let eventColors: [(hex: String, color: Color)] = [
@@ -508,6 +539,8 @@ struct EventFormSheet: View {
         _startDate        = State(initialValue: dayStart)
         _endDate          = State(initialValue: Calendar(identifier: .gregorian).date(byAdding: .hour, value: 1, to: dayStart)!)
         _selectedColorHex = State(initialValue: "4A7DFF")
+        _alert            = State(initialValue: .none)
+        _customAlertMinutes = State(initialValue: 10)
     }
 
     // ── Edit initializer ──
@@ -518,6 +551,8 @@ struct EventFormSheet: View {
         _startDate        = State(initialValue: event.startDate)
         _endDate          = State(initialValue: event.endDate)
         _selectedColorHex = State(initialValue: event.colorHex)
+        _alert            = State(initialValue: event.alert)
+        _customAlertMinutes = State(initialValue: event.customAlertMinutes)
     }
 
     private var isEditing: Bool { existingEvent != nil }
@@ -530,6 +565,7 @@ struct EventFormSheet: View {
             Form {
                 titleSection
                 dateSection
+                alertSection
                 colorSection
                 if isEditing { deleteSection }
             }
@@ -603,6 +639,30 @@ struct EventFormSheet: View {
         }
     }
 
+    private var alertSection: some View {
+        Section("แจ้งเตือน") {
+            Picker("เตือนล่วงหน้า", selection: $alert) {
+                ForEach(EventAlert.allCases) { option in
+                    Text(option.label).tag(option)
+                }
+            }
+            if alert == .custom {
+                Stepper("ก่อน \(customAlertMinutes) นาที", value: $customAlertMinutes, in: 1...1440, step: 5)
+            }
+            if alert != .none && notifications.authorizationStatus == .denied {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label("แจ้งเตือนถูกปิดอยู่ — เปิดตั้งค่าเครื่อง", systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(Theme.Colors.warning)
+                }
+            }
+        }
+    }
+
     private var colorSection: some View {
         Section("สี") {
             HStack(spacing: 14) {
@@ -650,24 +710,35 @@ struct EventFormSheet: View {
             ? (cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: endDate)) ?? endDate)
             : (endDate > start ? endDate : (cal.date(byAdding: .hour, value: 1, to: start) ?? start))
 
+        let savedEvent: CalendarEvent
         if let event = existingEvent {
-            event.title     = trimmed
-            event.startDate = start
-            event.endDate   = end
-            event.isAllDay  = isAllDay
-            event.colorHex  = selectedColorHex
-            event.updatedAt = .now
+            event.title              = trimmed
+            event.startDate          = start
+            event.endDate            = end
+            event.isAllDay           = isAllDay
+            event.colorHex           = selectedColorHex
+            event.alert              = alert
+            event.customAlertMinutes = customAlertMinutes
+            event.updatedAt          = .now
+            savedEvent = event
         } else {
-            modelContext.insert(CalendarEvent(
+            let newEvent = CalendarEvent(
                 title: trimmed, startDate: start, endDate: end,
-                isAllDay: isAllDay, colorHex: selectedColorHex
-            ))
+                isAllDay: isAllDay,
+                alert: alert, customAlertMinutes: customAlertMinutes,
+                colorHex: selectedColorHex
+            )
+            modelContext.insert(newEvent)
+            savedEvent = newEvent
         }
+        try? modelContext.save()
+        Task { await notifications.schedule(for: savedEvent) }
         dismiss()
     }
 
     private func delete() {
         if let event = existingEvent {
+            notifications.cancel(for: event)
             modelContext.delete(event)
         }
         dismiss()

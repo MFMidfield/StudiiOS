@@ -18,6 +18,13 @@ enum Theme {
         static let textPrimary = Color(hex: "1A1A2E")
         static let background = Color(hex: "F5F6FA")
         static let cardBackground = Color.white
+
+        static let breakBackground = Color(hex: "FFF8E7")
+        static let separator = Color(hex: "E8EAF0")
+        static let textSecondary = Color(hex: "6B7280")
+
+        static let subjectPalette: [Color] = [primary, success, warning, danger, purple, pink, indigo, info]
+        static let subjectPaletteHex: [String] = ["4A7DFF", "4CAF50", "FFB347", "FF6B6B", "9C27B0", "E91E63", "3F51B5", "00BCD4"]
     }
 
     enum Spacing {

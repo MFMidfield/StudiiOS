@@ -22,6 +22,22 @@ extension DateFormatter {
         return f
     }()
 
+    static let thaiShortNoYear: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "th_TH")
+        f.dateFormat = "d MMM"
+        f.calendar = Calendar(identifier: .buddhist)
+        return f
+    }()
+
+    static let thaiDayMonthYear: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "th_TH")
+        f.dateFormat = "d MMM yyyy"
+        f.calendar = Calendar(identifier: .buddhist)
+        return f
+    }()
+
     static let time24h: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
@@ -32,6 +48,8 @@ extension DateFormatter {
 extension Date {
     var thaiFullString: String { DateFormatter.thaiFull.string(from: self) }
     var thaiShortString: String { DateFormatter.thaiShort.string(from: self) }
+    var thaiShortNoYearString: String { DateFormatter.thaiShortNoYear.string(from: self) }
+    var thaiDayMonthYearString: String { DateFormatter.thaiDayMonthYear.string(from: self) }
 
     /// Days remaining until this date, from now, floored at 0.
     var daysRemaining: Int {

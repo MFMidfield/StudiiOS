@@ -1,66 +1,59 @@
 //
 //  ScheduleEntry.swift
-//  "Thai School Schedule": normal class periods plus Thai-specific slots —
-//  หน้าเสาธง, ชุมนุม, ลูกเสือ, แนะแนว, กิจกรรมโรงเรียน.
+//  A single weekly class period. Times are stored as minutes-from-midnight
+//  (not Date) so they compare cleanly within a day and are easy to
+//  recompute when a day's periods are shortened (see DayScheduleOverride).
 //
 
 import Foundation
 import SwiftData
 
-enum ScheduleKind: String, Codable, CaseIterable {
-    case classPeriod, flagCeremony, club, scout, guidance, schoolActivity
-
-    var label: String {
-        switch self {
-        case .classPeriod: return "คาบเรียน"
-        case .flagCeremony: return "หน้าเสาธง"
-        case .club: return "ชุมนุม"
-        case .scout: return "ลูกเสือ"
-        case .guidance: return "แนะแนว"
-        case .schoolActivity: return "กิจกรรมโรงเรียน"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .classPeriod: return "book.closed.fill"
-        case .flagCeremony: return "flag.fill"
-        case .club: return "person.3.fill"
-        case .scout: return "figure.hiking"
-        case .guidance: return "person.fill.questionmark"
-        case .schoolActivity: return "star.fill"
-        }
-    }
-}
-
 @Model
 final class ScheduleEntry {
     /// 1 = Monday ... 7 = Sunday
     var dayOfWeek: Int
-    var startTime: Date
-    var endTime: Date
-    var kindRaw: String
+    var startMinute: Int
+    var endMinute: Int
+    var periodNumber: Int
+    var teacherName: String
     var location: String
     var subjectName: String
 
-    var kind: ScheduleKind {
-        get { ScheduleKind(rawValue: kindRaw) ?? .classPeriod }
-        set { kindRaw = newValue.rawValue }
-    }
+    var subject: Subject?
 
     init(
         dayOfWeek: Int,
-        startTime: Date,
-        endTime: Date,
-        kind: ScheduleKind = .classPeriod,
+        startMinute: Int,
+        endMinute: Int,
+        periodNumber: Int = 0,
+        teacherName: String = "",
         location: String = "",
-        subjectName: String = ""
+        subjectName: String = "",
+        subject: Subject? = nil
     ) {
         self.dayOfWeek = dayOfWeek
-        self.startTime = startTime
-        self.endTime = endTime
-        self.kindRaw = kind.rawValue
+        self.startMinute = startMinute
+        self.endMinute = endMinute
+        self.periodNumber = periodNumber
+        self.teacherName = teacherName
         self.location = location
         self.subjectName = subjectName
+        self.subject = subject
+    }
+}
+
+extension Int {
+    /// Formats minutes-from-midnight as "08:00".
+    var asClockString: String {
+        let h = self / 60
+        let m = self % 60
+        return String(format: "%02d:%02d", h, m)
+    }
+
+    /// Parses a "08:00" string into minutes-from-midnight, or nil if malformed.
+    static func minutesFromClockString(_ text: String) -> Int? {
+        let parts = text.split(separator: ":")
+        guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
+        return h * 60 + m
     }
 }

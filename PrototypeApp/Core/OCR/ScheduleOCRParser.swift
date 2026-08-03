@@ -14,8 +14,8 @@ import Vision
 struct ScheduleDraftEntry: Identifiable {
     let id = UUID()
     var dayOfWeek: Int
-    var startTime: Date
-    var endTime: Date
+    var startMinute: Int
+    var endMinute: Int
     var subjectName: String
 }
 
@@ -90,16 +90,6 @@ enum ScheduleOCRParser {
         timeRows.sort { $0.y > $1.y }
         guard timeRows.count >= 2 else { return [] }
 
-        let calendar = Calendar.current
-        let today = Date()
-
-        func time(hour: Int, minute: Int) -> Date {
-            var components = calendar.dateComponents([.year, .month, .day], from: today)
-            components.hour = hour
-            components.minute = minute
-            return calendar.date(from: components) ?? today
-        }
-
         var drafts: [ScheduleDraftEntry] = []
         for box in boxes {
             let text = box.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -113,14 +103,14 @@ enum ScheduleOCRParser {
 
             let startRow = timeRows[rowIndex]
             let endRow = rowIndex > 0 ? timeRows[rowIndex - 1] : nil
-            let startTime = time(hour: startRow.hour, minute: startRow.minute)
-            let endTime = endRow.map { time(hour: $0.hour, minute: $0.minute) } ?? startTime.addingTimeInterval(50 * 60)
+            let startMinute = startRow.hour * 60 + startRow.minute
+            let endMinute = endRow.map { $0.hour * 60 + $0.minute } ?? (startMinute + 50)
 
-            drafts.append(ScheduleDraftEntry(dayOfWeek: nearestDay.day, startTime: startTime, endTime: endTime, subjectName: text))
+            drafts.append(ScheduleDraftEntry(dayOfWeek: nearestDay.day, startMinute: startMinute, endMinute: endMinute, subjectName: text))
         }
 
         return drafts.sorted {
-            $0.dayOfWeek != $1.dayOfWeek ? $0.dayOfWeek < $1.dayOfWeek : $0.startTime < $1.startTime
+            $0.dayOfWeek != $1.dayOfWeek ? $0.dayOfWeek < $1.dayOfWeek : $0.startMinute < $1.startMinute
         }
     }
 

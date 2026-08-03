@@ -27,6 +27,7 @@ final class Assignment {
     var isDone: Bool
     var priorityRaw: String
     var createdAt: Date
+    var subjectName: String
 
     var priority: AssignmentPriority {
         get { AssignmentPriority(rawValue: priorityRaw) ?? .medium }
@@ -39,7 +40,8 @@ final class Assignment {
         dueDate: Date = .now,
         isDone: Bool = false,
         priority: AssignmentPriority = .medium,
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        subjectName: String = ""
     ) {
         self.title = title
         self.detail = detail
@@ -47,5 +49,6 @@ final class Assignment {
         self.isDone = isDone
         self.priorityRaw = priority.rawValue
         self.createdAt = createdAt
+        self.subjectName = subjectName
     }
 }
