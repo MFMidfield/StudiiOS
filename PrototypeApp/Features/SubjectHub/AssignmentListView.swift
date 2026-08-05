@@ -16,8 +16,14 @@ struct AssignmentListView: View {
         assignments
             .filter { showDone || !$0.isDone }
             .sorted { lhs, rhs in
-                if lhs.dueDate != rhs.dueDate { return lhs.dueDate < rhs.dueDate }
-                return priorityRank(lhs.priority) > priorityRank(rhs.priority)
+                // Tasks without a due date always sort last.
+                switch (lhs.resolvedDueDate, rhs.resolvedDueDate) {
+                case let (l?, r?) where l != r: return l < r
+                case (nil, _?): return false
+                case (_?, nil): return true
+                default:
+                    return priorityRank(lhs.effectivePriority) > priorityRank(rhs.effectivePriority)
+                }
             }
     }
 
@@ -40,11 +46,13 @@ struct AssignmentListView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(assignment.title).strikethrough(assignment.isDone)
                         HStack(spacing: 6) {
-                            Text(assignment.dueDate.thaiShortString).font(.caption2).foregroundStyle(.secondary)
+                            Text(assignment.resolvedDueDate?.thaiShortString ?? "ไม่กำหนดส่ง")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     Spacer()
-                    Text(assignment.priority.label)
+                    Text(assignment.effectivePriority.label)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

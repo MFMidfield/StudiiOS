@@ -17,7 +17,8 @@ struct ScheduleTodayTasksSection: View {
 
     private var tasks: [Assignment] {
         allAssignments.filter {
-            !$0.isDone && Calendar.current.isDate($0.dueDate, inSameDayAs: targetDate)
+            guard !$0.isDone, let due = $0.resolvedDueDate else { return false }
+            return Calendar.current.isDate(due, inSameDayAs: targetDate)
         }
     }
 
@@ -96,7 +97,7 @@ struct ScheduleTodayTasksSection: View {
                             .foregroundStyle(Theme.Colors.textPrimary)
                             .lineLimit(1)
                         Spacer()
-                        Text("ส่ง \(task.dueDate.thaiShortNoYearString)")
+                        Text(task.resolvedDueDate.map { "ส่ง \($0.thaiShortNoYearString)" } ?? "ไม่กำหนดส่ง")
                             .font(.caption)
                             .foregroundStyle(Theme.Colors.textSecondary)
                         Image(systemName: "chevron.right")

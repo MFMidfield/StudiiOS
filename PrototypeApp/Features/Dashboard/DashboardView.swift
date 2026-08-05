@@ -18,7 +18,10 @@ struct DashboardView: View {
     }
 
     private var dueTodayAssignments: [Assignment] {
-        pendingAssignments.filter { Calendar.current.isDateInToday($0.dueDate) }
+        pendingAssignments.filter {
+            guard let due = $0.resolvedDueDate else { return false }
+            return Calendar.current.isDateInToday(due)
+        }
     }
 
     var body: some View {
@@ -323,7 +326,7 @@ struct AssignmentRow: View {
                     .foregroundStyle(Theme.Colors.textPrimary)
             }
             Spacer()
-            Text(assignment.dueDate.thaiShortString)
+            Text(assignment.resolvedDueDate?.thaiShortString ?? "ไม่กำหนดส่ง")
                 .font(.caption2)
                 .foregroundStyle(isDueToday ? Theme.Colors.danger : .secondary)
         }

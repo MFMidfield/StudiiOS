@@ -45,7 +45,8 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │   ├── ScheduleOCRParser.swift      (130)  ScheduleDraftEntry ใช้ startMinute/endMinute (Int)
 │   │   └── GradeReportOCRParser.swift   (147)
 │   ├── Profile/StudentProfileStore.swift (71)
-│   └── Schedule/PeriodShiftCalculator.swift  logic ล้วน (ไม่มี View): date(forDay:in:) + apply(override:to:) → [ResolvedPeriod]
+│   ├── Schedule/PeriodShiftCalculator.swift  logic ล้วน (ไม่มี View): date(forDay:in:) + apply(override:to:) → [ResolvedPeriod]
+│   └── Tasks/AssignmentPriorityEngine.swift  logic ล้วน: priority(kind:dueDate:) + daysUntil() + dueLabel() — สูตรความสำคัญอัตโนมัติที่เดียว
 └── Features/
     ├── Calendar/CalendarView.swift        (687) ← ไฟล์ใหญ่สุด
     ├── CareerDiscovery/CareerDiscoveryView.swift (163)
@@ -72,7 +73,7 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-33`
 
 | Model | ไฟล์ |
 |---|---|
-| Assignment | Core/Models/Assignment.swift — มี `subjectName: String` (default "") |
+| Assignment | Core/Models/Assignment.swift — `subjectName: String` (default "") · `kindRaw` (การบ้าน/งานทั่วไป) · `hasDueDate` (default **true**) · `isPriorityManual` · `remindersEnabled` · `uid` (เติมด้วย `ensureUID()`)<br>**อ่านวันส่งผ่าน `resolvedDueDate` เท่านั้น** (nil = ไม่กำหนด) · ความสำคัญใช้ `effectivePriority` (auto จาก `AssignmentPriorityEngine`, ห้าม cache ลง `priorityRaw`) |
 | Note | Core/Models/Note.swift |
 | Flashcard | Core/Models/Flashcard.swift |
 | GradeComponent | Core/Models/GradeComponent.swift |
