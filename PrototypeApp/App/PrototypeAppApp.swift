@@ -86,19 +86,30 @@ private struct RootContainerView: View {
     @AppStorage("hasCompletedGradeSetup") private var hasCompletedGradeSetup = false
     @AppStorage("hasCompletedSetupSummary") private var hasCompletedSetupSummary = false
 
+    @Environment(\.scenePhase) private var scenePhase
+    @Query private var assignments: [Assignment]
+
     var body: some View {
-        if !hasCompletedOnboarding {
-            WelcomeView()
-        } else if !hasCompletedProfileSetup {
-            ProfileSetupView()
-        } else if !hasCompletedScheduleSetup {
-            NavigationStack { ScheduleSetupView() }
-        } else if !hasCompletedGradeSetup {
-            NavigationStack { GradeReportSetupView() }
-        } else if !hasCompletedSetupSummary {
-            SetupSummaryView()
-        } else {
-            RootTabView()
+        Group {
+            if !hasCompletedOnboarding {
+                WelcomeView()
+            } else if !hasCompletedProfileSetup {
+                ProfileSetupView()
+            } else if !hasCompletedScheduleSetup {
+                NavigationStack { ScheduleSetupView() }
+            } else if !hasCompletedGradeSetup {
+                NavigationStack { GradeReportSetupView() }
+            } else if !hasCompletedSetupSummary {
+                SetupSummaryView()
+            } else {
+                RootTabView()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // ป้ายวัน ("พรุ่งนี้"/"วันนี้") และหน้าต่าง 14 วัน ขึ้นกับวันที่ปัจจุบัน
+            // จึงต้องกวาดตั้งใหม่ทุกครั้งที่กลับเข้าแอป
+            guard newPhase == .active else { return }
+            Task { await NotificationManager.shared.refreshAssignmentReminders(assignments) }
         }
     }
 }

@@ -138,6 +138,133 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         center.removePendingNotificationRequests(withIdentifiers: [identifier(for: event)])
     }
 
+    // MARK: - Assignment scheduling
+    //
+    // แยกจากส่วนของ CalendarEvent ด้านบนโดยสิ้นเชิง — identifier คนละ prefix
+    // งาน 1 ชิ้นได้แจ้งเตือน 3 จุด (ดู AssignmentSlot)
+
+    private enum AssignmentSlot: String, CaseIterable {
+        /// 24 ชม. ก่อนกำหนดส่ง
+        case d1
+        /// 07:00 ของวันที่กำหนดส่ง
+        case am
+        /// 1 ชม. ก่อนกำหนดส่ง
+        case h1
+    }
+
+    /// iOS ยอมให้มี pending notification ได้ 64 อัน — 16 งาน × 3 จุด = 48
+    /// เหลือที่ว่างให้ CalendarEvent
+    private static let maxAssignmentsWithReminders = 16
+
+    /// ยิงเฉพาะงานที่กำหนดส่งภายในกี่วัน
+    private static let assignmentReminderWindowDays = 14
+
+    private func identifiers(forUID uid: String) -> [String] {
+        AssignmentSlot.allCases.map { "assignment-\(uid)-\($0.rawValue)" }
+    }
+
+    /// เงื่อนไขเดียวที่ตัดสินว่างานชิ้นนี้ควรมีแจ้งเตือนไหม
+    private func shouldSchedule(_ assignment: Assignment, now: Date = .now) -> Bool {
+        guard assignment.remindersEnabled,
+              !assignment.isDone,
+              let due = assignment.resolvedDueDate,
+              due > now
+        else { return false }
+        return AssignmentPriorityEngine.daysUntil(due, from: now) <= Self.assignmentReminderWindowDays
+    }
+
+    private func fireDate(for slot: AssignmentSlot, due: Date) -> Date? {
+        switch slot {
+        case .d1:
+            return due.addingTimeInterval(-24 * 60 * 60)
+        case .am:
+            return Calendar.current.date(bySettingHour: 7, minute: 0, second: 0, of: due)
+        case .h1:
+            return due.addingTimeInterval(-60 * 60)
+        }
+    }
+
+    /// ข้อความต่าง slot กัน เพราะป้ายวันต้องถูก ณ "ตอนเด้ง" ไม่ใช่ตอนตั้ง
+    private func reminderBody(for assignment: Assignment, due: Date, slot: AssignmentSlot) -> String {
+        var parts = [assignment.kind.label]
+        if !assignment.subjectName.isEmpty {
+            parts.append(assignment.subjectName)
+        }
+        let time = DateFormatter.time24h.string(from: due)
+        switch slot {
+        case .d1: parts.append("ส่งพรุ่งนี้ \(time) น.")
+        case .am: parts.append("ส่งวันนี้ \(time) น.")
+        case .h1: parts.append("อีก 1 ชั่วโมงถึงกำหนดส่ง (\(time) น.)")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// ยกเลิกของเดิมแล้วตั้งใหม่เสมอ — เรียกได้ทุกครั้งที่งานเปลี่ยน
+    /// ถ้างานไม่เข้าเงื่อนไข (ปิด toggle / เสร็จแล้ว / ไม่กำหนดส่ง) จะเหลือแค่ยกเลิก
+    func schedule(for assignment: Assignment) async {
+        cancel(for: assignment)
+
+        guard shouldSchedule(assignment), let due = assignment.resolvedDueDate else { return }
+
+        if authorizationStatus == .notDetermined {
+            _ = await requestAuthorization()
+        }
+        guard authorizationStatus == .authorized || authorizationStatus == .provisional else { return }
+
+        let uid = assignment.ensureUID()
+
+        for slot in AssignmentSlot.allCases {
+            guard let fireDate = fireDate(for: slot, due: due),
+                  fireDate > .now,
+                  fireDate <= due
+            else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = assignment.title
+            content.body = reminderBody(for: assignment, due: due, slot: slot)
+            content.sound = .default
+
+            let comps = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute],
+                from: fireDate
+            )
+            let request = UNNotificationRequest(
+                identifier: "assignment-\(uid)-\(slot.rawValue)",
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
+            )
+
+            do {
+                try await center.add(request)
+            } catch {
+                lastError = error.localizedDescription
+            }
+        }
+    }
+
+    func cancel(for assignment: Assignment) {
+        guard !assignment.uid.isEmpty else { return }
+        center.removePendingNotificationRequests(withIdentifiers: identifiers(forUID: assignment.uid))
+    }
+
+    /// เรียกตอนแอปขึ้น foreground — กวาดทิ้งแล้วตั้งใหม่ทั้งหมดให้ตรงกับวันนี้
+    /// (ป้ายวัน "พรุ่งนี้/วันนี้" และหน้าต่าง 14 วันขึ้นกับวันที่ปัจจุบัน)
+    func refreshAssignmentReminders(_ assignments: [Assignment]) async {
+        for assignment in assignments {
+            cancel(for: assignment)
+        }
+
+        let due = assignments
+            .filter { shouldSchedule($0) }
+            .sorted { ($0.resolvedDueDate ?? .distantFuture) < ($1.resolvedDueDate ?? .distantFuture) }
+            .prefix(Self.maxAssignmentsWithReminders)
+
+        for assignment in due {
+            await schedule(for: assignment)
+        }
+        AppLog.action("Notification", "ตั้งแจ้งเตือนงานใหม่ \(due.count) ชิ้น (สูงสุด \(Self.maxAssignmentsWithReminders))")
+    }
+
     func cancelAll() {
         center.removeAllPendingNotificationRequests()
         center.removeAllDeliveredNotifications()

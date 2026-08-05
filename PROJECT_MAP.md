@@ -40,7 +40,11 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │   └── Date+Thai.swift              วันที่ไทย/พ.ศ. + thaiShortNoYear/thaiDayMonthYear
 │   ├── Logging/AppLog.swift             print-based console log (🔵🟠🔴)
 │   ├── Models/                          (13 ไฟล์ — ดูตาราง §3)
-│   ├── Notifications/NotificationManager.swift  จัดการ UNUserNotificationCenter: schedule/cancel ตาม CalendarEvent + ปุ่มทดสอบแจ้งเตือน
+│   ├── Notifications/NotificationManager.swift  จัดการ UNUserNotificationCenter — 2 ส่วนแยกกันสิ้นเชิง คนละ identifier prefix
+│   │                                            · CalendarEvent: `event-{id}` 1 จุด ตาม EventAlert
+│   │                                            · Assignment: `assignment-{uid}-{d1|am|h1}` 3 จุด (1 วันก่อน · 07:00 วันกำหนด · 1 ชม.ก่อน)
+│   │                                              `schedule(for:)` ยกเลิกของเดิมให้เองเสมอ → เรียกซ้ำได้ปลอดภัย
+│   │                                              `refreshAssignmentReminders(_:)` เรียกจาก RootContainerView ตอนเข้า .active
 │   ├── OCR/
 │   │   ├── ScheduleOCRParser.swift      (130)  ScheduleDraftEntry ใช้ startMinute/endMinute (Int)
 │   │   └── GradeReportOCRParser.swift   (147)
@@ -174,6 +178,6 @@ Gated: `PortfolioView`, `TCASPlannerView`
 - `QuickAddSheet.swift`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ (`Repeat` `Location` `Tags` `Alert` `Note` `Detail`) — ผิดกฎ "UI ทั้งหมดเป็นภาษาไทย" ของสกิล ยกมาทั้งดุ้นจาก `SmartCaptureView` เดิม ยังไม่ได้แก้
 - `Features/FocusMode/` เป็นโฟลเดอร์ว่าง (ของเหลือ) — `FocusModeView.swift` ยังอยู่ใน `Features/Portfolio/`
 - `ScheduleTodayTasksSection`: แตะแถวงาน ตอนนี้แค่ log อย่างเดียว ยังไม่เปิดฟอร์มแก้ไข (หน้า Todo เปิดได้แล้ว — เหลือแค่การ์ดในตารางเรียน)
-- แจ้งเตือนของ `Assignment` ยังไม่ทำ (เฟส 4) — จุดที่ต้องเติมมาร์กไว้ด้วยคอมเมนต์ `เฟส 4:` ใน `AddTaskSheet.save()` และ `AssignmentListView.toggleDone/delete`
+- `refreshAssignmentReminders` ตัดที่ 16 งานแรก (× 3 จุด = 48 pending) กันชน 64 ของ iOS — งานที่กำหนดส่งไกลกว่านั้นจะยังไม่ถูกตั้งจนกว่าจะขยับเข้ามาในหน้าต่าง 14 วัน
 
 **`PLAN_ScheduleView.md` ครบทั้ง 3 รอบแล้ว** (Models/Schema → UI ตาราง+ฟอร์ม → งานวันนี้+ร่นคาบ) — ฟีเจอร์ตารางเรียนถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป

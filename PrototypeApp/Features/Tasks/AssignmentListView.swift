@@ -297,15 +297,17 @@ struct AssignmentListView: View {
     private func toggleDone(_ task: Assignment) {
         task.isDone.toggle()
         try? context.save()
-        // เฟส 4: isDone = true → cancel แจ้งเตือน · กลับเป็น false → schedule ใหม่
+        // เสร็จแล้ว → schedule() จะยกเลิกให้เอง · กดกลับเป็นยังไม่เสร็จ → ตั้งใหม่
+        Task { await NotificationManager.shared.schedule(for: task) }
         AppLog.action("Assignment", "\(task.isDone ? "ทำเสร็จ" : "ยกเลิกเสร็จ"): \(task.title)")
     }
 
     private func delete(_ task: Assignment) {
-        // เฟส 4: cancel แจ้งเตือนของงานนี้ก่อนลบ
+        let title = task.title
+        NotificationManager.shared.cancel(for: task)
         context.delete(task)
         try? context.save()
-        AppLog.action("Assignment", "ลบงาน: \(task.title)")
+        AppLog.action("Assignment", "ลบงาน: \(title)")
     }
 }
 

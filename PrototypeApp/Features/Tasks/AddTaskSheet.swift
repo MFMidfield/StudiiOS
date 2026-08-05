@@ -205,8 +205,9 @@ struct AddTaskSheet: View {
             return
         }
 
-        // เฟส 4: เรียก NotificationManager.shared.schedule(for: target) ตรงนี้
-        // (ยังไม่มี API นั้นในเฟส 2 — ดู PLAN_TodoList.md §4)
+        // schedule() ยกเลิกของเดิมให้ก่อนเสมอ — ครอบคลุมทั้งกรณีเปิดและปิด toggle
+        let saved = target
+        Task { await NotificationManager.shared.schedule(for: saved) }
 
         AppLog.action("Assignment", "\(editing == nil ? "เพิ่ม" : "แก้ไข")งาน: \(target.title) ประเภท=\(target.kind.rawValue) วิชา=\(target.subjectName) กำหนดส่ง=\(target.hasDueDate) แจ้งเตือน=\(target.remindersEnabled)")
         dismiss()
