@@ -59,9 +59,13 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │              + AddScheduleEntrySheet (add/edit ใช้ร่วม) · AddSubjectSheet
     │              + ScheduleTodayTasksSection (งาน/การบ้านวันนี้ ผูก Assignment.subjectName แบบ lookup ชื่อ)
     │              + PeriodShiftBanner · PeriodShiftSheet (ร่นคาบ — ใช้ PeriodShiftCalculator ที่เดียว ไม่มีสูตรซ้ำใน View)
+    ├── QuickAdd/QuickAddSheet.swift       (~340) half-sheet เมนู "เพิ่มอะไรดี?" (กริดไอคอน) ที่เด้งตอนกดปุ่ม `+` กลาง tab
+    │                                              งาน → AddTaskSheet · ปฏิทิน/โน๊ต/Portfolio → CaptureDetailSheet (private ในไฟล์เดียวกัน)
+    │                                              **เพิ่มโหมดใหม่ = เพิ่ม 1 บรรทัดใน `options`** (แทน SmartCaptureView เดิมที่ถูกลบ)
     ├── Settings/SettingsView.swift        (357)
-    ├── SmartCapture/SmartCaptureView.swift (314+)  มี Picker "วิชา" ใน assignmentFields แล้ว (ไม่บังคับ, default "ไม่ระบุ")
-    ├── SubjectHub/AssignmentListView.swift (64)
+    ├── SubjectHub/AssignmentListView.swift (64)   ⚠️ จะย้ายไป Features/Tasks/ ในเฟส 3
+    ├── Tasks/AddTaskSheet.swift            (~215) ฟอร์มเพิ่ม/แก้งาน `AddTaskSheet(editing:onSaved:)`
+    │                                              ทางเข้า: QuickAddSheet · การ์ด "งานค้าง" ใน Dashboard · FAB หน้า Todo (เฟส 3)
     └── TCASPlanner/TCASPlannerView.swift  (142)
 ```
 
@@ -98,7 +102,9 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-33`
 
 5 tabs: `dashboard` · `calendar` · `capture` · `schedule` · `settings`
 
-- แท็บ "เพิ่ม" (`.capture`) เป็น `Color.clear` + trick: `onChange` ดีดกลับแท็บเดิมแล้วเปิด `SmartCaptureView` เป็น sheet
+- แท็บ "เพิ่ม" (`.capture`) เป็น `Color.clear` + trick: `onChange` ดีดกลับแท็บเดิมแล้วเปิด **`QuickAddSheet`** เป็น sheet
+  → ผู้ใช้เลือกก่อนว่าจะเพิ่มอะไร (งาน / ปฏิทิน / โน๊ต / Portfolio) แล้วค่อยเปิดฟอร์ม
+  **นี่คือทางเข้าเดียวของ ปฏิทิน/โน๊ต/Portfolio** — ถ้าเปลี่ยนปุ่มนี้ให้เปิดฟอร์มใดฟอร์มหนึ่งตรงๆ อีก 3 โหมดจะกลายเป็นโค้ดตาย
 - Dashboard push ต่อผ่าน `DashboardDestination`: `.assignments` `.gradeCenter` `.tcasPlanner` `.portfolio` `.careerDiscovery` `.focusMode`
 - Onboarding gate อยู่ที่ `RootContainerView` (`PrototypeAppApp.swift:53-74`) ใช้ `@AppStorage` 5 ตัวเรียงลำดับหน้า
 - แท็บ "ตารางเรียน" (`ScheduleView`) toolbar มี 2 ปุ่ม: นาฬิกา (ซ้าย) เปิด `PeriodShiftSheet` (ร่นคาบ) · `+` (ขวา) เปิด `AddScheduleEntrySheet` (เพิ่ม/แก้คาบ, หรือแตะแถวคาบเพื่อแก้) → ซ้อน `AddSubjectSheet` (เพิ่มวิชาใหม่, เปิดจากปุ่ม "เพิ่มวิชาใหม่" ในฟอร์มคาบ)
@@ -156,7 +162,8 @@ Gated: `PortfolioView`, `TCASPlannerView`
 - `FocusModeView.swift` อยู่ใน `Features/Portfolio/` (วางผิดที่)
 - Calendar models ฝังใน `CalendarView.swift` แทนที่จะอยู่ `Core/Models/`
 - ไม่มี unit test จริงเลย (test target เป็น template)
-- `SmartCaptureView.swift`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ (`Repeat` `Location` `Tags` `Alert` `Note` `Detail`) — ผิดกฎ "UI ทั้งหมดเป็นภาษาไทย" ของสกิล พบระหว่างแก้รอบ 3 แต่ไม่ได้อยู่ในสโคปที่ขอ ยังไม่ได้แก้
+- `QuickAddSheet.swift`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ (`Repeat` `Location` `Tags` `Alert` `Note` `Detail`) — ผิดกฎ "UI ทั้งหมดเป็นภาษาไทย" ของสกิล ยกมาทั้งดุ้นจาก `SmartCaptureView` เดิม ยังไม่ได้แก้
+- `Features/FocusMode/` เป็นโฟลเดอร์ว่าง (ของเหลือ) — `FocusModeView.swift` ยังอยู่ใน `Features/Portfolio/`
 - `ScheduleTodayTasksSection`: แตะแถวงาน ตอนนี้แค่ log อย่างเดียว ยังไม่ push ไปหน้ารายละเอียด (ตั้งใจเก็บไว้ทำทีหลังตาม `PROMPT_ScheduleView_Round3.md`)
 
 **`PLAN_ScheduleView.md` ครบทั้ง 3 รอบแล้ว** (Models/Schema → UI ตาราง+ฟอร์ม → งานวันนี้+ร่นคาบ) — ฟีเจอร์ตารางเรียนถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป

@@ -221,7 +221,7 @@ struct MainMenuSection: View {
         MenuItem(title: "TCAS Planner", subtitle: "วางแผนสอบเข้า", icon: "target", color: Theme.Colors.info, destination: .tcasPlanner, tier: .free),
         MenuItem(title: "Portfolio", subtitle: "รวบรวมผลงาน", icon: "folder.fill", color: Theme.Colors.success, destination: .portfolio, tier: .free),
         MenuItem(title: "Career", subtitle: "สำรวจอาชีพ", icon: "briefcase.fill", color: Theme.Colors.warning, destination: .careerDiscovery, tier: .free),
-        MenuItem(title: "งาน & To-Do", subtitle: "รายการงาน", icon: "checkmark.square.fill", color: Theme.Colors.info, destination: .assignments, tier: .free),
+        MenuItem(title: "งาน / การบ้าน", subtitle: "รายการงาน", icon: "checkmark.square.fill", color: Theme.Colors.info, destination: .assignments, tier: .free),
         MenuItem(title: "โฟกัส", subtitle: "Pomodoro Timer", icon: "timer", color: Theme.Colors.indigo, destination: .focusMode, tier: .free),
     ]
 
@@ -285,6 +285,8 @@ struct PendingWorkSection: View {
     let dueToday: [Assignment]
     let pending: [Assignment]
 
+    @State private var showAddTask = false
+
     var body: some View {
         CardContainer {
             HStack {
@@ -296,6 +298,15 @@ struct PendingWorkSection: View {
                 Text("\(pending.count) รายการ")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Button {
+                    showAddTask = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Theme.Colors.primary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("เพิ่มงาน")
             }
             if pending.isEmpty {
                 EmptyRow(text: "ไม่มีงานค้าง 🎉")
@@ -307,6 +318,9 @@ struct PendingWorkSection: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showAddTask) {
+            AddTaskSheet()
         }
     }
 }

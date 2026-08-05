@@ -62,7 +62,7 @@ struct RootTabView: View {
             }
         }
         .sheet(isPresented: $showCapture) {
-            SmartCaptureView()
+            QuickAddSheet()
         }
     }
 

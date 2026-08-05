@@ -55,8 +55,8 @@ final class Assignment {
     // on launch instead).
     var kindRaw: String = "homework"
     /// `false` means "ไม่กำหนดส่ง". Defaults to `true` because every row created
-    /// before this field existed came from SmartCaptureView, which always set a
-    /// due date — so backfilled rows keep showing their date.
+    /// before this field existed came from the old Smart Capture form, which
+    /// always set a due date — so backfilled rows keep showing their date.
     var hasDueDate: Bool = true
     /// `true` once the user picks a priority themselves; otherwise the priority
     /// is derived from due date + kind on every read.

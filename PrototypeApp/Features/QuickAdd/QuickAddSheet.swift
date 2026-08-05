@@ -1,97 +1,128 @@
 //
-//  SmartCaptureView.swift
-//  Smart Capture: quick entry points for homework, calendar items, notes,
-//  and portfolio records.
+//  QuickAddSheet.swift
+//  Half-sheet menu shown by the tab bar's "+" button. Lets the user pick what
+//  to add before any form appears. "งาน" opens AddTaskSheet; the rest open
+//  CaptureDetailSheet below.
+//
+//  Adding a new kind later = one more entry in `options`.
 //
 
 import SwiftUI
 import SwiftData
 
-struct SmartCaptureView: View {
+struct QuickAddSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State private var mode: CaptureMode?
+    @State private var detailMode: CaptureMode?
+    @State private var showAddTask = false
 
-    fileprivate enum CaptureMode: String, Identifiable {
-        case assignment, calendar, note, portfolio
+    private let options: [QuickAddOption] = [
+        QuickAddOption(icon: "checklist", title: "งาน", color: Theme.Colors.primary, action: .task),
+        QuickAddOption(icon: "calendar.badge.plus", title: "ปฏิทิน", color: Theme.Colors.warning, action: .capture(.calendar)),
+        QuickAddOption(icon: "note.text", title: "โน๊ต", color: Theme.Colors.success, action: .capture(.note)),
+        QuickAddOption(icon: "folder.badge.plus", title: "Portfolio", color: Theme.Colors.danger, action: .capture(.portfolio)),
+    ]
 
-        var id: String { rawValue }
-    }
+    private let columns = [
+        GridItem(.flexible()),
+        GridItem(.flexible()),
+        GridItem(.flexible()),
+    ]
 
     var body: some View {
         NavigationStack {
-            List {
-                Section("เพิ่มข้อมูล") {
-                    CaptureRow(icon: "checklist", title: "งาน / การบ้าน", subtitle: "วันส่งงาน และรายละเอียด", color: Theme.Colors.primary) {
-                        mode = .assignment
-                    }
-                    CaptureRow(icon: "calendar.badge.plus", title: "กิจกรรมปฏิทิน", subtitle: "วัน เวลา สถานที่ แจ้งเตือน และโน้ต", color: Theme.Colors.warning) {
-                        mode = .calendar
-                    }
-                    CaptureRow(icon: "note.text", title: "โน๊ต", subtitle: "ชื่อ และเนื้อหา", color: Theme.Colors.success) {
-                        mode = .note
-                    }
-                    CaptureRow(icon: "folder.badge.plus", title: "Portfolio", subtitle: "ชื่อ และรายละเอียด", color: Theme.Colors.danger) {
-                        mode = .portfolio
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: Theme.Spacing.lg) {
+                    ForEach(options) { option in
+                        Button {
+                            select(option)
+                        } label: {
+                            tile(for: option)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
+                .padding(Theme.Spacing.lg)
             }
-            .navigationTitle("เพิ่มอย่างรวดเร็ว")
+            .background(Theme.Colors.background)
+            .navigationTitle("เพิ่มอะไรดี?")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("ปิด") { dismiss() }
                 }
             }
-            .sheet(item: $mode) { mode in
-                CaptureDetailSheet(mode: mode) { dismiss() }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .sheet(isPresented: $showAddTask) {
+            AddTaskSheet(onSaved: { dismiss() })
+        }
+        .sheet(item: $detailMode) { mode in
+            CaptureDetailSheet(mode: mode) { dismiss() }
+        }
+    }
+
+    private func tile(for option: QuickAddOption) -> some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.Radius.card)
+                    .fill(option.color.opacity(0.12))
+                    .frame(height: 72)
+                Image(systemName: option.icon)
+                    .font(.system(size: 28))
+                    .foregroundStyle(option.color)
             }
+            Text(option.title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Theme.Colors.textPrimary)
+                .lineLimit(1)
+        }
+    }
+
+    private func select(_ option: QuickAddOption) {
+        switch option.action {
+        case .task: showAddTask = true
+        case .capture(let mode): detailMode = mode
         }
     }
 }
 
-private struct CaptureRow: View {
+// MARK: - Options
+
+private struct QuickAddOption: Identifiable {
+    enum Action {
+        case task
+        case capture(CaptureMode)
+    }
+
+    let id = UUID()
     let icon: String
     let title: String
-    let subtitle: String
     let color: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(color.opacity(0.15))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: icon).foregroundStyle(color)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.Colors.textPrimary)
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.secondary)
-            }
-        }
-        .buttonStyle(.plain)
-    }
+    let action: Action
 }
 
+/// Kinds still handled by the generic capture form. งาน is not here — it has
+/// its own dedicated form (`AddTaskSheet`).
+private enum CaptureMode: String, Identifiable {
+    case calendar, note, portfolio
+
+    var id: String { rawValue }
+}
+
+// MARK: - Detail form (ปฏิทิน / โน๊ต / Portfolio)
+
 private struct CaptureDetailSheet: View {
-    let mode: SmartCaptureView.CaptureMode
+    let mode: CaptureMode
     let onSaved: () -> Void
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \Subject.createdAt) private var subjects: [Subject]
 
     @State private var title = ""
     @State private var detail = ""
     @State private var noteBody = ""
-
-    @State private var dueDate = Date.now
-    @State private var assignmentSubjectName = ""
 
     @State private var startDate = Date.now
     @State private var endDate = Date.now.addingTimeInterval(3600)
@@ -141,8 +172,6 @@ private struct CaptureDetailSheet: View {
         NavigationStack {
             Form {
                 switch mode {
-                case .assignment:
-                    assignmentFields
                 case .calendar:
                     calendarFields
                 case .note:
@@ -169,21 +198,6 @@ private struct CaptureDetailSheet: View {
                 Button("ตกลง", role: .cancel) { saveError = nil }
             } message: {
                 Text(saveError ?? "")
-            }
-        }
-    }
-
-    private var assignmentFields: some View {
-        Group {
-            Section("งาน / การบ้าน") {
-                DatePicker("วันส่งงาน", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
-                TextField("รายละเอียด", text: $detail, axis: .vertical)
-                Picker("วิชา", selection: $assignmentSubjectName) {
-                    Text("ไม่ระบุ").tag("")
-                    ForEach(subjects) { subject in
-                        Text(subject.name).tag(subject.name)
-                    }
-                }
             }
         }
     }
@@ -241,16 +255,15 @@ private struct CaptureDetailSheet: View {
 
     private var canSave: Bool {
         switch mode {
-        case .assignment, .calendar:
+        case .calendar:
             return !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .note, .portfolio:
             return !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
     }
 
-    private func title(for mode: SmartCaptureView.CaptureMode) -> String {
+    private func title(for mode: CaptureMode) -> String {
         switch mode {
-        case .assignment: return "งาน / การบ้าน"
         case .calendar: return "กิจกรรมปฏิทิน"
         case .note: return "โน๊ต"
         case .portfolio: return "Portfolio"
@@ -261,8 +274,6 @@ private struct CaptureDetailSheet: View {
         var scheduledEvent: CalendarEvent?
         do {
             switch mode {
-            case .assignment:
-                context.insert(Assignment(title: detailTitle, detail: detail, dueDate: dueDate, subjectName: assignmentSubjectName))
             case .calendar:
                 let event = CalendarEvent(
                     title: detailTitle,
@@ -322,6 +333,6 @@ extension CaptureDetailSheet.AlertOption {
 }
 
 #Preview {
-    SmartCaptureView()
+    QuickAddSheet()
         .modelContainer(for: [Assignment.self, Note.self, CalendarEvent.self, PortfolioItem.self, Subject.self], inMemory: true)
 }
