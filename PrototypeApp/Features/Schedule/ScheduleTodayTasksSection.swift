@@ -15,9 +15,13 @@ struct ScheduleTodayTasksSection: View {
     @Query private var allAssignments: [Assignment]
     @Query(sort: \Subject.createdAt) private var subjects: [Subject]
 
+    /// ตารางเรียนแสดงเฉพาะการบ้านเป็นค่าเริ่มต้น — เปิดรวมงานส่วนตัวได้ที่ Settings
+    @AppStorage("scheduleShowsPersonalTasks") private var showsPersonalTasks = false
+
     private var tasks: [Assignment] {
         allAssignments.filter {
             guard !$0.isDone, let due = $0.resolvedDueDate else { return false }
+            guard showsPersonalTasks || $0.kind == .homework else { return false }
             return Calendar.current.isDate(due, inSameDayAs: targetDate)
         }
     }

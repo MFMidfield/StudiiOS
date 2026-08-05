@@ -26,6 +26,7 @@ struct SettingsView: View {
     @AppStorage("hasCompletedScheduleSetup") private var hasCompletedScheduleSetup = false
     @AppStorage("hasCompletedGradeSetup") private var hasCompletedGradeSetup = false
     @AppStorage("hasCompletedSetupSummary") private var hasCompletedSetupSummary = false
+    @AppStorage("scheduleShowsPersonalTasks") private var scheduleShowsPersonalTasks = false
 
     var body: some View {
         List {
@@ -110,6 +111,13 @@ struct SettingsView: View {
                 NavigationLink("การแจ้งเตือนที่ตั้งไว้") {
                     PendingNotificationsView()
                 }
+            }
+
+            Section("ตารางเรียน") {
+                Toggle("แสดงงานส่วนตัวในตารางเรียน", isOn: $scheduleShowsPersonalTasks)
+                Text("ปิดไว้ = การ์ด \"งาน / การบ้านวันนี้\" แสดงเฉพาะการบ้าน ไม่รวมงานทั่วไป")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
 
             Section("เกี่ยวกับ") {
