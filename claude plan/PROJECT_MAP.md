@@ -1,7 +1,7 @@
 # PROJECT_MAP — Student OS (PrototypeApp)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-03 · **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
+> **อัปเดตล่าสุด:** 2026-08-07 · **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
 > ถ้าแก้โครงสร้าง (เพิ่ม/ลบไฟล์, เพิ่ม @Model, เปลี่ยน tab) → อัปเดตไฟล์นี้ในคอมมิตเดียวกัน
 
 ---
@@ -53,12 +53,37 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │   │                                (พิกัด normalized origin ซ้าย**ล่าง** กลับหัวกับ SwiftUI) + `dumpOCRBoxes(_:label:)`
 │   │   │                                `candidates` = topCandidates ของ Vision เรียงดีสุดก่อน, `candidates[0] == text` เสมอ
 │   │   │                                init มี default → call site ที่ขอ top 1 อย่างเดียวยังคอมไพล์ได้
-│   │   ├── SubjectCodeValidator.swift   ไวยากรณ์รหัสวิชาไทย (พยัญชนะ 1 + เลข 5) + `confusionMap` (2→ว, W→พ, 0→ง/อ, 1→ท/ก/จ)
+│   │   ├── SubjectCodeValidator.swift   ไวยากรณ์รหัสวิชาไทย (พยัญชนะ 1 + เลข 5)
+│   │   │                                `confusionMap` = คู่ที่**ยืนยันจากรูปจริง** (ตัวเลือกเดียว = ซ่อมอัตโนมัติ)
+│   │   │                                `shapeOnlyConfusionMap` = เดาจากรูปทรงล้วน (4→ง, 6→ค, A→ค, a→ส, N→พ, n→ก/ท, ด→ค)
+│   │   │                                → **ติดธงเสมอ ไม่ซ่อมอัตโนมัติ** แม้มีตัวเลือกเดียว
+│   │   │                                `looksLikeCode` = 6 ตัวเป๊ะ (เส้นทางซ่อม) · `looksLikeCodeSlot` = 5–7 ตัว + เลขติดกัน ≥4 (เส้นทางติดธง)
+│   │   │                                `SubjectCodeLedger` = โหวตข้ามภาพ — key คือ**เลข 5 ตัวท้าย** และต้อง**เอกฉันท์**
+│   │   │                                  ⚠️ ห้ามเปลี่ยนเป็น majority: tail `32101` ในรูปอ้างอิงใช้ร่วมกัน 6 วิชา (ท ค พ อ ศ ส)
+│   │   │                                  หลักฐานนับเฉพาะรหัสที่ถูกต้องอยู่แล้ว (`.alreadyValid`) — ของที่ซ่อมมาห้ามเป็นหลักฐาน
+│   │   │                                  ครู↔รหัส ตรวจก่อน sheet-wide เพราะกู้ tail ที่ใช้ร่วมกันได้
 │   │   │                                ⚠️ **ห้ามใช้ `confidence` เลือก candidate** — วัดจากรูปจริงแล้วมันกลับด้าน
 │   │   │                                (รหัสที่ผิดทุกตัว conf 1.00 · ที่ถูกหลายตัว conf 0.50) รายละเอียดใน `PLAN_OCRAccuracy.md` §0.2
+│   │   ├── CellFieldValidator.swift     ไวยากรณ์ของฟิลด์ที่**ไม่ใช่**รหัสวิชา — ชื่อครู · ห้อง · รวมชื่อครูที่สะกดต่างกัน
+│   │   │                                `teacher(in:)` ซ่อม `ครวรัญญา`→`ครูวรัญญา` (สระ ู หาย) · ตัดจุดท้าย · ติดธงถ้ามีอักษรละติน (`ครูA`)
+│   │   │                                `canonicalTeacherNames` edit distance ≤1 = คนเดียวกัน (`ครูจริยา`/`ครูจาริยา`) **ต้องรันก่อนโหวตรหัส**
+│   │   │                                หมายเหตุ: `Character` ไทย = grapheme cluster → `"ครู".count == 2` โค้ดทั้งไฟล์อาศัยข้อนี้
+│   │   ├── TableGridBuilder.swift       **หัวใจของ OCR ตารางเรียน** — เปลี่ยน [OCRTextBox] เป็นกริดจริง
+│   │   │                                auto-detect orientation (วันเป็นแถวหรือคอลัมน์ — **ห้าม hardcode**)
+│   │   │                                → fit `pos = origin + step·index` จาก **คำที่ซ้ำหนึ่งครั้งต่อแถว**
+│   │   │                                  (`โฮมรูม`/`พัก`) ไม่ใช่ชื่อวัน เพราะชื่อวันคือสิ่งที่ Vision อ่านไม่ออก
+│   │   │                                → กู้แถว/คอลัมน์ที่อ่านไม่ออกกลับมาจากเส้นที่ fit ได้
+│   │   │                                คืน `OCRTableGrid` (dayAxis/periodAxis/dayNumbers/periodTimes/cells)
+│   │   │                                รวมงาน: แยกกล่องที่คร่อมหลายคอลัมน์ · กรองหัว/ท้ายกระดาษ (ตกนอกกริด)
+│   │   │                                · รวมช่องหลายบรรทัด (ตกช่องเดียวกันเอง) · เวลาต้องเป็นช่วง start<end 20–180 นาที
 │   │   ├── ScheduleOCRParser.swift      ScheduleDraftEntry ใช้ startMinute/endMinute (Int)
-│   │   │                                `classifySubjectCode(_:)` / `resolveSubjectCode(_:)` = จุดเดียวที่ตัดสินรหัสวิชา
-│   │   │                                ⚠️ `buildDraftSchedule` ยัง**พัง** (สมมติวันเป็นคอลัมน์ แต่ตารางจริงวันเป็นแถว) — รื้อในระยะ B
+│   │   │                                + `periodNumber` `teacherName` `room` `needsReview` `reviewOptions` (มี default ครบ)
+│   │   │                                `classifySubjectCode(_:)` = **จุดเดียว**ที่ตัดสินรหัสวิชา (`.notACode` = ช่องนี้ไม่ใช่ช่องรหัส)
+│   │   │                                `buildDraftSchedule` = TableGridBuilder → `readCell` (รหัส/ครู/ห้อง/กิจกรรม)
+│   │   │                                → `unifyTeacherNames` → `applyCrossImageVote` (ลำดับนี้ห้ามสลับ)
+│   │   │                                `CellContent` แยก `codeNeedsReview` กับ `fieldNeedsReview` — โหวตล้างได้แค่ตัวแรก
+│   │   │                                `parseScheduleDetailed` คืน `ScheduleOCRResult` (entries + problem บอกสาเหตุ)
+│   │   │                                `usesLanguageCorrection` เป็น static var ไว้ A/B (PLAN_OCRFix C5)
 │   │   └── GradeReportOCRParser.swift
 │   ├── Profile/StudentProfileStore.swift (71)
 │   ├── Schedule/PeriodShiftCalculator.swift  logic ล้วน (ไม่มี View): date(forDay:in:) + apply(override:to:) → [ResolvedPeriod]
@@ -85,7 +110,9 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │                                      ไม่ขึ้นใน Release · ไม่มี overlay (รอรอบ 2 ตาม PLAN_OCRDebug.md)
     │                                      โหมด "ตารางเรียน" ต่อท้ายแต่ละแถวด้วยผลของ `classifySubjectCode`
     │                                      (`✅ ซ่อมแล้ว` / `⚠️ กำกวม` / `✓ ถูกอยู่แล้ว`) + บรรทัดสรุปนับรวม
-    │                                      → นี่คือเครื่องมือวัดผลของ PLAN_OCRAccuracy ระยะ A
+    │                                      + **รายการตารางที่ parse ได้จริง** (วัน · คาบ · เวลา · วิชา · ครู · ห้อง · ⚠️)
+    │                                      และข้อความ problem จาก `ScheduleOCRResult` เวลาหากริด/เวลาไม่เจอ
+    │                                      → นี่คือเครื่องมือวัดผลของ PLAN_OCRAccuracy และ PLAN_OCRFix
     ├── Tasks/   หน้า "งาน / การบ้าน" ทั้งโมดูล
     │   ├── AssignmentListView.swift   (~330) root ของหน้า — ประกอบ chips + สถิติ + section + FAB + ค้นหา
     │   │                                     ใช้ `List(.plain)` + `plainRow()` (ซ่อนเส้น/พื้นแถว) เพื่อให้ได้การ์ดลอย **และ** ปัดซ้ายลบได้
@@ -197,6 +224,9 @@ Gated: `PortfolioView`, `TCASPlannerView`
 - `QuickAddSheet.swift`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ (`Repeat` `Location` `Tags` `Alert` `Note` `Detail`) — ผิดกฎ "UI ทั้งหมดเป็นภาษาไทย" ของสกิล ยกมาทั้งดุ้นจาก `SmartCaptureView` เดิม ยังไม่ได้แก้
 - `Features/FocusMode/` เป็นโฟลเดอร์ว่าง (ของเหลือ) — `FocusModeView.swift` ยังอยู่ใน `Features/Portfolio/`
 - `ScheduleTodayTasksSection`: แตะแถวงาน ตอนนี้แค่ log อย่างเดียว ยังไม่เปิดฟอร์มแก้ไข (หน้า Todo เปิดได้แล้ว — เหลือแค่การ์ดในตารางเรียน)
+- **`PLAN_OCRFix.md` ครบทั้ง 2 รอบแล้ว** เหลืออย่างเดียวคือ **UI ให้ผู้ใช้แก้ช่องที่ติดธง ⚠️**
+  `needsReview` / `reviewOptions` ไหลถึง `ScheduleSetupView` แล้วแต่หน้ายังไม่ได้ใช้ → ผู้ใช้ยังไม่รู้ว่าช่องไหนต้องตรวจ
+  (ขัดกับหลักของแผนเอง `PLAN_OCRDebug.md` §6.7 "ผู้ใช้ไม่รู้ว่า 3 ช่องผิด = UX ที่แย่") · `ocrFoundNothing` ยังไม่ได้ใช้ `ScheduleOCRResult.problem`
 - `refreshAssignmentReminders` ตัดที่ 16 งานแรก (× 3 จุด = 48 pending) กันชน 64 ของ iOS — งานที่กำหนดส่งไกลกว่านั้นจะยังไม่ถูกตั้งจนกว่าจะขยับเข้ามาในหน้าต่าง 14 วัน
 
 **`PLAN_ScheduleView.md` ครบทั้ง 3 รอบแล้ว** (Models/Schema → UI ตาราง+ฟอร์ม → งานวันนี้+ร่นคาบ) — ฟีเจอร์ตารางเรียนถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป

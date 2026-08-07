@@ -17,16 +17,31 @@ enum SubjectCodeValidator {
     /// Thai consonants ก (U+0E01) … ฮ (U+0E2E)
     private static let thaiConsonants: ClosedRange<UInt32> = 0x0E01...0x0E2E
 
-    /// Confusion pairs observed on real report photos.
-    /// Value = every plausible correction, most likely first.
-    /// Only entries with EXACTLY ONE candidate get auto-repaired; the rest
-    /// are flagged for the user (see `repair`).
+    /// Confusion pairs CONFIRMED on real report photos — every one of these was
+    /// observed as an actual misread, not inferred from letter shapes.
+    /// An entry with exactly one candidate is repaired automatically; the rest
+    /// are handed to the user (see `repair`).
     static let confusionMap: [Character: [Character]] = [
-        "2": ["ว"],
+        "2": ["ว"],               // 5 occurrences on the reference sheet
         "W": ["พ"],
         "w": ["พ"],
+        "3": ["ส"],
         "0": ["ง", "อ"],          // genuinely ambiguous — always flag
-        "1": ["ท", "ก", "จ"],     // unconfirmed, flag
+        "1": ["ท", "ก", "จ"],     // ท seen twice, the rest are shape-only
+    ]
+
+    /// Guesses made from letter shapes alone, never seen in a verified misread.
+    /// These are ALWAYS flagged, even the single-candidate ones — repairing on
+    /// shape resemblance is exactly the "automatic 100%" the round-2 design
+    /// rule rejects: repair what you can prove, flag what you can't.
+    static let shapeOnlyConfusionMap: [Character: [Character]] = [
+        "4": ["ง"],
+        "6": ["ค"],
+        "A": ["ค"],
+        "a": ["ส"],
+        "N": ["พ"],
+        "n": ["ก", "ท"],
+        "ด": ["ค"],
     ]
 
     /// True when `text` is a well-formed subject code.
@@ -38,13 +53,36 @@ enum SubjectCodeValidator {
         return t.dropFirst().allSatisfy(\.isNumber)
     }
 
-    /// True when `text` LOOKS like a subject code slot (6 chars, last five
-    /// are digits) regardless of whether the first char is a Thai consonant.
-    /// Used to decide "this box was supposed to be a code" before repairing.
+    /// True when `text` has the exact SHAPE of a subject code (6 chars, last
+    /// five are digits) regardless of what the first character turned out to
+    /// be. This is the only shape that gets auto-repaired.
     static func looksLikeCode(_ text: String) -> Bool {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard t.count == 6 else { return false }
         return t.dropFirst().allSatisfy(\.isNumber)
+    }
+
+    /// Looser: the cell was *meant* to be a code even though Vision dropped or
+    /// invented a character around it. 5–7 characters containing a run of at
+    /// least four digits.
+    ///
+    /// Used only to decide "this belongs to the user", never to repair — the
+    /// point is that a dropped consonant surfaces as ⚠️ instead of becoming a
+    /// subject literally named "32101".
+    static func looksLikeCodeSlot(_ text: String) -> Bool {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (5...7).contains(t.count) else { return false }
+        return longestDigitRun(t) >= 4
+    }
+
+    /// The five trailing digits of a code-shaped string — the key the
+    /// cross-image ledger groups on.
+    static func tail(of text: String) -> String? {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard t.count >= 5 else { return nil }
+        let last = String(t.suffix(5))
+        guard last.allSatisfy(\.isNumber), Int(last) != nil else { return nil }
+        return last
     }
 
     enum Repair {
@@ -54,16 +92,97 @@ enum SubjectCodeValidator {
         case unknown                             // no idea — needs the user
     }
 
-    /// Single-character confusion repair. Voting across the whole image
-    /// (using other codes that share the same five trailing digits) is a
-    /// separate, later stage — this function looks at one string only.
+    /// Single-character confusion repair. Voting across the whole image is a
+    /// separate stage (`SubjectCodeLedger`) — this function looks at one
+    /// string, on its own, with no context.
     static func repair(_ text: String) -> Repair {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if isValid(t) { return .alreadyValid(t) }
         guard looksLikeCode(t), let first = t.first else { return .unknown }
-        guard let options = confusionMap[first] else { return .unknown }
         let tail = t.dropFirst()
-        let fixed = options.map { String($0) + tail }
-        return fixed.count == 1 ? .repaired(fixed[0]) : .ambiguous(options: fixed)
+
+        if let options = confusionMap[first] {
+            let fixed = options.map { String($0) + tail }
+            return fixed.count == 1 ? .repaired(fixed[0]) : .ambiguous(options: fixed)
+        }
+        if let options = shapeOnlyConfusionMap[first] {
+            return .ambiguous(options: options.map { String($0) + tail })
+        }
+        return .unknown
+    }
+
+    /// Longest run of consecutive digits — the signal that a cell was a code
+    /// slot even when its length is off by one.
+    private static func longestDigitRun(_ text: String) -> Int {
+        var best = 0
+        var run = 0
+        for character in text {
+            if character.isNumber {
+                run += 1
+                best = max(best, run)
+            } else {
+                run = 0
+            }
+        }
+        return best
+    }
+}
+
+/// Agreement between several readings of the same code within one image.
+///
+/// This is the only thing that can catch Thai→Thai confusion: ค misread as ศ
+/// produces a perfectly well-formed code, so the grammar above is blind to it
+/// and no per-string rule will ever see the problem.
+///
+/// Two rules, deliberately narrow:
+///
+/// * **Unanimity, not majority.** The key is the five trailing digits, and the
+///   valid readings sharing that tail must all agree. On the reference sheet
+///   the tail "32101" is shared by ท ค พ อ ศ ส — a plain majority vote there
+///   would rewrite six correct cells in order to fix none. Unanimity narrows
+///   the rule to "in this table that tail belongs to exactly one subject",
+///   which is the only case where the evidence actually holds.
+/// * **Only proven readings vote.** A code produced by confusion repair must
+///   never become the proof for the next one, or one bad guess propagates
+///   across the sheet.
+struct SubjectCodeLedger {
+    private var byTail: [String: Set<Character>] = [:]
+    private var byTeacherAndTail: [String: Set<Character>] = [:]
+
+    /// Field separator that cannot appear in a name or a code.
+    private static let keySeparator = "\u{1F}"
+
+    init(observations: [(code: String, teacher: String?)]) {
+        for observation in observations {
+            let code = observation.code.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard SubjectCodeValidator.isValid(code),
+                  let tail = SubjectCodeValidator.tail(of: code),
+                  let lead = code.first
+            else { continue }
+            byTail[tail, default: []].insert(lead)
+            if let teacher = observation.teacher {
+                byTeacherAndTail[Self.key(teacher, tail), default: []].insert(lead)
+            }
+        }
+    }
+
+    /// The leading consonant this tail must have, or nil when the image offers
+    /// no unanimous answer.
+    ///
+    /// Teacher evidence goes first: one teacher teaches one subject, so it
+    /// still decides tails that several subjects share — the case where the
+    /// sheet-wide vote has to abstain.
+    func leadingConsonant(tail: String, teacher: String?) -> Character? {
+        if let teacher, let byTeacher = byTeacherAndTail[Self.key(teacher, tail)], byTeacher.count == 1 {
+            return byTeacher.first
+        }
+        if let sheetWide = byTail[tail], sheetWide.count == 1 {
+            return sheetWide.first
+        }
+        return nil
+    }
+
+    private static func key(_ teacher: String, _ tail: String) -> String {
+        teacher + keySeparator + tail
     }
 }

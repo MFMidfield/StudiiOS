@@ -1,11 +1,11 @@
 //
 //  ScheduleOCRParser.swift
 //  Best-effort, fully on-device parser that turns a photo of a school
-//  timetable into draft ScheduleEntry rows: Vision reads the text, then a
-//  heuristic maps each text box onto a (day column, time row) grid using
-//  its position in the image. Results are always a *draft* meant to be
-//  reviewed/edited in ScheduleSetupView — table layouts vary too much
-//  across schools for this to be reliable without user confirmation.
+//  timetable into draft ScheduleEntry rows: Vision reads the text,
+//  TableGridBuilder recovers the table geometry, and this file decides what
+//  each cell means. Results are always a *draft* meant to be reviewed in
+//  ScheduleSetupView — cells the parser cannot prove are marked `needsReview`
+//  rather than silently guessed.
 //
 
 import UIKit
@@ -17,21 +17,56 @@ struct ScheduleDraftEntry: Identifiable {
     var startMinute: Int
     var endMinute: Int
     var subjectName: String
+    /// Column index in the photographed table, 0-based. Not the school's own
+    /// period numbering unless the table happens to start at 0.
+    var periodNumber: Int = 0
+    var teacherName: String?
+    var room: String?
+    /// True when the parser could not prove its reading — the cell is a guess
+    /// and the user has to confirm it.
+    var needsReview: Bool = false
+    /// Every plausible reading when the ambiguity is enumerable (e.g. a
+    /// leading "0" that is either ง or อ). Empty means "no idea, just check".
+    var reviewOptions: [String] = []
+}
+
+/// Outcome of one parse. Entries can be non-empty *and* carry a problem: a
+/// missing time row is worth telling the user about, not worth throwing the
+/// whole table away for.
+struct ScheduleOCRResult {
+    var entries: [ScheduleDraftEntry] = []
+    var problem: Problem?
+
+    enum Problem {
+        case noTextFound
+        case gridNotRecognized
+        case timesNotRecognized
+
+        var message: String {
+            switch self {
+            case .noTextFound:
+                return "อ่านตัวหนังสือในรูปไม่ออกเลย ลองถ่ายใหม่ให้ชัดขึ้นและอย่าให้เอียง"
+            case .gridNotRecognized:
+                return "หาโครงตารางไม่เจอ ลองถ่ายให้เห็นตารางทั้งใบ ไม่มีมือหรือเงาบัง"
+            case .timesNotRecognized:
+                return "อ่านแถวเวลาไม่ออก เวลาที่ใส่ให้เป็นการเดา กรุณาตรวจก่อนบันทึก"
+            }
+        }
+    }
 }
 
 enum ScheduleOCRParser {
-    private static let dayKeywords: [(pattern: String, day: Int)] = [
-        ("จันทร์", 1), ("อังคาร", 2), ("พุธ", 3), ("พฤหัส", 4), ("ศุกร์", 5), ("เสาร์", 6), ("อาทิตย์", 7),
-        ("MON", 1), ("TUE", 2), ("WED", 3), ("THU", 4), ("FRI", 5), ("SAT", 6), ("SUN", 7),
-    ]
+    /// A/B knob for PLAN_OCRFix C5. Vision's language model is tuned for prose
+    /// and can "correct" a subject code into a real word; on a sheet that is
+    /// mostly codes and proper nouns it may do more harm than good. Flip this,
+    /// re-run the same photo through the debug viewer, and compare the
+    /// "ถูกเลย / ซ่อมได้ / ต้องให้คนดู" line before deciding.
+    static var usesLanguageCorrection = true
 
-    private static let timeRegex = try! NSRegularExpression(pattern: "([01]?\\d|2[0-3])[:.]([0-5]\\d)")
-
-    /// Runs Vision OCR on `image` off the main thread and calls `completion` with
-    /// draft schedule rows on the main thread. Returns an empty array if no day
-    /// header or no time labels could be found (table layout not recognized).
+    /// Runs Vision OCR on `image` off the main thread and calls `completion`
+    /// with draft schedule rows on the main thread.
     static func parseSchedule(from image: UIImage, completion: @escaping ([ScheduleDraftEntry]) -> Void) {
-        parseSchedule(from: image, onRawBoxes: nil, completion: completion)
+        parseScheduleDetailed(from: image, onRawBoxes: nil) { completion($0.entries) }
     }
 
     /// Same as above, plus `onRawBoxes` — every line Vision recognized, before
@@ -45,10 +80,20 @@ enum ScheduleOCRParser {
         onRawBoxes: (([OCRTextBox]) -> Void)?,
         completion: @escaping ([ScheduleDraftEntry]) -> Void
     ) {
+        parseScheduleDetailed(from: image, onRawBoxes: onRawBoxes) { completion($0.entries) }
+    }
+
+    /// The full result, including *why* a parse came back thin. Callers that
+    /// only need the rows should use `parseSchedule` above.
+    static func parseScheduleDetailed(
+        from image: UIImage,
+        onRawBoxes: (([OCRTextBox]) -> Void)?,
+        completion: @escaping (ScheduleOCRResult) -> Void
+    ) {
         guard let cgImage = image.cgImage else {
             DispatchQueue.main.async {
                 onRawBoxes?([])
-                completion([])
+                completion(ScheduleOCRResult(entries: [], problem: .noTextFound))
             }
             return
         }
@@ -66,14 +111,14 @@ enum ScheduleOCRParser {
                 )
             }
             dumpOCRBoxes(boxes, label: "Schedule")
-            let drafts = buildDraftSchedule(from: boxes)
+            let result = buildDraftSchedule(from: boxes)
             DispatchQueue.main.async {
                 onRawBoxes?(boxes)
-                completion(drafts)
+                completion(result)
             }
         }
         request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
+        request.usesLanguageCorrection = usesLanguageCorrection
         request.recognitionLanguages = ["th-TH", "en-US"]
 
         let orientation = cgOrientation(from: image.imageOrientation)
@@ -111,7 +156,10 @@ enum ScheduleOCRParser {
         }
         // Only treat this box as a code slot if *some* reading has the shape
         // of one; otherwise plain text would come back as "unrepairable code".
-        guard box.candidates.contains(where: SubjectCodeValidator.looksLikeCode) else { return .notACode }
+        // The loose test is deliberate: a code Vision read one character short
+        // must still land here so it gets flagged, instead of sailing through
+        // as a subject named "32101".
+        guard box.candidates.contains(where: SubjectCodeValidator.looksLikeCodeSlot) else { return .notACode }
 
         switch SubjectCodeValidator.repair(box.text) {
         case .alreadyValid(let code):
@@ -125,70 +173,218 @@ enum ScheduleOCRParser {
         }
     }
 
-    /// Convenience wrapper for the grid builder: the code to use plus whether
-    /// the resulting cell has to be confirmed by the user.
-    static func resolveSubjectCode(_ box: OCRTextBox) -> (code: String, needsReview: Bool) {
-        switch classifySubjectCode(box) {
-        case .notACode:
-            return (box.text.trimmingCharacters(in: .whitespacesAndNewlines), false)
-        case .alreadyValid(let code), .repaired(let code):
-            return (code, false)
-        case .needsReview(let best, _):
-            return (best, true)
+    // MARK: - Grid → drafts
+
+    /// What one cell of the table turned out to contain.
+    private struct CellContent {
+        var name = ""
+        var teacher: String?
+        var room: String?
+        /// Doubt about the subject code specifically — this is what the
+        /// cross-image vote can clear.
+        var codeNeedsReview = false
+        /// Doubt about some other field ("ครูA"). The vote must NOT clear this:
+        /// agreeing on the code says nothing about the teacher's name.
+        var fieldNeedsReview = false
+        var options: [String] = []
+        /// True when `name` came out of the subject-code path — only those
+        /// cells take part in the cross-image vote.
+        var isCode = false
+        /// True when `name` was already a well-formed code with no repair at
+        /// all. Only these are trusted as evidence for the other cells.
+        var isProvenCode = false
+
+        var needsReview: Bool { codeNeedsReview || fieldNeedsReview }
+    }
+
+    private struct CellReading {
+        let day: Int
+        let period: Int
+        var content: CellContent
+    }
+
+    /// Recovers the table geometry, reads every non-empty cell, then lets the
+    /// cells correct each other before anything is emitted. Page titles and
+    /// signature lines fall outside the fitted grid and are dropped without a
+    /// special case.
+    private static func buildDraftSchedule(from boxes: [OCRTextBox]) -> ScheduleOCRResult {
+        guard !boxes.isEmpty else {
+            return ScheduleOCRResult(entries: [], problem: .noTextFound)
+        }
+        guard let grid = TableGridBuilder.build(from: boxes) else {
+            return ScheduleOCRResult(entries: [], problem: .gridNotRecognized)
+        }
+
+        var readings: [CellReading] = []
+        for day in 0..<grid.dayCount {
+            for period in 0..<grid.periodCount {
+                let fragments = grid.cells[day][period]
+                guard !fragments.isEmpty else { continue }
+                let content = readCell(fragments)
+                guard !content.name.isEmpty else { continue }
+                readings.append(CellReading(day: day, period: period, content: content))
+            }
+        }
+
+        // Order matters: teacher spellings have to be merged first, because
+        // the vote leans on "one teacher teaches one subject" and two
+        // spellings of one teacher would quietly break that.
+        unifyTeacherNames(&readings)
+        let voted = applyCrossImageVote(&readings)
+
+        var entries: [ScheduleDraftEntry] = []
+        var sawMeasuredTime = false
+        for reading in readings {
+            let time = grid.periodTimes[reading.period]
+            if time?.isInferred == false { sawMeasuredTime = true }
+            let fallbackStart = 8 * 60 + 30 + reading.period * 50
+            let start = time?.start ?? fallbackStart
+            let end = time.map { max($0.end, $0.start + 5) } ?? (fallbackStart + 50)
+
+            entries.append(
+                ScheduleDraftEntry(
+                    dayOfWeek: grid.dayNumbers[reading.day],
+                    startMinute: start,
+                    endMinute: end,
+                    subjectName: reading.content.name,
+                    periodNumber: reading.period,
+                    teacherName: reading.content.teacher,
+                    room: reading.content.room,
+                    needsReview: reading.content.needsReview || time?.isInferred != false,
+                    reviewOptions: reading.content.options
+                )
+            )
+        }
+
+        entries.sort {
+            $0.dayOfWeek != $1.dayOfWeek ? $0.dayOfWeek < $1.dayOfWeek : $0.startMinute < $1.startMinute
+        }
+
+        #if DEBUG
+        let flagged = entries.filter(\.needsReview).count
+        AppLog.action(
+            "OCR",
+            "กริด \(grid.dayCount)×\(grid.periodCount) · วันเป็น\(grid.daysAreRows ? "แถว" : "คอลัมน์")"
+                + " · ได้ \(entries.count) รายการ · โหวตซ่อม \(voted) · ติดธง \(flagged)"
+        )
+        #endif
+
+        // A grid that produced no cells at all was not really a grid.
+        if entries.isEmpty {
+            return ScheduleOCRResult(entries: [], problem: .gridNotRecognized)
+        }
+        return ScheduleOCRResult(entries: entries, problem: sawMeasuredTime ? nil : .timesNotRecognized)
+    }
+
+    /// Splits the lines of one cell into subject code / teacher / room, then
+    /// falls back to free text so activity cells ("โฮมรูม", "พัก", "ชุมนุม",
+    /// "กิจกรรมในเครื่องแบบ") survive instead of being dropped. A timetable
+    /// with holes in it is worse than one with a few rough labels.
+    private static func readCell(_ fragments: [OCRCellFragment]) -> CellContent {
+        var content = CellContent()
+        var code: (text: String, needsReview: Bool, options: [String], proven: Bool)?
+        var freeText: [String] = []
+
+        for fragment in fragments {
+            let text = fragment.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { continue }
+
+            if code == nil {
+                switch classifySubjectCode(fragment.asTextBox) {
+                case .alreadyValid(let value):
+                    code = (value, false, [], true)
+                    continue
+                case .repaired(let value):
+                    code = (value, false, [], false)
+                    continue
+                case .needsReview(let best, let options):
+                    code = (best, true, options, false)
+                    continue
+                case .notACode:
+                    break
+                }
+            }
+            if content.teacher == nil, let reading = CellFieldValidator.teacher(in: text) {
+                content.teacher = reading.name
+                if reading.needsReview { content.fieldNeedsReview = true }
+                continue
+            }
+            if content.room == nil, CellFieldValidator.isRoom(text) {
+                content.room = text
+                continue
+            }
+            freeText.append(text)
+        }
+
+        if let code {
+            content.name = code.text
+            content.isCode = true
+            content.isProvenCode = code.proven
+            content.codeNeedsReview = code.needsReview
+            content.options = code.options
+            return content
+        }
+        let activity = freeText.joined(separator: " ").trimmingCharacters(in: .whitespaces)
+        if !activity.isEmpty {
+            content.name = activity
+            return content
+        }
+        // Teacher or room only: something was read but the subject itself was
+        // not — keep the cell so the user sees there is something to fill in.
+        if let teacher = content.teacher {
+            content.name = teacher
+            content.fieldNeedsReview = true
+            return content
+        }
+        if let room = content.room {
+            content.name = room
+            content.fieldNeedsReview = true
+        }
+        return content
+    }
+
+    // MARK: - Cross-cell correction
+
+    /// Collapses the spellings of one teacher onto a single canonical name.
+    private static func unifyTeacherNames(_ readings: inout [CellReading]) {
+        let mapping = CellFieldValidator.canonicalTeacherNames(readings.compactMap(\.content.teacher))
+        for index in readings.indices {
+            guard let teacher = readings[index].content.teacher else { continue }
+            readings[index].content.teacher = mapping[teacher] ?? teacher
         }
     }
 
-    /// Maps recognized text boxes onto a day/time grid:
-    /// 1. Boxes matching a day name become column anchors (x position).
-    /// 2. Boxes matching a time like "08:30" become row anchors (y position),
-    ///    sorted top-to-bottom (Vision's boundingBox origin is bottom-left).
-    /// 3. Every remaining box is assigned to its nearest column and the row
-    ///    band it falls into, becoming that cell's subject name.
-    private static func buildDraftSchedule(from boxes: [OCRTextBox]) -> [ScheduleDraftEntry] {
-        var dayColumns: [(day: Int, x: CGFloat)] = []
-        for box in boxes {
-            for (pattern, day) in dayKeywords where box.text.localizedCaseInsensitiveContains(pattern) {
-                dayColumns.append((day, box.boundingBox.midX))
-                break
-            }
+    /// Lets cells that read cleanly repair the ones that didn't, and returns
+    /// how many were fixed.
+    ///
+    /// A unanimous ledger answer outranks a confusion-table repair on purpose:
+    /// several readings from different places on the same sheet are stronger
+    /// evidence than one guess about the shape of one character. It never
+    /// touches a cell that was already well-formed on its own — see
+    /// `SubjectCodeLedger` for why overriding those would do more harm than
+    /// good on tails that several subjects share.
+    private static func applyCrossImageVote(_ readings: inout [CellReading]) -> Int {
+        let ledger = SubjectCodeLedger(
+            observations: readings
+                .filter(\.content.isProvenCode)
+                .map { (code: $0.content.name, teacher: $0.content.teacher) }
+        )
+
+        var fixed = 0
+        for index in readings.indices {
+            let content = readings[index].content
+            guard content.isCode, !content.isProvenCode else { continue }
+            guard let tail = SubjectCodeValidator.tail(of: content.name),
+                  let lead = ledger.leadingConsonant(tail: tail, teacher: content.teacher)
+            else { continue }
+
+            let agreed = String(lead) + tail
+            if agreed != content.name { fixed += 1 }
+            readings[index].content.name = agreed
+            readings[index].content.codeNeedsReview = false
+            readings[index].content.options = []
         }
-        guard !dayColumns.isEmpty else { return [] }
-
-        struct TimeRow { let y: CGFloat; let hour: Int; let minute: Int }
-        var timeRows: [TimeRow] = []
-        for box in boxes {
-            let ns = box.text as NSString
-            if let match = timeRegex.firstMatch(in: box.text, range: NSRange(location: 0, length: ns.length)) {
-                let hour = Int(ns.substring(with: match.range(at: 1))) ?? 0
-                let minute = Int(ns.substring(with: match.range(at: 2))) ?? 0
-                timeRows.append(TimeRow(y: box.boundingBox.midY, hour: hour, minute: minute))
-            }
-        }
-        timeRows.sort { $0.y > $1.y }
-        guard timeRows.count >= 2 else { return [] }
-
-        var drafts: [ScheduleDraftEntry] = []
-        for box in boxes {
-            let text = box.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { continue }
-            if dayKeywords.contains(where: { text.localizedCaseInsensitiveContains($0.pattern) }) { continue }
-            let ns = text as NSString
-            if timeRegex.firstMatch(in: text, range: NSRange(location: 0, length: ns.length)) != nil { continue }
-
-            guard let nearestDay = dayColumns.min(by: { abs($0.x - box.boundingBox.midX) < abs($1.x - box.boundingBox.midX) }) else { continue }
-            guard let rowIndex = timeRows.firstIndex(where: { box.boundingBox.midY >= $0.y }) else { continue }
-
-            let startRow = timeRows[rowIndex]
-            let endRow = rowIndex > 0 ? timeRows[rowIndex - 1] : nil
-            let startMinute = startRow.hour * 60 + startRow.minute
-            let endMinute = endRow.map { $0.hour * 60 + $0.minute } ?? (startMinute + 50)
-
-            drafts.append(ScheduleDraftEntry(dayOfWeek: nearestDay.day, startMinute: startMinute, endMinute: endMinute, subjectName: text))
-        }
-
-        return drafts.sorted {
-            $0.dayOfWeek != $1.dayOfWeek ? $0.dayOfWeek < $1.dayOfWeek : $0.startMinute < $1.startMinute
-        }
+        return fixed
     }
 
     private static func cgOrientation(from uiOrientation: UIImage.Orientation) -> CGImagePropertyOrientation {

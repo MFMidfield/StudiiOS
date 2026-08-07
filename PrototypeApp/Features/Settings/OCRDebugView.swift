@@ -46,6 +46,10 @@ struct OCRDebugView: View {
     @State private var image: UIImage?
     @State private var boxes: [OCRTextBox] = []
     @State private var draftCount: Int = 0
+    /// Schedule mode only — the actual rows, so a parse can be judged on what
+    /// it produced and not just on how many rows it produced.
+    @State private var scheduleDrafts: [ScheduleDraftEntry] = []
+    @State private var problemMessage: String?
     @State private var isAnalyzing = false
     @State private var hasResult = false
     @State private var picker: PickerRequest?
@@ -163,6 +167,8 @@ struct OCRDebugView: View {
                         .foregroundStyle(Theme.Colors.danger)
                 } else {
                     codeSummaryLine
+                    problemLine
+                    draftList
 
                     Divider()
 
@@ -187,6 +193,46 @@ struct OCRDebugView: View {
                 .foregroundStyle(Theme.Colors.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    @ViewBuilder
+    private var problemLine: some View {
+        if let problemMessage {
+            Text("⚠️ \(problemMessage)")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Theme.Colors.warning)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// The parsed timetable itself. This is what the round-2 grid work is
+    /// measured against — box count says nothing about whether the grid landed.
+    @ViewBuilder
+    private var draftList: some View {
+        if !scheduleDrafts.isEmpty {
+            Divider()
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                ForEach(scheduleDrafts) { draft in
+                    Text(draftLine(draft))
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(draft.needsReview ? Theme.Colors.warning : Theme.Colors.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    private func draftLine(_ draft: ScheduleDraftEntry) -> String {
+        let day = ScheduleConstants.dayLabels[draft.dayOfWeek] ?? "?"
+        let time = "\(draft.startMinute.asClockString)-\(draft.endMinute.asClockString)"
+        var line = "\(day) ค\(draft.periodNumber) \(time)  \(draft.subjectName)"
+        if let teacher = draft.teacherName { line += "  · \(teacher)" }
+        if let room = draft.room { line += "  · \(room)" }
+        if draft.needsReview {
+            let options = draft.reviewOptions.isEmpty ? "" : " (\(draft.reviewOptions.joined(separator: "/")))"
+            line += "  ⚠️\(options)"
+        }
+        return line
     }
 
     // MARK: - Subject code annotations (schedule mode only)
@@ -244,6 +290,12 @@ struct OCRDebugView: View {
             "===== \(mode.dumpLabel) · Vision อ่านได้ \(boxes.count) กล่อง · parse เป็น \(draftCount) รายการ ====="
         ]
         if let summary = codeSummaryText { lines.append(summary) }
+        if let problemMessage { lines.append("⚠️ \(problemMessage)") }
+        if !scheduleDrafts.isEmpty {
+            lines.append("----- ตารางที่ parse ได้ -----")
+            lines += scheduleDrafts.map(draftLine)
+            lines.append("----- กล่องดิบ -----")
+        }
         lines += boxes.enumerated().map { line(for: $0.element, index: $0.offset) }
         lines.append("===== จบ =====")
         return lines.joined(separator: "\n")
@@ -253,15 +305,19 @@ struct OCRDebugView: View {
         self.image = image
         boxes = []
         draftCount = 0
+        scheduleDrafts = []
+        problemMessage = nil
         hasResult = false
         isAnalyzing = true
 
         switch mode {
         case .schedule:
-            ScheduleOCRParser.parseSchedule(from: image, onRawBoxes: { raw in
+            ScheduleOCRParser.parseScheduleDetailed(from: image, onRawBoxes: { raw in
                 boxes = raw
-            }) { drafts in
-                draftCount = drafts.count
+            }) { result in
+                scheduleDrafts = result.entries
+                draftCount = result.entries.count
+                problemMessage = result.problem?.message
                 isAnalyzing = false
                 hasResult = true
             }
