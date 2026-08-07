@@ -17,28 +17,48 @@ struct GradeDraftEntry: Identifiable {
     var gradePoint: Double
 }
 
-private struct RecognizedTextBox {
-    let text: String
-    let boundingBox: CGRect
-}
-
 enum GradeReportOCRParser {
     private static let numberRegex = try! NSRegularExpression(pattern: "^\\d+(\\.\\d+)?$")
 
     static func parseGradeReport(from image: UIImage, completion: @escaping ([GradeDraftEntry]) -> Void) {
+        parseGradeReport(from: image, onRawBoxes: nil, completion: completion)
+    }
+
+    /// Same as above, plus `onRawBoxes` — every line Vision recognized, before
+    /// any heuristic runs, delivered on the main thread for OCRDebugView.
+    ///
+    /// Kept as a separate overload rather than a defaulted parameter so the
+    /// existing `parseGradeReport(from:) { ... }` trailing-closure call sites
+    /// keep binding to `completion` under Swift's forward-scan matching.
+    static func parseGradeReport(
+        from image: UIImage,
+        onRawBoxes: (([OCRTextBox]) -> Void)?,
+        completion: @escaping ([GradeDraftEntry]) -> Void
+    ) {
         guard let cgImage = image.cgImage else {
-            DispatchQueue.main.async { completion([]) }
+            DispatchQueue.main.async {
+                onRawBoxes?([])
+                completion([])
+            }
             return
         }
 
         let request = VNRecognizeTextRequest { request, _ in
             let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
-            let boxes = observations.compactMap { observation -> RecognizedTextBox? in
+            let boxes = observations.compactMap { observation -> OCRTextBox? in
                 guard let candidate = observation.topCandidates(1).first else { return nil }
-                return RecognizedTextBox(text: candidate.string, boundingBox: observation.boundingBox)
+                return OCRTextBox(
+                    text: candidate.string,
+                    boundingBox: observation.boundingBox,
+                    confidence: candidate.confidence
+                )
             }
+            dumpOCRBoxes(boxes, label: "GradeReport")
             let drafts = buildDraftEntries(from: boxes)
-            DispatchQueue.main.async { completion(drafts) }
+            DispatchQueue.main.async {
+                onRawBoxes?(boxes)
+                completion(drafts)
+            }
         }
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
@@ -56,7 +76,7 @@ enum GradeReportOCRParser {
     /// 3. Within each row: numeric boxes go to whichever column they're
     ///    closest to (or left/right order if no header was found); the
     ///    rest of the text becomes the subject name.
-    private static func buildDraftEntries(from boxes: [RecognizedTextBox]) -> [GradeDraftEntry] {
+    private static func buildDraftEntries(from boxes: [OCRTextBox]) -> [GradeDraftEntry] {
         var creditColumnX: CGFloat?
         var gradeColumnX: CGFloat?
         for box in boxes {
@@ -77,8 +97,8 @@ enum GradeReportOCRParser {
 
         guard !bodyBoxes.isEmpty else { return [] }
 
-        var rows: [[RecognizedTextBox]] = []
-        var currentRow: [RecognizedTextBox] = []
+        var rows: [[OCRTextBox]] = []
+        var currentRow: [OCRTextBox] = []
         var currentRowY: CGFloat?
         let rowThreshold: CGFloat = 0.025
 

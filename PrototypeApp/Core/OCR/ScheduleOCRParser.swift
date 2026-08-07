@@ -19,11 +19,6 @@ struct ScheduleDraftEntry: Identifiable {
     var subjectName: String
 }
 
-private struct RecognizedTextBox {
-    let text: String
-    let boundingBox: CGRect
-}
-
 enum ScheduleOCRParser {
     private static let dayKeywords: [(pattern: String, day: Int)] = [
         ("จันทร์", 1), ("อังคาร", 2), ("พุธ", 3), ("พฤหัส", 4), ("ศุกร์", 5), ("เสาร์", 6), ("อาทิตย์", 7),
@@ -36,19 +31,44 @@ enum ScheduleOCRParser {
     /// draft schedule rows on the main thread. Returns an empty array if no day
     /// header or no time labels could be found (table layout not recognized).
     static func parseSchedule(from image: UIImage, completion: @escaping ([ScheduleDraftEntry]) -> Void) {
+        parseSchedule(from: image, onRawBoxes: nil, completion: completion)
+    }
+
+    /// Same as above, plus `onRawBoxes` — every line Vision recognized, before
+    /// any heuristic runs, delivered on the main thread for OCRDebugView.
+    ///
+    /// Kept as a separate overload rather than a defaulted parameter so the
+    /// existing `parseSchedule(from:) { ... }` trailing-closure call sites keep
+    /// binding to `completion` under Swift's forward-scan matching.
+    static func parseSchedule(
+        from image: UIImage,
+        onRawBoxes: (([OCRTextBox]) -> Void)?,
+        completion: @escaping ([ScheduleDraftEntry]) -> Void
+    ) {
         guard let cgImage = image.cgImage else {
-            DispatchQueue.main.async { completion([]) }
+            DispatchQueue.main.async {
+                onRawBoxes?([])
+                completion([])
+            }
             return
         }
 
         let request = VNRecognizeTextRequest { request, _ in
             let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
-            let boxes = observations.compactMap { observation -> RecognizedTextBox? in
+            let boxes = observations.compactMap { observation -> OCRTextBox? in
                 guard let candidate = observation.topCandidates(1).first else { return nil }
-                return RecognizedTextBox(text: candidate.string, boundingBox: observation.boundingBox)
+                return OCRTextBox(
+                    text: candidate.string,
+                    boundingBox: observation.boundingBox,
+                    confidence: candidate.confidence
+                )
             }
+            dumpOCRBoxes(boxes, label: "Schedule")
             let drafts = buildDraftSchedule(from: boxes)
-            DispatchQueue.main.async { completion(drafts) }
+            DispatchQueue.main.async {
+                onRawBoxes?(boxes)
+                completion(drafts)
+            }
         }
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
@@ -67,7 +87,7 @@ enum ScheduleOCRParser {
     ///    sorted top-to-bottom (Vision's boundingBox origin is bottom-left).
     /// 3. Every remaining box is assigned to its nearest column and the row
     ///    band it falls into, becoming that cell's subject name.
-    private static func buildDraftSchedule(from boxes: [RecognizedTextBox]) -> [ScheduleDraftEntry] {
+    private static func buildDraftSchedule(from boxes: [OCRTextBox]) -> [ScheduleDraftEntry] {
         var dayColumns: [(day: Int, x: CGFloat)] = []
         for box in boxes {
             for (pattern, day) in dayKeywords where box.text.localizedCaseInsensitiveContains(pattern) {

@@ -23,7 +23,7 @@
 
 ---
 
-## 2. โครงสร้างไฟล์จริง (53 ไฟล์ Swift, ~6,600+ บรรทัด)
+## 2. โครงสร้างไฟล์จริง (~55 ไฟล์ Swift)
 
 ```
 PrototypeApp/                      ← โฟลเดอร์ซอร์ส (ชั้นในของ repo)
@@ -45,9 +45,14 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │                                            · Assignment: `assignment-{uid}-{d1|am|h1}` 3 จุด (1 วันก่อน · 07:00 วันกำหนด · 1 ชม.ก่อน)
 │   │                                              `schedule(for:)` ยกเลิกของเดิมให้เองเสมอ → เรียกซ้ำได้ปลอดภัย
 │   │                                              `refreshAssignmentReminders(_:)` เรียกจาก RootContainerView ตอนเข้า .active
-│   ├── OCR/
-│   │   ├── ScheduleOCRParser.swift      (130)  ScheduleDraftEntry ใช้ startMinute/endMinute (Int)
-│   │   └── GradeReportOCRParser.swift   (147)
+│   ├── OCR/                             parser ทั้งสองมี overload `onRawBoxes:` คืนกล่องดิบจาก Vision ก่อน heuristic
+│   │   │                                (ใช้โดย OCRDebugView) + dump ลง console ทุกครั้งใน DEBUG
+│   │   │                                **แยกเป็น overload ไม่ใช่ param ที่มี default** เพราะ trailing closure เดิม
+│   │   │                                จะไป bind กับ onRawBoxes แทน completion (Swift forward-scan)
+│   │   ├── OCRTextBox.swift             โครงกลาง 1 บรรทัดข้อความ: text + boundingBox + confidence
+│   │   │                                (พิกัด normalized origin ซ้าย**ล่าง** กลับหัวกับ SwiftUI) + `dumpOCRBoxes(_:label:)`
+│   │   ├── ScheduleOCRParser.swift      ScheduleDraftEntry ใช้ startMinute/endMinute (Int)
+│   │   └── GradeReportOCRParser.swift
 │   ├── Profile/StudentProfileStore.swift (71)
 │   ├── Schedule/PeriodShiftCalculator.swift  logic ล้วน (ไม่มี View): date(forDay:in:) + apply(override:to:) → [ResolvedPeriod]
 │   └── Tasks/AssignmentPriorityEngine.swift  logic ล้วน: priority(kind:dueDate:) + daysUntil() + dueLabel() — สูตรความสำคัญอัตโนมัติที่เดียว
@@ -66,7 +71,11 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     ├── QuickAdd/QuickAddSheet.swift       (~340) half-sheet เมนู "เพิ่มอะไรดี?" (กริดไอคอน) ที่เด้งตอนกดปุ่ม `+` กลาง tab
     │                                              งาน → AddTaskSheet · ปฏิทิน/โน๊ต/Portfolio → CaptureDetailSheet (private ในไฟล์เดียวกัน)
     │                                              **เพิ่มโหมดใหม่ = เพิ่ม 1 บรรทัดใน `options`** (แทน SmartCaptureView เดิมที่ถูกลบ)
-    ├── Settings/SettingsView.swift        (357)
+    ├── Settings/
+    │   ├── SettingsView.swift             (~375) section "สำหรับนักพัฒนา" อยู่ใน `developerSection`
+    │   │                                         (computed property เพราะ `#if DEBUG` ใน ViewBuilder ทำ type-check เพี้ยน)
+    │   └── OCRDebugView.swift             ทั้งไฟล์ครอบ `#if DEBUG` — เลือกรูป → ดูทุกกล่องที่ Vision อ่านได้ + confidence
+    │                                      ไม่ขึ้นใน Release · ไม่มี overlay (รอรอบ 2 ตาม PLAN_OCRDebug.md)
     ├── Tasks/   หน้า "งาน / การบ้าน" ทั้งโมดูล
     │   ├── AssignmentListView.swift   (~330) root ของหน้า — ประกอบ chips + สถิติ + section + FAB + ค้นหา
     │   │                                     ใช้ `List(.plain)` + `plainRow()` (ซ่อนเส้น/พื้นแถว) เพื่อให้ได้การ์ดลอย **และ** ปัดซ้ายลบได้

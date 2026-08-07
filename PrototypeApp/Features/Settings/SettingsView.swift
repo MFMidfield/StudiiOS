@@ -130,6 +130,8 @@ struct SettingsView: View {
                 Label("Privacy-first", systemImage: "lock.shield")
                 Label("Thai-first", systemImage: "character.book.closed")
             }
+
+            developerSection
         }
         .navigationTitle("ตั้งค่า")
         .task {
@@ -161,6 +163,23 @@ struct SettingsView: View {
         } message: {
             Text("ข้อมูลทั้งหมดในแอป (วิชา, งาน, โน้ต, ตารางเรียน, เกรด, โปรไฟล์ ฯลฯ) จะถูกลบถาวร แล้วพาคุณกลับไปหน้า Welcome ใหม่")
         }
+    }
+
+    /// Kept out of `body` on purpose: `#if DEBUG` written inline inside a
+    /// ViewBuilder confuses the type checker, so the conditional lives here
+    /// and `body` just references the property.
+    @ViewBuilder
+    private var developerSection: some View {
+        #if DEBUG
+        Section("สำหรับนักพัฒนา") {
+            NavigationLink("ทดสอบ OCR") {
+                OCRDebugView()
+            }
+            Text("ดูว่า Vision อ่านรูปออกมาเป็นข้อความอะไรบ้าง — ไม่ขึ้นในเวอร์ชันจริง")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        #endif
     }
 
     private var authorizationStatusLabel: String {
