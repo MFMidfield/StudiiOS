@@ -162,11 +162,13 @@ struct OCRDebugView: View {
                         .font(.caption)
                         .foregroundStyle(Theme.Colors.danger)
                 } else {
+                    codeSummaryLine
+
                     Divider()
 
                     VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                         ForEach(Array(boxes.enumerated()), id: \.element.id) { index, box in
-                            Text(box.debugLine(index: index))
+                            Text(line(for: box, index: index))
                                 .font(.system(.caption, design: .monospaced))
                                 .foregroundStyle(Theme.Colors.textPrimary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -177,6 +179,62 @@ struct OCRDebugView: View {
         }
     }
 
+    @ViewBuilder
+    private var codeSummaryLine: some View {
+        if let summary = codeSummaryText {
+            Text(summary)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // MARK: - Subject code annotations (schedule mode only)
+
+    /// How every box that looks like a subject-code slot was resolved.
+    /// Counting these is how we measure whether the validator actually helps:
+    /// "ซ่อมได้" going up and nothing silently wrong is the goal, not 100%.
+    private var codeSummaryText: String? {
+        guard mode == .schedule else { return nil }
+        var valid = 0, repaired = 0, review = 0
+        for box in boxes {
+            switch ScheduleOCRParser.classifySubjectCode(box) {
+            case .notACode:      break
+            case .alreadyValid:  valid += 1
+            case .repaired:      repaired += 1
+            case .needsReview:   review += 1
+            }
+        }
+        let total = valid + repaired + review
+        guard total > 0 else { return nil }
+        return "รหัสวิชา \(total) ตัว · ถูกเลย \(valid) · ซ่อมได้ \(repaired) · ต้องให้คนดู \(review)"
+    }
+
+    /// Suffix appended to a box's debug line describing what happened to it.
+    /// `nil` for boxes that were never code candidates in the first place.
+    private func codeAnnotation(for box: OCRTextBox) -> String? {
+        guard mode == .schedule else { return nil }
+        switch ScheduleOCRParser.classifySubjectCode(box) {
+        case .notACode:
+            return nil
+        case .alreadyValid:
+            return "⟶ —       ✓ ถูกอยู่แล้ว"
+        case .repaired(let code):
+            return "⟶ \(code)  ✅ ซ่อมแล้ว"
+        case .needsReview(let best, let options) where options.count > 1:
+            let heads = options.map { String($0.prefix(1)) }.joined(separator: "/")
+            return "⟶ \(best)  ⚠️ กำกวม (\(heads))"
+        case .needsReview(let best, _):
+            return "⟶ \(best)  ⚠️ ต้องให้คนดู"
+        }
+    }
+
+    private func line(for box: OCRTextBox, index: Int) -> String {
+        let base = box.debugLine(index: index)
+        guard let annotation = codeAnnotation(for: box) else { return base }
+        return base + "   " + annotation
+    }
+
     // MARK: - Logic
 
     /// Full console-style report, same lines as the Xcode dump, for pasting
@@ -185,7 +243,8 @@ struct OCRDebugView: View {
         var lines = [
             "===== \(mode.dumpLabel) · Vision อ่านได้ \(boxes.count) กล่อง · parse เป็น \(draftCount) รายการ ====="
         ]
-        lines += boxes.enumerated().map { $0.element.debugLine(index: $0.offset) }
+        if let summary = codeSummaryText { lines.append(summary) }
+        lines += boxes.enumerated().map { line(for: $0.element, index: $0.offset) }
         lines.append("===== จบ =====")
         return lines.joined(separator: "\n")
     }

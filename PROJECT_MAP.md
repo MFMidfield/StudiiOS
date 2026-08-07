@@ -49,9 +49,16 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │   │                                (ใช้โดย OCRDebugView) + dump ลง console ทุกครั้งใน DEBUG
 │   │   │                                **แยกเป็น overload ไม่ใช่ param ที่มี default** เพราะ trailing closure เดิม
 │   │   │                                จะไป bind กับ onRawBoxes แทน completion (Swift forward-scan)
-│   │   ├── OCRTextBox.swift             โครงกลาง 1 บรรทัดข้อความ: text + boundingBox + confidence
+│   │   ├── OCRTextBox.swift             โครงกลาง 1 บรรทัดข้อความ: text + boundingBox + confidence + `candidates: [String]`
 │   │   │                                (พิกัด normalized origin ซ้าย**ล่าง** กลับหัวกับ SwiftUI) + `dumpOCRBoxes(_:label:)`
+│   │   │                                `candidates` = topCandidates ของ Vision เรียงดีสุดก่อน, `candidates[0] == text` เสมอ
+│   │   │                                init มี default → call site ที่ขอ top 1 อย่างเดียวยังคอมไพล์ได้
+│   │   ├── SubjectCodeValidator.swift   ไวยากรณ์รหัสวิชาไทย (พยัญชนะ 1 + เลข 5) + `confusionMap` (2→ว, W→พ, 0→ง/อ, 1→ท/ก/จ)
+│   │   │                                ⚠️ **ห้ามใช้ `confidence` เลือก candidate** — วัดจากรูปจริงแล้วมันกลับด้าน
+│   │   │                                (รหัสที่ผิดทุกตัว conf 1.00 · ที่ถูกหลายตัว conf 0.50) รายละเอียดใน `PLAN_OCRAccuracy.md` §0.2
 │   │   ├── ScheduleOCRParser.swift      ScheduleDraftEntry ใช้ startMinute/endMinute (Int)
+│   │   │                                `classifySubjectCode(_:)` / `resolveSubjectCode(_:)` = จุดเดียวที่ตัดสินรหัสวิชา
+│   │   │                                ⚠️ `buildDraftSchedule` ยัง**พัง** (สมมติวันเป็นคอลัมน์ แต่ตารางจริงวันเป็นแถว) — รื้อในระยะ B
 │   │   └── GradeReportOCRParser.swift
 │   ├── Profile/StudentProfileStore.swift (71)
 │   ├── Schedule/PeriodShiftCalculator.swift  logic ล้วน (ไม่มี View): date(forDay:in:) + apply(override:to:) → [ResolvedPeriod]
@@ -76,6 +83,9 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │   │                                         (computed property เพราะ `#if DEBUG` ใน ViewBuilder ทำ type-check เพี้ยน)
     │   └── OCRDebugView.swift             ทั้งไฟล์ครอบ `#if DEBUG` — เลือกรูป → ดูทุกกล่องที่ Vision อ่านได้ + confidence
     │                                      ไม่ขึ้นใน Release · ไม่มี overlay (รอรอบ 2 ตาม PLAN_OCRDebug.md)
+    │                                      โหมด "ตารางเรียน" ต่อท้ายแต่ละแถวด้วยผลของ `classifySubjectCode`
+    │                                      (`✅ ซ่อมแล้ว` / `⚠️ กำกวม` / `✓ ถูกอยู่แล้ว`) + บรรทัดสรุปนับรวม
+    │                                      → นี่คือเครื่องมือวัดผลของ PLAN_OCRAccuracy ระยะ A
     ├── Tasks/   หน้า "งาน / การบ้าน" ทั้งโมดูล
     │   ├── AssignmentListView.swift   (~330) root ของหน้า — ประกอบ chips + สถิติ + section + FAB + ค้นหา
     │   │                                     ใช้ `List(.plain)` + `plainRow()` (ซ่อนเส้น/พื้นแถว) เพื่อให้ได้การ์ดลอย **และ** ปัดซ้ายลบได้

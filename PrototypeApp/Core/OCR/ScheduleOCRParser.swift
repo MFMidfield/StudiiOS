@@ -56,11 +56,13 @@ enum ScheduleOCRParser {
         let request = VNRecognizeTextRequest { request, _ in
             let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
             let boxes = observations.compactMap { observation -> OCRTextBox? in
-                guard let candidate = observation.topCandidates(1).first else { return nil }
+                let candidates = observation.topCandidates(10)
+                guard let best = candidates.first else { return nil }
                 return OCRTextBox(
-                    text: candidate.string,
+                    text: best.string,
                     boundingBox: observation.boundingBox,
-                    confidence: candidate.confidence
+                    confidence: best.confidence,
+                    candidates: candidates.map(\.string)
                 )
             }
             dumpOCRBoxes(boxes, label: "Schedule")
@@ -78,6 +80,61 @@ enum ScheduleOCRParser {
         DispatchQueue.global(qos: .userInitiated).async {
             let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation)
             try? handler.perform([request])
+        }
+    }
+
+    // MARK: - Subject code resolution
+
+    /// What a single text box turned out to be, code-wise.
+    enum SubjectCodeOutcome {
+        /// The box is not a subject-code slot at all (teacher name, room, …).
+        case notACode
+        /// Vision's best reading was already a well-formed code.
+        case alreadyValid(String)
+        /// Fixed with certainty — either an alternative candidate parsed
+        /// cleanly, or the confusion table had exactly one option.
+        case repaired(String)
+        /// Cannot be decided here. `options` may be empty (no idea at all)
+        /// or hold every plausible reading for the user to pick from.
+        case needsReview(best: String, options: [String])
+    }
+
+    /// Pipeline, in order — do not reorder:
+    ///   1. any candidate that already parses as a valid code wins
+    ///   2. single-option confusion repair on the best candidate
+    ///   3. give up → flag the cell for review
+    /// Confidence is deliberately never consulted (see SubjectCodeValidator).
+    static func classifySubjectCode(_ box: OCRTextBox) -> SubjectCodeOutcome {
+        if let valid = box.candidates.first(where: SubjectCodeValidator.isValid) {
+            let trimmed = valid.trimmingCharacters(in: .whitespacesAndNewlines)
+            return valid == box.candidates.first ? .alreadyValid(trimmed) : .repaired(trimmed)
+        }
+        // Only treat this box as a code slot if *some* reading has the shape
+        // of one; otherwise plain text would come back as "unrepairable code".
+        guard box.candidates.contains(where: SubjectCodeValidator.looksLikeCode) else { return .notACode }
+
+        switch SubjectCodeValidator.repair(box.text) {
+        case .alreadyValid(let code):
+            return .alreadyValid(code)
+        case .repaired(let code):
+            return .repaired(code)
+        case .ambiguous(let options):
+            return .needsReview(best: options.first ?? box.text, options: options)
+        case .unknown:
+            return .needsReview(best: box.text.trimmingCharacters(in: .whitespacesAndNewlines), options: [])
+        }
+    }
+
+    /// Convenience wrapper for the grid builder: the code to use plus whether
+    /// the resulting cell has to be confirmed by the user.
+    static func resolveSubjectCode(_ box: OCRTextBox) -> (code: String, needsReview: Bool) {
+        switch classifySubjectCode(box) {
+        case .notACode:
+            return (box.text.trimmingCharacters(in: .whitespacesAndNewlines), false)
+        case .alreadyValid(let code), .repaired(let code):
+            return (code, false)
+        case .needsReview(let best, _):
+            return (best, true)
         }
     }
 

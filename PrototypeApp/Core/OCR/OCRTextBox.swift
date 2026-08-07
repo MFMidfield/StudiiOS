@@ -15,6 +15,21 @@ struct OCRTextBox: Identifiable {
     /// Normalized 0–1, origin bottom-left (Vision convention).
     let boundingBox: CGRect
     let confidence: Float
+    /// Vision's alternative readings of the same line, best-first.
+    /// Always non-empty and `candidates[0] == text`. Useful because the best
+    /// candidate is often wrong in a way a later one isn't — see
+    /// `SubjectCodeValidator` for why confidence can't be used to choose.
+    let candidates: [String]
+
+    /// `candidates` defaults to `[text]` so call sites that only asked Vision
+    /// for the top candidate keep compiling unchanged.
+    init(text: String, boundingBox: CGRect, confidence: Float, candidates: [String]? = nil) {
+        self.text = text
+        self.boundingBox = boundingBox
+        self.confidence = confidence
+        let supplied = candidates ?? []
+        self.candidates = supplied.isEmpty ? [text] : supplied
+    }
 
     var midX: CGFloat { boundingBox.midX }
     var midY: CGFloat { boundingBox.midY }
