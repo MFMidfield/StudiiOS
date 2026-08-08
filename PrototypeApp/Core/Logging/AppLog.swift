@@ -4,7 +4,8 @@
 //  console without attaching a debugger.
 //
 
-enum AppLog {
+// nonisolated: called from background OCR code as well as from views.
+nonisolated enum AppLog {
     static func action(_ category: String, _ message: String) {
         print("🔵 [\(category)] \(message)")
     }

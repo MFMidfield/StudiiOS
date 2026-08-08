@@ -9,7 +9,8 @@
 import CoreGraphics
 import Foundation
 
-struct OCRTextBox: Identifiable {
+// nonisolated: runs off the main thread inside Vision's completion handler.
+nonisolated struct OCRTextBox: Identifiable {
     let id = UUID()
     let text: String
     /// Normalized 0–1, origin bottom-left (Vision convention).
@@ -50,7 +51,8 @@ struct OCRTextBox: Identifiable {
 
 /// Prints every box Vision returned to the Xcode console. Shared by both
 /// parsers so the two dumps have an identical format. DEBUG builds only.
-func dumpOCRBoxes(_ boxes: [OCRTextBox], label: String) {
+// nonisolated: runs off the main thread inside Vision's completion handler.
+nonisolated func dumpOCRBoxes(_ boxes: [OCRTextBox], label: String) {
     #if DEBUG
     AppLog.action("OCR", "===== \(label) · Vision คืน \(boxes.count) กล่อง =====")
     for (index, box) in boxes.enumerated() {

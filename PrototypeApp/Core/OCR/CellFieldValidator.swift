@@ -16,7 +16,8 @@
 
 import Foundation
 
-enum CellFieldValidator {
+// nonisolated: runs off the main thread inside Vision's completion handler.
+nonisolated enum CellFieldValidator {
 
     /// A teacher label as read off the sheet, after normalization.
     struct TeacherReading {

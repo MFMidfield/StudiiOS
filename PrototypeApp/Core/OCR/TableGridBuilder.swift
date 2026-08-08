@@ -29,7 +29,8 @@ import Foundation
 
 /// One piece of text sitting in a single cell. Usually a whole line from
 /// Vision; a line wide enough to straddle several columns is cut up first.
-struct OCRCellFragment {
+// nonisolated: runs off the main thread inside Vision's completion handler.
+nonisolated struct OCRCellFragment {
     let text: String
     let candidates: [String]
     /// Normalized centre in Vision space (origin bottom-left).
@@ -48,7 +49,8 @@ struct OCRCellFragment {
     }
 }
 
-struct OCRTableGrid {
+// nonisolated: runs off the main thread inside Vision's completion handler.
+nonisolated struct OCRTableGrid {
     /// An evenly spaced axis fitted through anchor positions.
     struct Axis {
         /// Centre of index 0, already nudged onto the cell content.
@@ -89,6 +91,9 @@ struct OCRTableGrid {
     /// dayAxis index → weekday 1…7 (1 = Monday). Rows whose name Vision could
     /// not read are filled in by counting from the ones it could.
     let dayNumbers: [Int]
+    /// periodAxis index → the period number printed on the paper. Empty when the
+    /// header row was unreadable; callers fall back to index + 1.
+    let printedPeriodNumbers: [Int: Int]
     let periodTimes: [Int: PeriodTime]
     /// `cells[dayIndex][periodIndex]`, each cell's lines ordered top→bottom.
     let cells: [[[OCRCellFragment]]]
@@ -99,7 +104,13 @@ struct OCRTableGrid {
 
 // MARK: - Builder
 
-enum TableGridBuilder {
+// `nonisolated` is required, not cosmetic. The project builds with
+// SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor, so an unmarked type is implicitly
+// @MainActor — but every function below actually runs inside Vision's
+// completion handler on a background queue (see ScheduleOCRParser). Leaving the
+// default label on would let a future cached property here compile without a
+// single diagnostic and then race at runtime.
+nonisolated enum TableGridBuilder {
 
     // MARK: Tunables — all in normalized image units (0…1)
 
@@ -312,6 +323,9 @@ enum TableGridBuilder {
             periodAxis: periodAxis,
             daysAreRows: daysAreRows,
             dayNumbers: weekdays(for: dayAxis, dayBoxes: dayBoxes, daysAreRows: daysAreRows),
+            printedPeriodNumbers: printedPeriodNumbers(
+                clean, periodAxis: periodAxis, daysAreRows: daysAreRows
+            ),
             periodTimes: periodTimes(in: clean, axis: periodAxis, daysAreRows: daysAreRows),
             cells: cells
         )
@@ -608,6 +622,44 @@ enum TableGridBuilder {
         return (0..<axis.count).map { index in
             labelled[index] ?? min(max(index + offset, 1), 7)
         }
+    }
+
+    /// Recovers the *values* of the period header, not just its positions: the
+    /// axis fit only needed to know where the numbers sat, but the user reads
+    /// "คาบ 3" off the paper and expects to see 3, not the column index.
+    ///
+    /// The whole map is thrown away rather than half-trusted. Fewer than three
+    /// resolved columns, or values that do not rise with the index, means the
+    /// header row was misread — and a wrong printed number is worse than no
+    /// number at all, because the caller's index + 1 fallback is at least
+    /// consistent. Strictly increasing is not the same as consecutive: a lunch
+    /// column legitimately makes the printed sequence skip (1 2 3 พัก 4 5).
+    private static func printedPeriodNumbers(
+        _ boxes: [OCRTextBox], periodAxis: OCRTableGrid.Axis, daysAreRows: Bool
+    ) -> [Int: Int] {
+        var votes: [Int: [Int]] = [:]
+        for box in boxes where isPeriodNumberOnly(box.text) {
+            for token in tokens(in: box.text) {
+                guard token.text.count <= 2, let value = Int(token.text), (0...12).contains(value) else { continue }
+                // Same position numericHeaderCandidate used to anchor the axis.
+                let position = daysAreRows
+                    ? box.boundingBox.minX + token.fraction * box.boundingBox.width
+                    : box.midY
+                guard let index = periodAxis.index(for: position) else { continue }
+                votes[index, default: []].append(value)
+            }
+        }
+
+        var resolved: [Int: Int] = [:]
+        for (index, values) in votes {
+            guard let winner = mostCommon(values) else { continue }
+            resolved[index] = winner
+        }
+        guard resolved.count >= 3 else { return [:] }
+
+        let ordered = resolved.sorted { $0.key < $1.key }.map(\.value)
+        let increases = zip(ordered, ordered.dropFirst()).allSatisfy { $0 < $1 }
+        return increases ? resolved : [:]
     }
 
     /// Reads every printed period and pins it to a column, then fills the gaps

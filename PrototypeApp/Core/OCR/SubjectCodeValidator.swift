@@ -13,7 +13,8 @@
 
 import Foundation
 
-enum SubjectCodeValidator {
+// nonisolated: runs off the main thread inside Vision's completion handler.
+nonisolated enum SubjectCodeValidator {
     /// Thai consonants ก (U+0E01) … ฮ (U+0E2E)
     private static let thaiConsonants: ClosedRange<UInt32> = 0x0E01...0x0E2E
 
@@ -153,7 +154,8 @@ enum SubjectCodeValidator {
 ///   starved it — the reference sheet had 6 of those out of 35 codes, so the
 ///   vote had almost nothing to say and cells that four readings agreed on
 ///   still came out wrong.
-struct SubjectCodeLedger {
+// nonisolated: runs off the main thread inside Vision's completion handler.
+nonisolated struct SubjectCodeLedger {
     private var byTail: [String: Set<Character>] = [:]
     private var byTeacherAndTail: [String: Set<Character>] = [:]
 

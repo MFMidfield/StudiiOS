@@ -17,9 +17,12 @@ struct ScheduleDraftEntry: Identifiable {
     var startMinute: Int
     var endMinute: Int
     var subjectName: String
-    /// Column index in the photographed table, 0-based. Not the school's own
-    /// period numbering unless the table happens to start at 0.
+    /// The period number printed on the paper. Falls back to column index + 1
+    /// when the header row was unreadable — never a bare 0-based index.
     var periodNumber: Int = 0
+    /// True when the period's time was inferred from its neighbours rather than
+    /// read off the sheet. Kept apart from `needsReview`, which folds this in.
+    var timeIsGuessed: Bool = false
     var teacherName: String?
     var room: String?
     /// True when the parser could not prove its reading — the cell is a guess
@@ -251,7 +254,8 @@ enum ScheduleOCRParser {
                     startMinute: start,
                     endMinute: end,
                     subjectName: reading.content.name,
-                    periodNumber: reading.period,
+                    periodNumber: grid.printedPeriodNumbers[reading.period] ?? (reading.period + 1),
+                    timeIsGuessed: time?.isInferred != false,
                     teacherName: reading.content.teacher,
                     room: reading.content.room,
                     needsReview: reading.content.needsReview || time?.isInferred != false,
