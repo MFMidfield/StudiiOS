@@ -56,4 +56,23 @@ extension Int {
         guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
         return h * 60 + m
     }
+
+    /// The same clock time as a `Date` on today, which is the only shape
+    /// `DatePicker(displayedComponents: .hourAndMinute)` accepts. The date part
+    /// is meaningless and is thrown away again by `minutesFromMidnight`.
+    var asClockDate: Date {
+        let calendar = Calendar.current
+        let midnight = calendar.startOfDay(for: .now)
+        return calendar.date(byAdding: .minute, value: self, to: midnight) ?? midnight
+    }
+}
+
+extension Date {
+    /// Clock time of this date as minutes from midnight — the inverse of
+    /// `Int.asClockDate`. Declared here so every schedule form converts the
+    /// same way instead of each rolling its own `dateComponents` call.
+    var minutesFromMidnight: Int {
+        let parts = Calendar.current.dateComponents([.hour, .minute], from: self)
+        return (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+    }
 }

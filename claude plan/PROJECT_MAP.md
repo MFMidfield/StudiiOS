@@ -1,7 +1,7 @@
 # PROJECT_MAP — Student OS (PrototypeApp)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-07 · **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
+> **อัปเดตล่าสุด:** 2026-08-08 · **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
 > ถ้าแก้โครงสร้าง (เพิ่ม/ลบไฟล์, เพิ่ม @Model, เปลี่ยน tab) → อัปเดตไฟล์นี้ในคอมมิตเดียวกัน
 
 ---
@@ -86,7 +86,21 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │   │                                `usesLanguageCorrection` เป็น static var ไว้ A/B (PLAN_OCRFix C5)
 │   │   └── GradeReportOCRParser.swift
 │   ├── Profile/StudentProfileStore.swift (71)
-│   ├── Schedule/PeriodShiftCalculator.swift  logic ล้วน (ไม่มี View): date(forDay:in:) + apply(override:to:) → [ResolvedPeriod]
+│   ├── Schedule/  logic ล้วน ไม่มี View เลยทั้งโฟลเดอร์
+│   │   ├── PeriodShiftCalculator.swift   date(forDay:in:) + apply(override:to:) → [ResolvedPeriod]
+│   │   ├── ThaiSubjectCatalog.swift      ไวยากรณ์รหัสวิชาไทยในรูปข้อมูล — ThaiSubjectStrand 13 สาย
+│   │   │                                 (พยัญชนะนำ → ชื่อ/ไอคอน/สี ทุกสีอยู่ใน subjectPaletteHex)
+│   │   │                                 `generatedName` คืน**หมวด** ("วิทยาศาสตร์เพิ่มเติม") ไม่ใช่ชื่อวิชาจริง
+│   │   │                                 เพราะรหัสแยก ฟิสิกส์/เคมี/ชีวะ ไม่ได้ → ผู้เรียกต้องติดธง nameIsGuessed
+│   │   │                                 `commonSubjects` = dropdown ให้ผู้ใช้เลือกชื่อจริง · `isBreakLabel`/`breakAppearance`
+│   │   ├── ScheduleImport.swift          `ImportedPeriod` (struct ธรรมดา **ไม่ใช่ @Model**) + `ImportReviewPayload`
+│   │   │                                 + `ScheduleImportBuilder.build` แปลง [ScheduleDraftEntry] → [ImportedPeriod]
+│   │   │                                 ธง 3 ตัวแยกกันเด็ดขาด: codeNeedsReview · timeIsGuessed · nameIsGuessed
+│   │   │                                 (หน้าตรวจแสดงคำอธิบายคนละแบบ รวมเป็นตัวเดียวเมื่อไหร่ = เสียข้อมูล)
+│   │   └── ScheduleImportCommitter.swift **จุดเดียวที่เขียนผลนำเข้าลง SwiftData** — ลบ ScheduleEntry
+│   │                                     **ทุกแถวของวันที่รูปมี** แล้วใส่ใหม่ · วันที่ไม่มีในรูปไม่แตะเลย
+│   │                                     จับคู่วิชา: รหัสก่อน → ชื่อ → ไม่เจอค่อยสร้าง (fetch Subject ครั้งเดียว)
+│   │                                     ⚠️ **ห้ามลบ Subject** — Assignment.subjectName ผูกด้วยชื่อแบบ lookup
 │   └── Tasks/AssignmentPriorityEngine.swift  logic ล้วน: priority(kind:dueDate:) + daysUntil() + dueLabel() — สูตรความสำคัญอัตโนมัติที่เดียว
 └── Features/
     ├── Calendar/CalendarView.swift        (687) ← ไฟล์ใหญ่สุด
@@ -98,6 +112,9 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     ├── Schedule/  ScheduleView.swift (root) + ScheduleConstants.swift (visibleDays/dayLabels/findOrCreateSubject)
     │              + ScheduleDayPickerBar · ScheduleTimetableSection (ใช้ [ResolvedPeriod]) · SchedulePeriodRow · ScheduleBreakRow
     │              + AddScheduleEntrySheet (add/edit ใช้ร่วม) · AddSubjectSheet
+    │              + ScheduleImportReviewSheet · ScheduleImportRowEditSheet
+    │                (หน้าตรวจผลอ่านตารางจากรูป — ไม่เขียน SwiftData เอง ส่ง [ImportedPeriod]
+    │                 กลับทาง onSave ให้ AddScheduleEntrySheet เรียก ScheduleImportCommitter)
     │              + ScheduleTodayTasksSection (งาน/การบ้านวันนี้ ผูก Assignment.subjectName แบบ lookup ชื่อ)
     │              + PeriodShiftBanner · PeriodShiftSheet (ร่นคาบ — ใช้ PeriodShiftCalculator ที่เดียว ไม่มีสูตรซ้ำใน View)
     ├── QuickAdd/QuickAddSheet.swift       (~340) half-sheet เมนู "เพิ่มอะไรดี?" (กริดไอคอน) ที่เด้งตอนกดปุ่ม `+` กลาง tab
@@ -166,6 +183,11 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-33`
 - Dashboard push ต่อผ่าน `DashboardDestination`: `.assignments` `.gradeCenter` `.tcasPlanner` `.portfolio` `.careerDiscovery` `.focusMode`
 - Onboarding gate อยู่ที่ `RootContainerView` (`PrototypeAppApp.swift:53-74`) ใช้ `@AppStorage` 5 ตัวเรียงลำดับหน้า
 - แท็บ "ตารางเรียน" (`ScheduleView`) toolbar มี 2 ปุ่ม: นาฬิกา (ซ้าย) เปิด `PeriodShiftSheet` (ร่นคาบ) · `+` (ขวา) เปิด `AddScheduleEntrySheet` (เพิ่ม/แก้คาบ, หรือแตะแถวคาบเพื่อแก้) → ซ้อน `AddSubjectSheet` (เพิ่มวิชาใหม่, เปิดจากปุ่ม "เพิ่มวิชาใหม่" ในฟอร์มคาบ)
+- **ทางเข้าอ่านตารางจากรูปอยู่ใน `AddScheduleEntrySheet` เฉพาะโหมดเพิ่ม** (`editing == nil`) — โหมดแก้ไขไม่มีปุ่มนี้
+  ปุ่ม "ถ่ายตารางสอน" → alert เตือนว่าอ่านผิดได้ → confirmationDialog ถ่าย/คลังภาพ → `ProfileImagePicker`
+  → `ScheduleOCRParser` → `ScheduleImportBuilder` → `ScheduleImportReviewSheet` → `ScheduleImportCommitter`
+  presentation **ทั้ง 4 ชั้นแขวนจาก NavigationStack ของ `AddScheduleEntrySheet` ตัวเดียว** ห้ามยกไปไว้ใน child view
+  `AddScheduleEntrySheet(editing:defaultDay:onImported:)` — `onImported` ส่งวันแรกที่นำเข้ากลับให้ `ScheduleView` เด้ง `selectedDay`
 - `ScheduleTodayTasksSection` แสดง **เฉพาะการบ้าน** เป็นค่าเริ่มต้น — สลับด้วย `@AppStorage("scheduleShowsPersonalTasks")` (Toggle อยู่ใน Settings section "ตารางเรียน")
 - `ScheduleTodayTasksSection`'s "ดูทั้งหมด" push ตรงไป `AssignmentListView()` ด้วย plain `NavigationLink` (ไม่ใช้ `DashboardDestination` enum เพราะ Schedule tab มี `NavigationStack` แยกจาก Dashboard — ปลายทางเดียวไม่คุ้มความซับซ้อนของ enum-based navigation)
 
@@ -224,9 +246,10 @@ Gated: `PortfolioView`, `TCASPlannerView`
 - `QuickAddSheet.swift`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ (`Repeat` `Location` `Tags` `Alert` `Note` `Detail`) — ผิดกฎ "UI ทั้งหมดเป็นภาษาไทย" ของสกิล ยกมาทั้งดุ้นจาก `SmartCaptureView` เดิม ยังไม่ได้แก้
 - `Features/FocusMode/` เป็นโฟลเดอร์ว่าง (ของเหลือ) — `FocusModeView.swift` ยังอยู่ใน `Features/Portfolio/`
 - `ScheduleTodayTasksSection`: แตะแถวงาน ตอนนี้แค่ log อย่างเดียว ยังไม่เปิดฟอร์มแก้ไข (หน้า Todo เปิดได้แล้ว — เหลือแค่การ์ดในตารางเรียน)
-- **`PLAN_OCRFix.md` ครบทั้ง 2 รอบแล้ว** เหลืออย่างเดียวคือ **UI ให้ผู้ใช้แก้ช่องที่ติดธง ⚠️**
-  `needsReview` / `reviewOptions` ไหลถึง `ScheduleSetupView` แล้วแต่หน้ายังไม่ได้ใช้ → ผู้ใช้ยังไม่รู้ว่าช่องไหนต้องตรวจ
-  (ขัดกับหลักของแผนเอง `PLAN_OCRDebug.md` §6.7 "ผู้ใช้ไม่รู้ว่า 3 ช่องผิด = UX ที่แย่") · `ocrFoundNothing` ยังไม่ได้ใช้ `ScheduleOCRResult.problem`
+- **`Features/Onboarding/ScheduleSetupView.swift` ยังมีทางถ่ายรูปของตัวเองอยู่คนละเส้นกับของใหม่** — ไม่ผ่าน
+  `ScheduleImportBuilder` / `ScheduleImportReviewSheet` เลย จึงยังไม่แสดงธง ⚠️ ให้ผู้ใช้แก้ และยังไม่ได้ใช้
+  `ScheduleOCRResult.problem` (`ocrFoundNothing` เป็น Bool ล้วน) · `PLAN_ScheduleOCRImport.md` §0.4 สั่งไม่ให้แตะไว้ก่อน
+  → งานที่เหลือคือย้าย onboarding มาใช้เส้นเดียวกัน แล้วลบโค้ดถ่ายรูปซ้ำทิ้ง
 - `refreshAssignmentReminders` ตัดที่ 16 งานแรก (× 3 จุด = 48 pending) กันชน 64 ของ iOS — งานที่กำหนดส่งไกลกว่านั้นจะยังไม่ถูกตั้งจนกว่าจะขยับเข้ามาในหน้าต่าง 14 วัน
 
 **`PLAN_ScheduleView.md` ครบทั้ง 3 รอบแล้ว** (Models/Schema → UI ตาราง+ฟอร์ม → งานวันนี้+ร่นคาบ) — ฟีเจอร์ตารางเรียนถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป

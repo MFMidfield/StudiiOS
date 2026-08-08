@@ -6,6 +6,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 private enum PeriodChoice: Hashable {
     case number(Int)
@@ -20,6 +21,9 @@ struct AddScheduleEntrySheet: View {
 
     let editing: ScheduleEntry?
     let defaultDay: Int
+    /// Called with the first day the import touched, so the Schedule tab can
+    /// land on a day that actually has the new rows on it.
+    let onImported: ((Int) -> Void)?
 
     @State private var dayOfWeek: Int
     @State private var periodChoice: PeriodChoice
@@ -32,9 +36,20 @@ struct AddScheduleEntrySheet: View {
     @State private var showDeleteConfirm = false
     @State private var isAddingSubject = false
 
-    init(editing: ScheduleEntry?, defaultDay: Int) {
+    // Photo import (add mode only). Every step of the chain is presented from
+    // this NavigationStack, never from a child view — nesting a picker inside a
+    // sheet that is itself inside a sheet is what makes presentations vanish.
+    @State private var isShowingScanWarning = false
+    @State private var isShowingPhotoSource = false
+    @State private var activePickerSource: ProfileImagePicker.Source?
+    @State private var isAnalyzingPhoto = false
+    @State private var scanError: String?
+    @State private var reviewPayload: ImportReviewPayload?
+
+    init(editing: ScheduleEntry?, defaultDay: Int, onImported: ((Int) -> Void)? = nil) {
         self.editing = editing
         self.defaultDay = defaultDay
+        self.onImported = onImported
 
         _dayOfWeek = State(initialValue: editing?.dayOfWeek ?? defaultDay)
 
@@ -49,10 +64,8 @@ struct AddScheduleEntrySheet: View {
             _customPeriodText = State(initialValue: "")
         }
 
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: .now)
-        _startTime = State(initialValue: cal.date(byAdding: .minute, value: editing?.startMinute ?? 480, to: today) ?? today)
-        _endTime = State(initialValue: cal.date(byAdding: .minute, value: editing?.endMinute ?? 530, to: today) ?? today)
+        _startTime = State(initialValue: (editing?.startMinute ?? 480).asClockDate)
+        _endTime = State(initialValue: (editing?.endMinute ?? 530).asClockDate)
 
         _selectedSubject = State(initialValue: editing?.subject)
         _teacherName = State(initialValue: editing?.teacherName ?? "")
@@ -61,15 +74,8 @@ struct AddScheduleEntrySheet: View {
 
     private var isEditing: Bool { editing != nil }
 
-    private var startMinuteValue: Int {
-        let c = Calendar.current.dateComponents([.hour, .minute], from: startTime)
-        return (c.hour ?? 0) * 60 + (c.minute ?? 0)
-    }
-
-    private var endMinuteValue: Int {
-        let c = Calendar.current.dateComponents([.hour, .minute], from: endTime)
-        return (c.hour ?? 0) * 60 + (c.minute ?? 0)
-    }
+    private var startMinuteValue: Int { startTime.minutesFromMidnight }
+    private var endMinuteValue: Int { endTime.minutesFromMidnight }
 
     private var periodNumberValue: Int? {
         switch periodChoice {
@@ -92,6 +98,9 @@ struct AddScheduleEntrySheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                if editing == nil {
+                    scanSection
+                }
                 dayAndPeriodSection
                 timeSection
                 subjectSection
@@ -131,10 +140,65 @@ struct AddScheduleEntrySheet: View {
                     AppLog.action("Schedule", "เปิดฟอร์มเพิ่มคาบ (วัน=\(ScheduleConstants.dayLabels[dayOfWeek] ?? ""))")
                 }
             }
+            .alert("ระบบอาจอ่านผิด", isPresented: $isShowingScanWarning) {
+                Button("ยกเลิก", role: .cancel) {}
+                Button("เข้าใจแล้ว") { isShowingPhotoSource = true }
+            } message: {
+                Text("การอ่านตารางจากรูปอาจอ่านผิด โดยเฉพาะรหัสวิชาและเวลา กรุณาตรวจทุกคาบก่อนบันทึก")
+            }
+            .confirmationDialog(
+                "เลือกรูปตารางเรียน",
+                isPresented: $isShowingPhotoSource,
+                titleVisibility: .visible
+            ) {
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button("ถ่ายรูป") { activePickerSource = .camera }
+                }
+                Button("เลือกจากคลังภาพ") { activePickerSource = .photoLibrary }
+                Button("ยกเลิก", role: .cancel) {}
+            }
+            .fullScreenCover(item: $activePickerSource) { source in
+                ProfileImagePicker(source: source, allowsEditing: false) { analyze($0) }
+                    .ignoresSafeArea()
+            }
+            .sheet(item: $reviewPayload) { payload in
+                ScheduleImportReviewSheet(payload: payload) { confirmed in
+                    commitImport(confirmed)
+                }
+                .presentationDetents([.large])
+                .interactiveDismissDisabled(true)
+            }
         }
     }
 
     // MARK: - Sections
+
+    /// Kept as its own property on purpose: the Form body is already close to
+    /// SwiftUI's type-check budget and inlining this tips it over.
+    private var scanSection: some View {
+        Section {
+            Button {
+                isShowingScanWarning = true
+            } label: {
+                Label("ถ่ายตารางสอน", systemImage: "camera.viewfinder")
+            }
+            .disabled(isAnalyzingPhoto)
+
+            if isAnalyzingPhoto {
+                HStack(spacing: Theme.Spacing.sm) {
+                    ProgressView()
+                    Text("กำลังอ่านตารางเรียน…").foregroundStyle(.secondary)
+                }
+            }
+            if let scanError {
+                Text(scanError)
+                    .font(.caption)
+                    .foregroundStyle(Theme.Colors.warning)
+            }
+        } footer: {
+            Text("อ่านตารางทั้งใบจากรูป แล้วกรอกคาบให้อัตโนมัติ")
+        }
+    }
 
     private var dayAndPeriodSection: some View {
         Section {
@@ -200,6 +264,45 @@ struct AddScheduleEntrySheet: View {
                 }
             }
         }
+    }
+
+    // MARK: - Photo import
+
+    /// `parseScheduleDetailed` already calls back on the main thread, so there
+    /// is no hop here. A thin result is reported inline rather than opening an
+    /// empty review sheet — a sheet with nothing in it reads as a crash.
+    private func analyze(_ image: UIImage) {
+        isAnalyzingPhoto = true
+        scanError = nil
+        ScheduleOCRParser.parseScheduleDetailed(from: image, onRawBoxes: nil) { result in
+            isAnalyzingPhoto = false
+            let periods = ScheduleImportBuilder.build(from: result.entries)
+            guard !periods.isEmpty else {
+                scanError = result.problem?.message
+                    ?? "อ่านตารางจากรูปนี้ไม่สำเร็จ ลองถ่ายให้เห็นตารางทั้งใบและอย่าให้เอียง"
+                AppLog.warn(
+                    "ScheduleImport",
+                    "OCR ไม่ได้คาบเลย · problem=\(String(describing: result.problem))"
+                )
+                return
+            }
+            // A readable table can still carry a problem worth mentioning —
+            // "the times are guesses" is a warning, not a reason to throw the
+            // whole sheet away.
+            if let problem = result.problem { scanError = problem.message }
+            AppLog.action(
+                "ScheduleImport",
+                "อ่านได้ \(periods.count) คาบ · ต้องตรวจ \(periods.filter(\.needsAttention).count)"
+            )
+            reviewPayload = ImportReviewPayload(image: image, periods: periods)
+        }
+    }
+
+    private func commitImport(_ periods: [ImportedPeriod]) {
+        let summary = ScheduleImportCommitter.commit(periods, in: context)
+        reviewPayload = nil                       // closes the review sheet
+        if let day = summary.firstDay { onImported?(day) }
+        dismiss()                                 // closes this sheet
     }
 
     // MARK: - Actions

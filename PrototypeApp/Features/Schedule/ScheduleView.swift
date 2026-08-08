@@ -87,7 +87,13 @@ struct ScheduleView: View {
             }
         }
         .sheet(isPresented: $isAddingEntry) {
-            AddScheduleEntrySheet(editing: nil, defaultDay: selectedDay)
+            // Only add mode offers the photo import, so only this presentation
+            // needs the "jump to the first imported day" callback.
+            AddScheduleEntrySheet(editing: nil, defaultDay: selectedDay) { day in
+                // The picker bar only holds จ–ศ, so a Saturday import must not
+                // move the selection somewhere the bar cannot show.
+                if ScheduleConstants.visibleDays.contains(day) { selectedDay = day }
+            }
         }
         .sheet(item: $editingEntry) { entry in
             AddScheduleEntrySheet(editing: entry, defaultDay: selectedDay)

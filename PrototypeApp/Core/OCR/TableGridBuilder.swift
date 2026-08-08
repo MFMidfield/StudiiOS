@@ -634,6 +634,14 @@ nonisolated enum TableGridBuilder {
     /// number at all, because the caller's index + 1 fallback is at least
     /// consistent. Strictly increasing is not the same as consecutive: a lunch
     /// column legitimately makes the printed sequence skip (1 2 3 พัก 4 5).
+    ///
+    /// Columns Vision missed are completed here rather than left to the caller.
+    /// On the reference sheet Vision read 1 2 3 4 · 7 · 9 10 and missed 0, 5, 6
+    /// and 8, and index + 1 then handed column 6 the number 7 that column 7
+    /// already had — the timetable showed "คาบ 7" twice in a row, and the
+    /// homeroom column 0 showed 1. What carries across a gap is the header's
+    /// *offset* (value − index): it is constant along the row except at a skip,
+    /// so the nearest labelled column to the left always knows it.
     private static func printedPeriodNumbers(
         _ boxes: [OCRTextBox], periodAxis: OCRTableGrid.Axis, daysAreRows: Bool
     ) -> [Int: Int] {
@@ -657,9 +665,16 @@ nonisolated enum TableGridBuilder {
         }
         guard resolved.count >= 3 else { return [:] }
 
-        let ordered = resolved.sorted { $0.key < $1.key }.map(\.value)
-        let increases = zip(ordered, ordered.dropFirst()).allSatisfy { $0 < $1 }
-        return increases ? resolved : [:]
+        let ordered = resolved.sorted { $0.key < $1.key }
+        let increases = zip(ordered, ordered.dropFirst()).allSatisfy { $0.value < $1.value }
+        guard increases else { return [:] }
+
+        var completed = resolved
+        for index in 0..<periodAxis.count where completed[index] == nil {
+            let anchor = ordered.last { $0.key < index } ?? ordered[0]
+            completed[index] = max(anchor.value + (index - anchor.key), 0)
+        }
+        return completed
     }
 
     /// Reads every printed period and pins it to a column, then fills the gaps
