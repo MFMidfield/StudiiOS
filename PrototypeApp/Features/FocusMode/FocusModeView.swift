@@ -32,7 +32,25 @@ struct FocusModeView: View {
     @State private var showSettings = false
     @State private var showAuthAlert = false
 
+    // body ถูกแบ่งเป็น 2 ชั้น (`mainContent` + presentation) จงใจ —
+    // ต่อ modifier ยาวเป็นสายเดียวคือสาเหตุคลาสสิกของ
+    // "unable to type-check this expression in reasonable time"
     var body: some View {
+        mainContent
+            .fullScreenCover(isPresented: .constant(shouldShowLock)) {
+                FocusLockOverlay(engine: engine)
+            }
+            .sheet(isPresented: $showCustomPicker) { customPickerSheet }
+            .sheet(isPresented: $showSettings) { settingsSheet }
+            .familyActivityPicker(isPresented: $showAppPicker, selection: $blocker.selection)
+            .alert("เปิดระบบบล็อกแอปไม่สำเร็จ", isPresented: $showAuthAlert) {
+                Button("เข้าใจแล้ว", role: .cancel) {}
+            } message: {
+                Text(blocker.authorizationError ?? "ลองใหม่อีกครั้ง")
+            }
+    }
+
+    private var mainContent: some View {
         ScrollView {
             VStack(spacing: Theme.Spacing.xl) {
                 timerCard
@@ -55,26 +73,21 @@ struct FocusModeView: View {
             engine.syncToNow()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            switch newPhase {
-            case .active:
-                engine.syncToNow()
-                blocker.reconcile()
-            case .background, .inactive:
-                engine.noteLeftApp()
-            @unknown default:
-                break
-            }
+            handleScenePhase(newPhase)
         }
-        .fullScreenCover(isPresented: .constant(shouldShowLock)) {
-            FocusLockOverlay(engine: engine)
-        }
-        .sheet(isPresented: $showCustomPicker) { customPickerSheet }
-        .sheet(isPresented: $showSettings) { settingsSheet }
-        .familyActivityPicker(isPresented: $showAppPicker, selection: $blocker.selection)
-        .alert("เปิดระบบบล็อกแอปไม่สำเร็จ", isPresented: $showAuthAlert) {
-            Button("เข้าใจแล้ว", role: .cancel) {}
-        } message: {
-            Text(blocker.authorizationError ?? "ลองใหม่อีกครั้ง")
+    }
+
+    private func handleScenePhase(_ newPhase: ScenePhase) {
+        switch newPhase {
+        case .active:
+            engine.syncToNow()
+            blocker.reconcile()
+        case .background:
+            // นับเฉพาะ .background — `.inactive` เกิดตอนเปิด sheet/แถบแจ้งเตือน
+            // ด้วย ถ้านับรวมตัวเลข "หนีออกไป" จะเฟ้อทั้งที่ผู้ใช้ไม่ได้ออกไปไหน
+            engine.noteLeftApp()
+        default:
+            break
         }
     }
 

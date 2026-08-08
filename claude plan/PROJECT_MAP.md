@@ -111,9 +111,33 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     ├── Calendar/CalendarView.swift        (687) ← ไฟล์ใหญ่สุด
     ├── CareerDiscovery/CareerDiscoveryView.swift (163)
     ├── Dashboard/DashboardView.swift      (350)
+    ├── FocusMode/   โหมดโฟกัส/Pomodoro — ย้ายออกจาก Portfolio แล้ว
+    │   ├── PomodoroSettings.swift   (76)  **จุดเดียวที่รู้จัก UserDefaults key ของ Pomodoro**
+    │   │                                  ห้ามเขียน key ตรงๆ ที่อื่น · duration(for:) แปลง phase → วินาที
+    │   ├── PomodoroEngine.swift     (362) `@Observable @MainActor` singleton — **หัวใจของโหมดโฟกัส**
+    │   │                                  ⚠️ **นับจาก `deadline: Date` ไม่ใช่นับ tick** ห้ามกลับไปใช้
+    │   │                                    `secondsRemaining -= 1` เด็ดขาด (ของเดิมพังเพราะข้อนี้ —
+    │   │                                    Timer หยุดตอนแอปเข้า background → เวลาค้าง)
+    │   │                                  Timer 0.5 วิ ใช้แค่กระตุ้นให้ View วาดใหม่ (`tickToken`)
+    │   │                                  สถานะทั้งหมด mirror ลง UserDefaults (`pomodoroState*`) เพื่อกู้
+    │   │                                    หลัง force-quit — **จำเป็น** เพราะการบล็อกแอปเป็นค่าระดับระบบ
+    │   │                                  `syncToNow()` ไล่ช่วงที่หมดเวลาไปแล้ว · กลับมาช้ากว่า 5 นาที =
+    │   │                                    เลิกรอบ ไม่ไล่ต่อ (กันสร้าง FocusSession ปลอมสิบกว่าอัน)
+    │   ├── AppBlockManager.swift    (~200) `@Observable @MainActor` singleton — Screen Time API จริง
+    │   │                                  FamilyControls (ขออนุญาต) + ManagedSettings (shield) +
+    │   │                                    DeviceActivity (ตาข่ายกันพลาด)
+    │   │                                  ⚠️ **ใช้บน Simulator ไม่ได้** · ต้องเปิด Capability
+    │   │                                    "Family Controls" ใน Xcode ก่อน (dev entitlement ใช้ได้เลย
+    │   │                                    ไม่ต้องรอ Apple — ที่ต้องขออนุมัติคือตอนขึ้น App Store)
+    │   │                                  ทุก method ออกแบบให้ล้มเหลวแบบเงียบ ไม่ crash
+    │   │                                  `reconcile()` เรียกจาก RootContainerView ตอน .active —
+    │   │                                    **ห้ามลบ** ไม่งั้นแอปอื่นถูกบล็อกค้างถาวร
+    │   ├── FocusModeView.swift      (~450) UI ล้วน ไม่เก็บเวลาเอง · body แบ่ง 2 ชั้น (mainContent
+    │   │                                  + presentation) จงใจ กัน type-check timeout
+    │   └── FocusLockOverlay.swift   (156) fullScreenCover ตอนโฟกัส · ปุ่มยอมแพ้ต้องกดค้าง 3 วิ
     ├── GradeCenter/GradeCenterView.swift  (183)
     ├── Onboarding/  (6 ไฟล์: Welcome→Profile→Schedule→GradeReport→Summary + ProfileImagePicker)
-    ├── Portfolio/   PortfolioView.swift (89) + FocusModeView.swift (133) ⚠️ FocusMode วางผิดโฟลเดอร์
+    ├── Portfolio/   PortfolioView.swift (89)
     ├── Schedule/  ScheduleView.swift (root) + ScheduleConstants.swift
     │                (visibleDays/dayLabels · `findOrCreateSubject` ใช้โดย onboarding เท่านั้น
     │                 · `resolveSubject(named:code:in:)` ใช้โดยฟอร์มคาบ — รหัสก่อน→ชื่อ, สี/ไอคอนจาก ThaiSubjectCatalog)
@@ -171,7 +195,7 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-33`
 | ScheduleEntry | Core/Models/ScheduleEntry.swift — เวลาเป็น `startMinute`/`endMinute: Int` (ไม่ใช่ Date แล้ว) + `subject: Subject?` relationship |
 | Subject | Core/Models/Subject.swift — วิชา/ช่วงพัก (`isBreak`), seed 3 ตัวตอนเปิดแอปครั้งแรก |
 | DayScheduleOverride | Core/Models/DayScheduleOverride.swift — ร่นคาบเฉพาะวัน จัดการผ่าน `PeriodShiftSheet`/`PeriodShiftBanner`, คำนวณผ่าน `PeriodShiftCalculator` เท่านั้น (ไม่แก้ `ScheduleEntry` จริง)<br>`startPeriodNumber: Int = 1` = คาบที่เริ่มร่น — **คาบก่อนหน้าถูกซ่อนทั้งวัน** และคาบพักตั้งแต่จุดนี้ไปถูกร่น+ย่อเหลือ `periodLengthMinutes` เท่าคาบอื่น |
-| FocusSession | Core/Models/FocusSession.swift |
+| FocusSession | Core/Models/FocusSession.swift — `kindRaw` (โฟกัส/พักสั้น/พักยาว, อ่านผ่าน `phase`) · `endedAt: Date?` · `wasLocked` (3 ตัวนี้มี default ครบ → migrate ของเดิมได้)<br>⚠️ **ช่วงพักถูกบันทึกเป็น FocusSession ด้วย** — สถิติ "นาทีโฟกัส" ต้องกรอง `phase == .focus` เสมอ (Dashboard + FocusModeView ทำแล้ว)<br>ไฟล์นี้ยังเป็นที่ประกาศ `enum PomodoroPhase` ด้วย |
 | PortfolioItem | Core/Models/PortfolioItem.swift |
 | CareerInterestResult | Core/Models/CareerInterestResult.swift |
 | TCASEntry + TCASChecklistItem | Core/Models/TCASEntry.swift |
@@ -251,7 +275,9 @@ Gated: `PortfolioView`, `TCASPlannerView`
 ## 8. หนี้ทางเทคนิคที่รู้อยู่แล้ว (ยังไม่ได้แก้)
 
 - ไม่มี `QuickLook` / `ShareLink` — ไฟล์ที่ SmartCapture copy ลง `Documents/SmartCapture/` เปิดดูจาก UI ไม่ได้
-- `FocusModeView.swift` อยู่ใน `Features/Portfolio/` (วางผิดที่)
+- ~~`FocusModeView.swift` อยู่ใน `Features/Portfolio/`~~ **แก้แล้ว** — ย้ายมา `Features/FocusMode/` และเขียนใหม่ทั้งโมดูล
+- **ระบบบล็อกแอปยังไม่มี `DeviceActivityMonitor` extension** — ถ้าผู้ใช้บังคับปิด Student OS ทิ้ง แอปที่บล็อกไว้จะยังถูกบล็อกจนกว่าจะเปิด Student OS อีกครั้ง (`reconcile()` ปลดให้) มีปุ่มปลดฉุกเฉินใน ตั้งค่า Pomodoro เป็นทางออกสำรอง
+- **แจ้งเตือนจบ Pomodoro ยังไม่ใช่ `.timeSensitive`** — เด้งทะลุโหมดห้ามรบกวนไม่ได้ ต้องเพิ่ม capability "Time Sensitive Notifications" ก่อน
 - Calendar models ฝังใน `CalendarView.swift` แทนที่จะอยู่ `Core/Models/`
 - ไม่มี unit test จริงเลย (test target เป็น template)
 - `QuickAddSheet.swift`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ (`Repeat` `Location` `Tags` `Alert` `Note` `Detail`) — ผิดกฎ "UI ทั้งหมดเป็นภาษาไทย" ของสกิล ยกมาทั้งดุ้นจาก `SmartCaptureView` เดิม ยังไม่ได้แก้

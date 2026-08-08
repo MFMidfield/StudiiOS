@@ -106,27 +106,18 @@ final class AppBlockManager {
         }
     }
 
+    /// จงใจไม่ switch บน case ของ `FamilyControlsError` — ชื่อ case เปลี่ยนตาม
+    /// เวอร์ชัน SDK และเราคอมไพล์ทดสอบเองไม่ได้ ใช้ localizedDescription พอ
     private static func friendlyMessage(for error: Error) -> String {
         #if targetEnvironment(simulator)
-        return "ระบบบล็อกแอปใช้บน Simulator ไม่ได้ ต้องรันบน iPhone จริง"
+        return "ระบบบล็อกแอปใช้บน Simulator ไม่ได้ — ต้องรันบน iPhone จริงเท่านั้น"
         #else
-        if let famError = error as? FamilyControlsError {
-            switch famError {
-            case .invalidAccountType:
-                return "บัญชี Apple นี้ใช้ไม่ได้ — ต้องเป็นบัญชีผู้ใช้ทั่วไป หรือให้ผู้ปกครองอนุมัติ"
-            case .authorizationCanceled:
-                return "ยกเลิกการขออนุญาต"
-            case .authorizationConflict:
-                return "มีแอปอื่นถือสิทธิ์ Screen Time อยู่"
-            case .networkError:
-                return "ต่ออินเทอร์เน็ตไม่ได้ ลองใหม่อีกครั้ง"
-            case .restricted:
-                return "เครื่องนี้ถูกจำกัดสิทธิ์ Screen Time ไว้"
-            default:
-                return "ขออนุญาตไม่สำเร็จ: \(famError.localizedDescription)"
-            }
-        }
-        return "ขออนุญาตไม่สำเร็จ: \(error.localizedDescription)"
+        return """
+        ขออนุญาต Screen Time ไม่สำเร็จ: \(error.localizedDescription)
+
+        เช็ค: เปิด Capability "Family Controls" ใน Xcode แล้วหรือยัง · \
+        ถ้าเป็นบัญชีเด็กใน Family Sharing ต้องให้ผู้ปกครองอนุมัติ
+        """
         #endif
     }
 

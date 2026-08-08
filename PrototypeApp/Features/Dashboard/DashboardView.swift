@@ -46,8 +46,10 @@ struct DashboardView: View {
     }
 
     private var focusMinutesToday: Int {
+        // นับเฉพาะช่วง "โฟกัส" — ช่วงพักถูกบันทึกเป็น FocusSession ด้วยตั้งแต่
+        // รอบ Pomodoro อัตโนมัติ ถ้าไม่กรองตัวเลขจะเฟ้อ
         let seconds = focusSessions
-            .filter { Calendar.current.isDateInToday($0.startedAt) && $0.completed }
+            .filter { $0.phase == .focus && Calendar.current.isDateInToday($0.startedAt) && $0.completed }
             .reduce(0) { $0 + $1.durationSeconds }
         return seconds / 60
     }

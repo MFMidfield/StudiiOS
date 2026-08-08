@@ -233,6 +233,11 @@ struct SettingsView: View {
         NotificationManager.shared.cancelAll()
         StudentProfileStore.shared.reset()
 
+        // การบล็อกแอปเป็นค่าระดับ**ระบบ** ไม่ได้อยู่ใน SwiftData — ถ้าไม่เคลียร์
+        // ตรงนี้ ล้างข้อมูลแล้วแอปอื่นจะยังถูกบล็อกค้างอยู่
+        PomodoroEngine.shared.stop(recordPartial: false)
+        AppBlockManager.shared.stopBlocking(reason: "ล้างข้อมูลทั้งหมด")
+
         PrototypeAppApp.seedBuiltInSubjects(in: context)
 
         hasCompletedOnboarding = false

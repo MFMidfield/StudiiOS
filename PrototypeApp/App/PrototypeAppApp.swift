@@ -87,6 +87,7 @@ private struct RootContainerView: View {
     @AppStorage("hasCompletedSetupSummary") private var hasCompletedSetupSummary = false
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
     @Query private var assignments: [Assignment]
 
     var body: some View {
@@ -110,6 +111,13 @@ private struct RootContainerView: View {
             // จึงต้องกวาดตั้งใหม่ทุกครั้งที่กลับเข้าแอป
             guard newPhase == .active else { return }
             Task { await NotificationManager.shared.refreshAssignmentReminders(assignments) }
+
+            // กันแอปอื่นถูกบล็อกค้าง: ถ้าเซสชันโฟกัสหมดเวลาไปแล้ว (หรือผู้ใช้
+            // บังคับปิดแอปทิ้งไว้) ต้องปลดบล็อกให้ตั้งแต่เปิดแอปมา ไม่ใช่รอ
+            // ให้ผู้ใช้เดินเข้าหน้าโฟกัสก่อน
+            PomodoroEngine.shared.attach(context: modelContext)
+            PomodoroEngine.shared.syncToNow()
+            AppBlockManager.shared.reconcile()
         }
     }
 }
