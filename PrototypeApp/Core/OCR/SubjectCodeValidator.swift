@@ -25,7 +25,10 @@ enum SubjectCodeValidator {
         "2": ["ว"],               // 5 occurrences on the reference sheet
         "W": ["พ"],
         "w": ["พ"],
-        "3": ["ส"],
+        "7": ["ว"],               // ม.4/9 #44 730261, #69 730242
+        "3": ["ว", "ส"],          // ส on ม.5/9, but ว on ม.4/9 (330261 → ว30261)
+        "8": ["อ", "ส"],          // ม.4/9 #25 #51 831102 → อ, #134 831102 → ส
+        "4": ["จ", "ง"],          // ม.4/9 #28 431102
         "0": ["ง", "อ"],          // genuinely ambiguous — always flag
         "1": ["ท", "ก", "จ"],     // ท seen twice, the rest are shape-only
     ]
@@ -35,7 +38,6 @@ enum SubjectCodeValidator {
     /// shape resemblance is exactly the "automatic 100%" the round-2 design
     /// rule rejects: repair what you can prove, flag what you can't.
     static let shapeOnlyConfusionMap: [Character: [Character]] = [
-        "4": ["ง"],
         "6": ["ค"],
         "A": ["ค"],
         "a": ["ส"],
@@ -142,9 +144,15 @@ enum SubjectCodeValidator {
 ///   would rewrite six correct cells in order to fix none. Unanimity narrows
 ///   the rule to "in this table that tail belongs to exactly one subject",
 ///   which is the only case where the evidence actually holds.
-/// * **Only proven readings vote.** A code produced by confusion repair must
-///   never become the proof for the next one, or one bad guess propagates
-///   across the sheet.
+/// * **Only unambiguous readings vote.** A reading the parser had to *choose*
+///   between — a "0" that is either ง or อ — must never become the proof for
+///   the next cell, or one guess propagates across the sheet. A reading with
+///   no choice in it does vote: an alternative Vision candidate that parsed
+///   cleanly, or a confusion entry with exactly one option, is as good as a
+///   first-candidate hit. Restricting the ledger to first-candidate hits
+///   starved it — the reference sheet had 6 of those out of 35 codes, so the
+///   vote had almost nothing to say and cells that four readings agreed on
+///   still came out wrong.
 struct SubjectCodeLedger {
     private var byTail: [String: Set<Character>] = [:]
     private var byTeacherAndTail: [String: Set<Character>] = [:]

@@ -20,59 +20,135 @@ enum CellFieldValidator {
 
     /// A teacher label as read off the sheet, after normalization.
     struct TeacherReading {
-        /// Always starts with "ครู".
+        /// Normalized label. Thai names always start with "ครู"; a foreign
+        /// teacher printed as "T.Kathleen" keeps the form the sheet used,
+        /// because forcing a "ครู" onto it would invent a spelling nobody
+        /// wrote and split the same person into two canonical names.
         let name: String
-        /// True when the label itself is doubtful — a Latin letter or a digit
-        /// where a Thai name belongs, or nothing left after the prefix.
+        /// True when the label itself is doubtful — a digit where a name
+        /// belongs, or nothing left after the prefix.
         let needsReview: Bool
         /// True when the "ครู" prefix had to be restored.
         let wasRepaired: Bool
     }
 
+    /// Prefixes that mark a foreign teacher. Both reference sheets print them:
+    /// "T.Kathleen" in the cells, "ครู Kathleen Baldazan Bandao" in the header.
+    /// The list stays closed on purpose — an open rule like "starts with a
+    /// capital letter" would swallow room codes such as "Com3".
+    private static let latinTeacherPrefixes = ["Teacher", "Mrs.", "Mr.", "Ms.", "T."]
+
     /// Thai timetables prefix every teacher with "ครู", and that prefix is the
     /// only reliable way to tell a teacher line from a subject name. So a
     /// dropped สระ ู has to be repaired rather than rejected — otherwise
     /// "ครวรัญญา" silently becomes the subject of its cell.
+    ///
+    /// A Latin letter in the body is NOT a defect: a school that employs a
+    /// native speaker prints that teacher's name in Latin script on every row
+    /// they teach. Flagging those was flagging a correct reading.
     static func teacher(in text: String) -> TeacherReading? {
         let trimmed = strippingTrailingPunctuation(text)
         guard !trimmed.isEmpty else { return nil }
+        if let latin = latinTeacher(trimmed) { return latin }
 
         let body: String
         let wasRepaired: Bool
         if let range = trimmed.range(of: "ครู"), range.lowerBound == trimmed.startIndex {
-            body = String(trimmed[range.upperBound...])
+            body = String(trimmed[range.upperBound...]).trimmingCharacters(in: .whitespaces)
             wasRepaired = false
         } else if let range = trimmed.range(of: "คร"), range.lowerBound == trimmed.startIndex,
                   trimmed.count >= 4 {
-            body = String(trimmed[range.upperBound...])
+            body = String(trimmed[range.upperBound...]).trimmingCharacters(in: .whitespaces)
             wasRepaired = true
         } else {
             return nil
         }
 
-        let name = "ครู" + body
+        // "ครูสมชาย" runs together, "ครู Kathleen" does not — keep the space
+        // the sheet printed rather than gluing scripts to each other.
+        let separator = (body.first?.isASCII ?? false) ? " " : ""
+        let name = "ครู" + separator + body
         guard !body.isEmpty else {
-            return TeacherReading(name: name, needsReview: true, wasRepaired: wasRepaired)
+            return TeacherReading(name: "ครู", needsReview: true, wasRepaired: wasRepaired)
         }
-        let hasLatin = body.contains { $0.isASCII && $0.isLetter }
-        let hasDigit = body.contains(where: \.isNumber)
         return TeacherReading(
             name: name,
-            needsReview: hasLatin || hasDigit || body.count < 2,
+            needsReview: body.contains(where: \.isNumber) || body.count < 2,
             wasRepaired: wasRepaired
         )
     }
 
-    /// Rooms are printed as a bare 3–4 digit number, occasionally with "ห้อง"
-    /// in front. Anything else that shares a cell — "นาฏศิลป์", "คณิต 1" — is
-    /// left to the free-text path so it can still name an activity cell.
-    static func isRoom(_ text: String) -> Bool {
-        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let range = trimmed.range(of: "ห้อง"), range.lowerBound == trimmed.startIndex {
-            trimmed = String(trimmed[range.upperBound...]).trimmingCharacters(in: .whitespaces)
+    private static func latinTeacher(_ trimmed: String) -> TeacherReading? {
+        for prefix in latinTeacherPrefixes where trimmed.hasPrefix(prefix) {
+            let body = String(trimmed.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces)
+            guard body.count >= 2, body.first?.isLetter == true else { return nil }
+            return TeacherReading(
+                name: trimmed,
+                needsReview: body.contains(where: \.isNumber),
+                wasRepaired: false
+            )
         }
-        guard (3...4).contains(trimmed.count), Int(trimmed) != nil else { return false }
-        return true
+        return nil
+    }
+
+    /// Rooms that are named rather than numbered. Matched as a prefix so
+    /// "โรงยิม 2" still counts.
+    private static let roomKeywords = [
+        "โรงยิม", "โรงอาหาร", "หอประชุม", "สนาม", "ลานกีฬา", "สระว่ายน้ำ", "โดม", "ศาลา",
+    ]
+
+    /// Rooms are usually a bare 3–4 digit number, but the two reference sheets
+    /// between them also print "ห้องดนตรีไทย", "Com3", "โรงยิม" and
+    /// "นาฏศิลป์2". Every one of those used to fail this test and fall through
+    /// to the free-text path, where it either became the subject name of its
+    /// cell or was thrown away next to a code that had already claimed the name.
+    ///
+    /// Each accepted form still has to be *shaped* like a place — a keyword, a
+    /// "ห้อง" prefix, or a name ending in a number. Bare activity words
+    /// ("ชุมนุม", "ลูกเสือ", "แนะแนว") match none of them and stay free text,
+    /// which is what keeps activity-only cells from losing their label.
+    static func isRoom(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= 14 else { return false }
+
+        if let range = trimmed.range(of: "ห้อง"), range.lowerBound == trimmed.startIndex {
+            return !String(trimmed[range.upperBound...])
+                .trimmingCharacters(in: .whitespaces).isEmpty
+        }
+        if roomKeywords.contains(where: { trimmed.hasPrefix($0) }) { return true }
+        if (3...4).contains(trimmed.count), Int(trimmed) != nil { return true }
+
+        // "Com3", "Lab2", "A101" — Latin and digits, no separators, both present.
+        if trimmed.count <= 8,
+           trimmed.allSatisfy({ ($0.isASCII && $0.isLetter) || isDigit($0) }),
+           trimmed.contains(where: { $0.isASCII && $0.isLetter }),
+           trimmed.contains(where: isDigit) {
+            return true
+        }
+
+        // "นาฏศิลป์2" — a Thai name with the room's number stuck on the end.
+        // The head must be pure Thai script, so "ม.4" (a class label) and
+        // "08.30" (a time) do not qualify.
+        let head = trimmed.prefix { !isDigit($0) }
+        if head.count >= 2, head.count < trimmed.count,
+           head.allSatisfy(isThai),
+           trimmed.dropFirst(head.count).allSatisfy(isDigit) {
+            return true
+        }
+        return false
+    }
+
+    /// ASCII digit only — `Character.isNumber` also matches Thai digits and
+    /// superscripts, which is not what any of these shape tests mean.
+    private static func isDigit(_ character: Character) -> Bool {
+        character.isASCII && character.isNumber
+    }
+
+    /// Every scalar sits in the Thai block. Written over scalars rather than
+    /// `isLetter` because a Thai grapheme cluster carries combining vowel and
+    /// tone marks that are not letters on their own.
+    private static func isThai(_ character: Character) -> Bool {
+        character.unicodeScalars.allSatisfy { (0x0E01...0x0E5B).contains($0.value) }
     }
 
     // MARK: - Same person, different spelling

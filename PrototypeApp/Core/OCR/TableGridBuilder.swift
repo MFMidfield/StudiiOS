@@ -153,8 +153,14 @@ enum TableGridBuilder {
     }
 
     /// Every plausible period in `text`, in reading order. Ranges that don't
-    /// move forward in time, or that run shorter than 20 / longer than 180
+    /// move forward in time, or that run shorter than 10 / longer than 180
     /// minutes, are rejected.
+    ///
+    /// The lower bound has to stay this low: a homeroom column printed as
+    /// "08.15-08.30" is a real 15-minute period, and rejecting it loses the
+    /// whole column — the time row is what anchors the period axis, so a
+    /// column with no time label falls at index −1 and every fragment in it is
+    /// dropped. The garbage "00.00-00.00" line is still filtered, by length 0.
     static func timeRanges(in text: String) -> [TimeRange] {
         let ns = text as NSString
         guard ns.length > 0 else { return [] }
@@ -165,7 +171,7 @@ enum TableGridBuilder {
             let end = (Int(ns.substring(with: match.range(at: 3))) ?? 0) * 60
                 + (Int(ns.substring(with: match.range(at: 4))) ?? 0)
             let length = end - start
-            guard length >= 20, length <= 180 else { return nil }
+            guard length >= 10, length <= 180 else { return nil }
             let middle = CGFloat(match.range.location) + CGFloat(match.range.length) / 2
             return TimeRange(start: start, end: end, textFraction: middle / CGFloat(ns.length))
         }
@@ -478,19 +484,45 @@ enum TableGridBuilder {
     /// sits at the top, the room at the bottom. Nudge the fitted line onto the
     /// centre of gravity of the real content so the ±½-step bands land on the
     /// cells instead of straddling two of them.
+    ///
+    /// The offset is measured as a *phase*: each box maps onto the unit circle
+    /// at `2π·(pos−origin)/step` and the mean direction is the answer. Taking
+    /// the median of per-box residuals instead cannot work, because getting a
+    /// residual at all means first rounding to an index — using the very axis
+    /// the offset is supposed to correct. On the reference sheet the room line
+    /// sat 0.55 step off its anchor, rounded into the *next* row as +0.45, and
+    /// cancelled the −0.27 of the teacher line: median 0, axis never moved,
+    /// and every room line stayed one row away from its subject. Phase has no
+    /// such seam — −0.55 and +0.45 are the same direction on the circle.
     private static func contentShift(
         _ boxes: [OCRTextBox], vertical: Bool, origin: CGFloat, step: CGFloat, count: Int
     ) -> CGFloat {
-        var residuals: [CGFloat] = []
+        guard step != 0 else { return 0 }
+        // A line straddling several cells sits in the middle of them, so its
+        // centre says nothing about where the content of one cell sits.
+        let maximumExtent = straddleFactor * abs(step)
+        var sumX: CGFloat = 0
+        var sumY: CGFloat = 0
+        var used = 0
         for box in boxes {
+            let extent = vertical ? box.boundingBox.height : box.boundingBox.width
+            guard extent <= maximumExtent else { continue }
             let position = vertical ? box.midY : box.midX
-            let index = ((position - origin) / step).rounded()
-            guard index >= 0, index <= CGFloat(count - 1) else { continue }
-            residuals.append(position - (origin + step * index))
+            let raw = (position - origin) / step
+            // Symmetric half-step margin at both ends: the content of row 0 is
+            // partly *before* index 0, and dropping it would bias the phase.
+            guard raw >= -0.5, raw <= CGFloat(count) - 0.5 else { continue }
+            let angle = 2 * CGFloat.pi * raw
+            sumX += cos(angle)
+            sumY += sin(angle)
+            used += 1
         }
-        guard !residuals.isEmpty else { return 0 }
-        let shift = median(residuals)
-        return abs(shift) < abs(step) * 0.4 ? shift : 0
+        guard used > 0 else { return 0 }
+        // Concentration near zero means the boxes fill the cell evenly and
+        // there is no phase to lock onto — leave the axis where the fit put it.
+        let concentration = (sumX * sumX + sumY * sumY).squareRoot() / CGFloat(used)
+        guard concentration >= 0.05 else { return 0 }
+        return atan2(sumY, sumX) / (2 * CGFloat.pi) * step
     }
 
     // MARK: - Splitting straddling lines

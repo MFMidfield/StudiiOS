@@ -191,8 +191,12 @@ enum ScheduleOCRParser {
         /// cells take part in the cross-image vote.
         var isCode = false
         /// True when `name` was already a well-formed code with no repair at
-        /// all. Only these are trusted as evidence for the other cells.
+        /// all. These are never overwritten by the vote.
         var isProvenCode = false
+        /// True when `name` was reached without the parser having to pick
+        /// between readings — either already valid, or repaired with exactly
+        /// one option available. Only these are evidence for the other cells.
+        var isUnambiguousCode = false
 
         var needsReview: Bool { codeNeedsReview || fieldNeedsReview }
     }
@@ -282,7 +286,7 @@ enum ScheduleOCRParser {
     /// with holes in it is worse than one with a few rough labels.
     private static func readCell(_ fragments: [OCRCellFragment]) -> CellContent {
         var content = CellContent()
-        var code: (text: String, needsReview: Bool, options: [String], proven: Bool)?
+        var code: (text: String, needsReview: Bool, options: [String], proven: Bool, unambiguous: Bool)?
         var freeText: [String] = []
 
         for fragment in fragments {
@@ -292,13 +296,13 @@ enum ScheduleOCRParser {
             if code == nil {
                 switch classifySubjectCode(fragment.asTextBox) {
                 case .alreadyValid(let value):
-                    code = (value, false, [], true)
+                    code = (value, false, [], true, true)
                     continue
                 case .repaired(let value):
-                    code = (value, false, [], false)
+                    code = (value, false, [], false, true)
                     continue
                 case .needsReview(let best, let options):
-                    code = (best, true, options, false)
+                    code = (best, true, options, false, false)
                     continue
                 case .notACode:
                     break
@@ -320,6 +324,7 @@ enum ScheduleOCRParser {
             content.name = code.text
             content.isCode = true
             content.isProvenCode = code.proven
+            content.isUnambiguousCode = code.unambiguous
             content.codeNeedsReview = code.needsReview
             content.options = code.options
             return content
@@ -366,7 +371,7 @@ enum ScheduleOCRParser {
     private static func applyCrossImageVote(_ readings: inout [CellReading]) -> Int {
         let ledger = SubjectCodeLedger(
             observations: readings
-                .filter(\.content.isProvenCode)
+                .filter(\.content.isUnambiguousCode)
                 .map { (code: $0.content.name, teacher: $0.content.teacher) }
         )
 
