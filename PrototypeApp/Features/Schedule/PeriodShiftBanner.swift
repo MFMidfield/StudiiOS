@@ -19,7 +19,7 @@ struct PeriodShiftBanner: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
-            Text("วันนี้ร่นคาบ · คาบละ \(override.periodLengthMinutes) นาที")
+            Text("วันนี้ร่นคาบ · เริ่มคาบ \(override.startPeriodNumber) \(override.startMinute.asClockString) · คาบละ \(override.periodLengthMinutes) นาที")
                 .font(.caption)
                 .fontWeight(.medium)
             Spacer()
@@ -61,7 +61,7 @@ struct PeriodShiftBanner: View {
         for: DayScheduleOverride.self,
         configurations: .init(isStoredInMemoryOnly: true)
     )
-    let override = DayScheduleOverride(date: .now, startMinute: 510, periodLengthMinutes: 50)
+    let override = DayScheduleOverride(date: .now, startPeriodNumber: 1, startMinute: 510, periodLengthMinutes: 50)
     container.mainContext.insert(override)
 
     return PeriodShiftBanner(override: override)

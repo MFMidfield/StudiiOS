@@ -21,8 +21,8 @@ import Foundation
 /// from it. Letters come from the ministry's own numbering, so they are fixed.
 // nonisolated: reachable from the OCR pipeline, which runs off the main thread.
 nonisolated enum ThaiSubjectStrand: String, CaseIterable, Identifiable {
-    case thai, math, science, social, health, arts, career
-    case english, chinese, japanese, korean, french, german
+    case thai, math, science, social, health, arts, career, activity
+    case english, chinese, japanese, french, german
 
     var id: String { rawValue }
 
@@ -35,10 +35,12 @@ nonisolated enum ThaiSubjectStrand: String, CaseIterable, Identifiable {
         case .health: return "พ"
         case .arts: return "ศ"
         case .career: return "ง"
+        // ก is the ministry's letter for กิจกรรมพัฒนาผู้เรียน (ก20901 แนะแนว,
+        // ก20902 ชุมนุม) — not for ภาษาเกาหลี, which schools code differently.
+        case .activity: return "ก"
         case .english: return "อ"
         case .chinese: return "จ"
         case .japanese: return "ญ"
-        case .korean: return "ก"
         case .french: return "ฝ"
         case .german: return "ย"
         }
@@ -54,10 +56,10 @@ nonisolated enum ThaiSubjectStrand: String, CaseIterable, Identifiable {
         case .health: return "สุขศึกษาและพลศึกษา"
         case .arts: return "ศิลปะ"
         case .career: return "การงานอาชีพ"
+        case .activity: return "กิจกรรมพัฒนาผู้เรียน"
         case .english: return "ภาษาอังกฤษ"
         case .chinese: return "ภาษาจีน"
         case .japanese: return "ภาษาญี่ปุ่น"
-        case .korean: return "ภาษาเกาหลี"
         case .french: return "ภาษาฝรั่งเศส"
         case .german: return "ภาษาเยอรมัน"
         }
@@ -72,8 +74,9 @@ nonisolated enum ThaiSubjectStrand: String, CaseIterable, Identifiable {
         case .health: return "figure.run"
         case .arts: return "paintpalette.fill"
         case .career: return "hammer.fill"
+        case .activity: return "person.3.fill"
         case .english: return "textformat.abc"
-        case .chinese, .japanese, .korean, .french, .german: return "globe"
+        case .chinese, .japanese, .french, .german: return "globe"
         }
     }
 
@@ -87,7 +90,7 @@ nonisolated enum ThaiSubjectStrand: String, CaseIterable, Identifiable {
         case .social: return "FFB347"
         case .health, .german: return "00BCD4"
         case .arts, .japanese: return "E91E63"
-        case .career, .korean: return "9C27B0"
+        case .career, .activity: return "9C27B0"
         case .english, .french: return "3F51B5"
         }
     }
@@ -113,9 +116,11 @@ nonisolated enum ThaiSubjectStrand: String, CaseIterable, Identifiable {
             return ["ทัศนศิลป์", "ดนตรี", "นาฏศิลป์"]
         case .career:
             return ["การงานอาชีพ", "คหกรรม", "งานช่าง", "งานเกษตร", "ธุรกิจและการเป็นผู้ประกอบการ"]
+        case .activity:
+            return ["แนะแนว", "ชุมนุม", "กิจกรรมในเครื่องแบบ", "ลูกเสือ-เนตรนารี", "ยุวกาชาด", "บำเพ็ญประโยชน์"]
         case .english:
             return ["ภาษาอังกฤษพื้นฐาน", "ภาษาอังกฤษเพิ่มเติม", "ภาษาอังกฤษฟัง-พูด", "ภาษาอังกฤษอ่าน-เขียน"]
-        case .chinese, .japanese, .korean, .french, .german:
+        case .chinese, .japanese, .french, .german:
             return [displayName]
         }
     }
@@ -157,8 +162,12 @@ nonisolated enum ThaiSubjectCatalog {
 
     /// "ว30203" → "วิทยาศาสตร์เพิ่มเติม" · "ค32101" → "คณิตศาสตร์พื้นฐาน".
     /// A category, not a subject name — see the file header for why.
+    ///
+    /// กิจกรรมพัฒนาผู้เรียน is the exception: it has no พื้นฐาน/เพิ่มเติม split,
+    /// so appending one would invent a category that does not exist.
     static func generatedName(for parsed: ParsedSubjectCode) -> String {
-        parsed.strand.displayName + (parsed.isAdditional ? "เพิ่มเติม" : "พื้นฐาน")
+        guard parsed.strand != .activity else { return parsed.strand.displayName }
+        return parsed.strand.displayName + (parsed.isAdditional ? "เพิ่มเติม" : "พื้นฐาน")
     }
 
     /// Icon and colour for a subject. A name the user actually chose beats the
@@ -190,6 +199,11 @@ nonisolated enum ThaiSubjectCatalog {
         "คหกรรม": ("fork.knife", .career),
         "สุขศึกษา": ("heart.fill", .health),
         "พลศึกษา": ("figure.run", .health),
+        "แนะแนว": ("signpost.right.fill", .activity),
+        "ชุมนุม": ("person.3.fill", .activity),
+        "กิจกรรมในเครื่องแบบ": ("figure.hiking", .activity),
+        "ลูกเสือ-เนตรนารี": ("figure.hiking", .activity),
+        "ยุวกาชาด": ("cross.case.fill", .activity),
     ]
 
     private static let fallbackIcon = "book.closed.fill"
@@ -197,13 +211,14 @@ nonisolated enum ThaiSubjectCatalog {
 
     // MARK: Breaks and activities
 
-    private static let breakKeywords = [
-        "พัก", "กลางวัน", "โฮมรูม", "ชุมนุม", "กิจกรรม", "แนะแนว", "ลูกเสือ", "เนตรนารี", "ยุวกาชาด",
-    ]
+    // Only the slots where no class happens. แนะแนว / ชุมนุม / กิจกรรมในเครื่องแบบ
+    // / ลูกเสือ are real periods with a period number and a teacher — they get
+    // shifted like any other subject, so they must not land here.
+    private static let breakKeywords = ["พัก", "กลางวัน", "โฮมรูม"]
 
     /// True for the cells that are not a subject at all. Substring match,
     /// because OCR delivers these with the school's own wording attached
-    /// ("กิจกรรมในเครื่องแบบ", "พักกลางวัน").
+    /// ("พักกลางวัน", "โฮมรูม (ครูประจำชั้น)").
     static func isBreakLabel(_ text: String) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }

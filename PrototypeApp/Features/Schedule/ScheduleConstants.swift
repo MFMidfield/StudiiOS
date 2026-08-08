@@ -32,4 +32,40 @@ enum ScheduleConstants {
         AppLog.action("Subject", "สร้างวิชาอัตโนมัติ: \(trimmed) สี=\(colorHex)")
         return subject
     }
+
+    /// Finds the Subject a hand-edited schedule row means, or creates it. Code
+    /// wins over name, matching ScheduleImportCommitter's rule, so a row typed
+    /// with a code lands on the same Subject a photo import would have found.
+    /// Colour and icon come from ThaiSubjectCatalog so a manually typed subject
+    /// looks the same as an imported one.
+    ///
+    /// `isBreak` is deliberately left false: a break subject is created through
+    /// AddSubjectSheet's "เป็นช่วงพัก" toggle or through the import path, never
+    /// by typing a name into the period form.
+    ///
+    /// Returns nil for a blank name.
+    static func resolveSubject(named: String, code: String, in context: ModelContext) -> Subject? {
+        let name = named.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return nil }
+        let code = code.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let existing = (try? context.fetch(FetchDescriptor<Subject>())) ?? []
+
+        if !code.isEmpty,
+           let match = existing.first(where: { !$0.code.isEmpty && $0.code.caseInsensitiveCompare(code) == .orderedSame }) {
+            return match
+        }
+        if let match = existing.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
+            // Fill in a code the user has now supplied, but never overwrite one.
+            if !code.isEmpty, match.code.isEmpty { match.code = code }
+            return match
+        }
+
+        let strand = ThaiSubjectCatalog.parse(code)?.strand
+        let look = ThaiSubjectCatalog.appearance(strand: strand, name: name)
+        let subject = Subject(name: name, code: code, colorHex: look.colorHex, iconName: look.iconName)
+        context.insert(subject)
+        AppLog.action("Subject", "สร้างวิชาจากฟอร์มคาบ: \(name) (\(code))")
+        return subject
+    }
 }

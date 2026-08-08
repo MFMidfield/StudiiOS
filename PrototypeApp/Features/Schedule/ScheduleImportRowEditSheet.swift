@@ -21,9 +21,6 @@ struct ScheduleImportRowEditSheet: View {
     @State private var draft: ImportedPeriod
     @State private var startTime: Date
     @State private var endTime: Date
-    @State private var periodText: String
-    /// nil means "อื่นๆ (พิมพ์เอง)" — the name field is the answer instead.
-    @State private var commonChoice: String?
     @State private var isConfirmingDelete = false
 
     init(
@@ -37,7 +34,6 @@ struct ScheduleImportRowEditSheet: View {
         _draft = State(initialValue: period)
         _startTime = State(initialValue: period.startMinute.asClockDate)
         _endTime = State(initialValue: period.endMinute.asClockDate)
-        _periodText = State(initialValue: String(period.periodNumber))
     }
 
     // MARK: - Derived
@@ -59,10 +55,6 @@ struct ScheduleImportRowEditSheet: View {
         let current = draft.subjectCode.trimmingCharacters(in: .whitespacesAndNewlines)
         if !current.isEmpty, !result.contains(current) { result.insert(current, at: 0) }
         return result
-    }
-
-    private var strand: ThaiSubjectStrand? {
-        ThaiSubjectCatalog.parse(draft.subjectCode)?.strand
     }
 
     /// visibleDays plus this row's own day: a Saturday row imported from a
@@ -116,31 +108,20 @@ struct ScheduleImportRowEditSheet: View {
 
     private var subjectSection: some View {
         Section("วิชา") {
-            TextField("ชื่อวิชา", text: $draft.subjectName)
-                .onChange(of: draft.subjectName) { _, _ in draft.nameIsGuessed = false }
-
+            // OCR-specific and stays here: the alternatives Vision could not
+            // choose between. Everything below is the shared control.
             if !period.codeOptions.isEmpty {
                 Picker("รหัสที่อ่านได้", selection: $draft.subjectCode) {
                     ForEach(codeChoices, id: \.self) { Text($0).tag($0) }
                 }
             }
 
-            if let strand {
-                Picker("วิชาที่พบบ่อย", selection: $commonChoice) {
-                    Text("อื่นๆ (พิมพ์เอง)").tag(String?.none)
-                    ForEach(strand.commonSubjects, id: \.self) { name in
-                        Text(name).tag(String?.some(name))
-                    }
-                }
-                .onChange(of: commonChoice) { _, new in
-                    guard let new else { return }
-                    draft.subjectName = new
-                }
-            }
-
-            TextField("รหัสวิชา", text: $draft.subjectCode)
-                .autocorrectionDisabled()
-                .onChange(of: draft.subjectCode) { _, _ in draft.codeNeedsReview = false }
+            SubjectPickerFields(
+                name: $draft.subjectName,
+                code: $draft.subjectCode,
+                onNameEdited: { draft.nameIsGuessed = false },
+                onCodeEdited: { draft.codeNeedsReview = false }
+            )
 
             if draft.nameIsGuessed {
                 hint("ชื่อวิชานี้เดามาจากรหัส ตรวจให้ตรงกับที่เรียนจริง", color: Theme.Colors.warning)
@@ -155,8 +136,7 @@ struct ScheduleImportRowEditSheet: View {
                     Text(ScheduleConstants.dayLabels[day] ?? "").tag(day)
                 }
             }
-            TextField("คาบที่", text: $periodText)
-                .keyboardType(.numberPad)
+            PeriodNumberField(periodNumber: $draft.periodNumber)
             DatePicker("เวลาเริ่ม", selection: $startTime, displayedComponents: .hourAndMinute)
                 .onChange(of: startTime) { _, _ in draft.timeIsGuessed = false }
             DatePicker("เวลาสิ้นสุด", selection: $endTime, displayedComponents: .hourAndMinute)
@@ -174,7 +154,7 @@ struct ScheduleImportRowEditSheet: View {
         Section("รายละเอียด") {
             TextField("ชื่อครู", text: $draft.teacherName)
             TextField("ห้องเรียน", text: $draft.room)
-            Toggle("เป็นคาบพัก / กิจกรรม", isOn: $draft.isBreak)
+            Toggle("เป็นคาบพัก (โฮมรูม / พักกลางวัน)", isOn: $draft.isBreak)
         }
     }
 
@@ -207,7 +187,6 @@ struct ScheduleImportRowEditSheet: View {
         result.subjectCode = draft.subjectCode.trimmingCharacters(in: .whitespacesAndNewlines)
         result.teacherName = draft.teacherName.trimmingCharacters(in: .whitespaces)
         result.room = draft.room.trimmingCharacters(in: .whitespaces)
-        result.periodNumber = Int(periodText.trimmingCharacters(in: .whitespaces)) ?? draft.periodNumber
         result.startMinute = startMinuteValue
         result.endMinute = endMinuteValue
         // A break is never a coded subject, so its two code flags cannot apply.

@@ -8,11 +8,6 @@ import SwiftUI
 import SwiftData
 import UIKit
 
-private enum PeriodChoice: Hashable {
-    case number(Int)
-    case custom
-}
-
 struct AddScheduleEntrySheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -26,11 +21,15 @@ struct AddScheduleEntrySheet: View {
     let onImported: ((Int) -> Void)?
 
     @State private var dayOfWeek: Int
-    @State private var periodChoice: PeriodChoice
-    @State private var customPeriodText: String
+    @State private var periodNumber: Int
     @State private var startTime: Date
     @State private var endTime: Date
-    @State private var selectedSubject: Subject?
+    @State private var subjectName: String
+    @State private var subjectCode: String
+    /// The Subject the user picked from the existing list, when they did.
+    /// Cleared as soon as the name stops matching, so the picker never claims
+    /// a row it no longer describes.
+    @State private var pickedExisting: Subject?
     @State private var teacherName: String
     @State private var location: String
     @State private var showDeleteConfirm = false
@@ -52,22 +51,14 @@ struct AddScheduleEntrySheet: View {
         self.onImported = onImported
 
         _dayOfWeek = State(initialValue: editing?.dayOfWeek ?? defaultDay)
-
-        if let editing, (0...10).contains(editing.periodNumber) {
-            _periodChoice = State(initialValue: .number(editing.periodNumber))
-            _customPeriodText = State(initialValue: "")
-        } else if let editing {
-            _periodChoice = State(initialValue: .custom)
-            _customPeriodText = State(initialValue: String(editing.periodNumber))
-        } else {
-            _periodChoice = State(initialValue: .number(0))
-            _customPeriodText = State(initialValue: "")
-        }
+        _periodNumber = State(initialValue: editing?.periodNumber ?? 0)
 
         _startTime = State(initialValue: (editing?.startMinute ?? 480).asClockDate)
         _endTime = State(initialValue: (editing?.endMinute ?? 530).asClockDate)
 
-        _selectedSubject = State(initialValue: editing?.subject)
+        _subjectName = State(initialValue: editing?.subject?.name ?? editing?.subjectName ?? "")
+        _subjectCode = State(initialValue: editing?.subject?.code ?? "")
+        _pickedExisting = State(initialValue: editing?.subject)
         _teacherName = State(initialValue: editing?.teacherName ?? "")
         _location = State(initialValue: editing?.location ?? "")
     }
@@ -77,13 +68,6 @@ struct AddScheduleEntrySheet: View {
     private var startMinuteValue: Int { startTime.minutesFromMidnight }
     private var endMinuteValue: Int { endTime.minutesFromMidnight }
 
-    private var periodNumberValue: Int? {
-        switch periodChoice {
-        case .number(let n): return n
-        case .custom: return Int(customPeriodText)
-        }
-    }
-
     private var overlappingEntry: ScheduleEntry? {
         allEntries.first { other in
             other.dayOfWeek == dayOfWeek && other !== editing &&
@@ -92,7 +76,8 @@ struct AddScheduleEntrySheet: View {
     }
 
     private var canSave: Bool {
-        selectedSubject != nil && periodNumberValue != nil && endMinuteValue > startMinuteValue
+        !subjectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && endMinuteValue > startMinuteValue
     }
 
     var body: some View {
@@ -101,9 +86,11 @@ struct AddScheduleEntrySheet: View {
                 if editing == nil {
                     scanSection
                 }
-                dayAndPeriodSection
-                timeSection
+                // Same order as ScheduleImportRowEditSheet — Few asked for the
+                // two edit screens to read identically.
                 subjectSection
+                timeSection
+                detailSection
                 if editing != nil {
                     deleteSection
                 }
@@ -130,7 +117,9 @@ struct AddScheduleEntrySheet: View {
             }
             .sheet(isPresented: $isAddingSubject) {
                 AddSubjectSheet { subject in
-                    selectedSubject = subject
+                    pickedExisting = subject
+                    subjectName = subject.name
+                    subjectCode = subject.code
                 }
             }
             .onAppear {
@@ -200,29 +189,52 @@ struct AddScheduleEntrySheet: View {
         }
     }
 
-    private var dayAndPeriodSection: some View {
-        Section {
+    private var subjectSection: some View {
+        Section("วิชา") {
+            Picker("เลือกจากวิชาที่มีอยู่", selection: $pickedExisting) {
+                Text("— ไม่เลือก —").tag(Subject?.none)
+                ForEach(subjects) { subject in
+                    Text(subject.name).tag(Subject?.some(subject))
+                }
+            }
+
+            SubjectPickerFields(name: $subjectName, code: $subjectCode)
+
+            Button {
+                isAddingSubject = true
+            } label: {
+                Label("เพิ่มวิชาใหม่", systemImage: "plus.circle.fill")
+            }
+        }
+        .onChange(of: pickedExisting) { _, new in
+            guard let new else { return }
+            subjectName = new.name
+            subjectCode = new.code
+        }
+        .onChange(of: subjectName) { _, new in
+            // Naming a different subject means the user has left the picked one
+            // behind; keeping the picker highlighted would be a lie.
+            guard let picked = pickedExisting,
+                  picked.name.caseInsensitiveCompare(new) != .orderedSame
+            else { return }
+            // The code still in the field belongs to the subject being replaced.
+            // Left there, resolveSubject matches on it and hands back the old
+            // Subject — the row saves "successfully" and nothing changes.
+            if !subjectCode.isEmpty, subjectCode.caseInsensitiveCompare(picked.code) == .orderedSame {
+                subjectCode = ""
+            }
+            pickedExisting = nil
+        }
+    }
+
+    private var timeSection: some View {
+        Section("เวลา") {
             Picker("วัน", selection: $dayOfWeek) {
                 ForEach(ScheduleConstants.visibleDays, id: \.self) { day in
                     Text(ScheduleConstants.dayLabels[day] ?? "").tag(day)
                 }
             }
-
-            Picker("คาบที่", selection: $periodChoice) {
-                ForEach(0...10, id: \.self) { n in
-                    Text("\(n)").tag(PeriodChoice.number(n))
-                }
-                Text("กำหนดเอง").tag(PeriodChoice.custom)
-            }
-            if periodChoice == .custom {
-                TextField("เลขคาบ", text: $customPeriodText)
-                    .keyboardType(.numberPad)
-            }
-        }
-    }
-
-    private var timeSection: some View {
-        Section {
+            PeriodNumberField(periodNumber: $periodNumber)
             DatePicker("เวลาเริ่ม", selection: $startTime, displayedComponents: .hourAndMinute)
             DatePicker("เวลาสิ้นสุด", selection: $endTime, displayedComponents: .hourAndMinute)
             if let overlap = overlappingEntry {
@@ -233,20 +245,8 @@ struct AddScheduleEntrySheet: View {
         }
     }
 
-    private var subjectSection: some View {
-        Section {
-            Picker("วิชา", selection: $selectedSubject) {
-                Text("เลือกวิชา").tag(Subject?.none)
-                ForEach(subjects) { subject in
-                    Text(subject.name).tag(Subject?.some(subject))
-                }
-            }
-            Button {
-                isAddingSubject = true
-            } label: {
-                Label("เพิ่มวิชาใหม่", systemImage: "plus.circle.fill")
-            }
-
+    private var detailSection: some View {
+        Section("รายละเอียด") {
             TextField("ชื่อครู", text: $teacherName)
             TextField("ห้องเรียน", text: $location)
         }
@@ -308,11 +308,17 @@ struct AddScheduleEntrySheet: View {
     // MARK: - Actions
 
     private func save() {
-        guard let subject = selectedSubject, let periodNumber = periodNumberValue else { return }
+        // Time is checked first: resolveSubject can *insert* a Subject, and
+        // bailing out after that would leave a stray one behind.
         guard endMinuteValue > startMinuteValue else {
             AppLog.warn("Schedule", "บันทึกไม่ได้: เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม")
             return
         }
+        // Resolves to the Subject the row means, creating it if the user typed
+        // a name that does not exist yet — the same rule the import path uses.
+        guard let subject = ScheduleConstants.resolveSubject(
+            named: subjectName, code: subjectCode, in: context
+        ) else { return }
 
         if let overlap = overlappingEntry {
             AppLog.warn("Schedule", "เวลาซ้อนทับกับ คาบ \(overlap.periodNumber) (\(overlap.startMinute.asClockString)-\(overlap.endMinute.asClockString))")
@@ -323,6 +329,7 @@ struct AddScheduleEntrySheet: View {
 
         if let editing {
             let oldLocation = editing.location
+            let oldSubject = editing.subject?.name ?? editing.subjectName
             editing.dayOfWeek = dayOfWeek
             editing.startMinute = startMinuteValue
             editing.endMinute = endMinuteValue
@@ -334,7 +341,10 @@ struct AddScheduleEntrySheet: View {
 
             do {
                 try context.save()
-                AppLog.action("Schedule", "แก้คาบสำเร็จ: คาบ \(periodNumber) · ห้อง \(oldLocation) → \(trimmedLocation)")
+                // Subject is logged as a before→after pair on purpose: a save
+                // that resolved back to the old Subject looks identical to a
+                // real edit without it.
+                AppLog.action("Schedule", "แก้คาบสำเร็จ: คาบ \(periodNumber) · วิชา \(oldSubject) → \(subject.name) (รหัส \(subject.code.isEmpty ? "-" : subject.code)) · ห้อง \(oldLocation) → \(trimmedLocation)")
             } catch {
                 AppLog.error("Schedule", "save ล้มเหลว: \(error.localizedDescription)")
                 return

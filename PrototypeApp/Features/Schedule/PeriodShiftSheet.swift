@@ -22,6 +22,7 @@ struct PeriodShiftSheet: View {
     let targetDate: Date
     let existing: DayScheduleOverride?
 
+    @State private var startPeriodNumber: Int
     @State private var startTime: Date
     @State private var lengthChoice: LengthChoice
     @State private var customLengthText: String
@@ -36,17 +37,24 @@ struct PeriodShiftSheet: View {
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
 
+        // `init` runs before `self` is usable, so the computed properties below
+        // are off limits here — sort into a local instead.
+        let sortedEntries = dayEntries.sorted { $0.startMinute < $1.startMinute }
+        let firstRealPeriod: Int? = sortedEntries.first { $0.subject?.isBreak != true }?.periodNumber
+        let initialPeriodNumber: Int = existing?.startPeriodNumber ?? firstRealPeriod ?? 1
+        let anchorEntry = sortedEntries.first { $0.periodNumber == initialPeriodNumber }
+
         let initialStartMinute: Int
         let initialLength: Int
         if let existing {
             initialStartMinute = existing.startMinute
             initialLength = existing.periodLengthMinutes
         } else {
-            let firstReal = dayEntries.first { $0.subject?.isBreak != true }
-            initialStartMinute = firstReal?.startMinute ?? 480
-            initialLength = firstReal.map { $0.endMinute - $0.startMinute } ?? 50
+            initialStartMinute = anchorEntry?.startMinute ?? 480
+            initialLength = anchorEntry.map { $0.endMinute - $0.startMinute } ?? 50
         }
 
+        _startPeriodNumber = State(initialValue: initialPeriodNumber)
         _startTime = State(initialValue: cal.date(byAdding: .minute, value: initialStartMinute, to: today) ?? today)
         if stride(from: 5, through: 60, by: 5).contains(initialLength) {
             _lengthChoice = State(initialValue: .minutes(initialLength))
@@ -55,6 +63,28 @@ struct PeriodShiftSheet: View {
             _lengthChoice = State(initialValue: .custom)
             _customLengthText = State(initialValue: String(initialLength))
         }
+    }
+
+    private var sortedDayEntries: [ScheduleEntry] {
+        dayEntries.sorted { $0.startMinute < $1.startMinute }
+    }
+
+    /// Period numbers as they appear down the day, de-duplicated but kept in
+    /// clock order — a school that prints "0" for both homeroom and lunch must
+    /// still offer that number exactly once.
+    private var periodChoices: [Int] {
+        var seen = Set<Int>()
+        return sortedDayEntries
+            .map { $0.periodNumber }
+            .filter { seen.insert($0).inserted }
+    }
+
+    /// "คาบ 1 · ฟิสิกส์" — the number alone is ambiguous when a school uses 0
+    /// for both homeroom and lunch.
+    private func periodChoiceLabel(_ n: Int) -> String {
+        let first = sortedDayEntries.first { $0.periodNumber == n }
+        let subject = first?.subject?.name ?? first?.subjectName ?? ""
+        return subject.isEmpty ? "คาบ \(n)" : "คาบ \(n) · \(subject)"
     }
 
     private var startMinuteValue: Int {
@@ -76,7 +106,12 @@ struct PeriodShiftSheet: View {
 
     private var previewPeriods: [ResolvedPeriod] {
         guard let length = periodLengthValue, isLengthValid else { return [] }
-        let previewOverride = DayScheduleOverride(date: targetDate, startMinute: startMinuteValue, periodLengthMinutes: length)
+        let previewOverride = DayScheduleOverride(
+            date: targetDate,
+            startPeriodNumber: startPeriodNumber,
+            startMinute: startMinuteValue,
+            periodLengthMinutes: length
+        )
         return PeriodShiftCalculator.apply(override: previewOverride, to: dayEntries)
     }
 
@@ -108,6 +143,15 @@ struct PeriodShiftSheet: View {
     private var infoSection: some View {
         Section {
             LabeledContent("วันที่ร่น", value: "\(ScheduleConstants.dayLabelsFull[day] ?? "") \(targetDate.thaiDayMonthYearString)")
+
+            Picker("เริ่มร่นที่คาบ", selection: $startPeriodNumber) {
+                ForEach(periodChoices, id: \.self) { n in
+                    Text(periodChoiceLabel(n)).tag(n)
+                }
+            }
+            Text("คาบก่อนหน้าคาบที่เลือกจะไม่แสดงในวันนี้")
+                .font(.caption)
+                .foregroundStyle(Theme.Colors.textSecondary)
 
             DatePicker("คาบแรกเริ่ม", selection: $startTime, displayedComponents: .hourAndMinute)
 
@@ -145,7 +189,7 @@ struct PeriodShiftSheet: View {
 
     private func previewRow(_ period: ResolvedPeriod) -> some View {
         HStack {
-            Text(period.entry.subject?.isBreak == true
+            Text(period.entry.periodNumber == 0
                  ? (period.entry.subject?.name ?? period.entry.subjectName)
                  : "คาบ \(period.entry.periodNumber)")
                 .font(.caption)
@@ -204,21 +248,27 @@ struct PeriodShiftSheet: View {
             return
         }
 
-        let impactedCount = dayEntries.filter { $0.subject?.isBreak != true }.count
-        let breakCount = dayEntries.filter { $0.subject?.isBreak == true }.count
+        let resolved = previewPeriods
+        let hiddenCount = dayEntries.count - resolved.count
 
         if let existing {
+            existing.startPeriodNumber = startPeriodNumber
             existing.startMinute = startMinuteValue
             existing.periodLengthMinutes = length
         } else {
-            context.insert(DayScheduleOverride(date: targetDate, startMinute: startMinuteValue, periodLengthMinutes: length))
+            context.insert(DayScheduleOverride(
+                date: targetDate,
+                startPeriodNumber: startPeriodNumber,
+                startMinute: startMinuteValue,
+                periodLengthMinutes: length
+            ))
         }
 
         do {
             try context.save()
             AppLog.action(
                 "Shift",
-                "ร่นคาบ \(targetDate.thaiDayMonthYearString) · เริ่ม \(startMinuteValue.asClockString) · คาบละ \(length) นาที · กระทบ \(impactedCount) คาบ (ข้ามพัก \(breakCount))"
+                "ร่นคาบ \(targetDate.thaiDayMonthYearString) · เริ่มคาบ \(startPeriodNumber) เวลา \(startMinuteValue.asClockString) · คาบละ \(length) นาที · ร่น \(resolved.count) คาบ · ซ่อน \(hiddenCount) คาบ"
             )
         } catch {
             AppLog.error("Shift", "save ล้มเหลว: \(error.localizedDescription)")

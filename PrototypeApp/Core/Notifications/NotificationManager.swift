@@ -265,6 +265,55 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         AppLog.action("Notification", "ตั้งแจ้งเตือนงานใหม่ \(due.count) ชิ้น (สูงสุด \(Self.maxAssignmentsWithReminders))")
     }
 
+    // MARK: - Pomodoro / Focus
+    //
+    // แยกจาก 2 ส่วนบนโดยสิ้นเชิง — identifier prefix `focus-`
+    // มีได้ทีละ 1 อันเท่านั้น (ช่วงที่กำลังเดินอยู่) ตั้งใหม่ = ทับของเดิม
+    //
+    // จุดสำคัญ: ตั้งไว้ **ล่วงหน้า** ที่เวลาหมด ไม่ได้ยิงตอนแอปตรวจพบว่าหมดเวลา
+    // เพราะถ้าแอปอยู่ background หรือถูกปิด จะไม่มีใครยิงให้เลย
+
+    private static let focusIdentifier = "focus-phase-end"
+
+    func scheduleFocusEnd(at fireDate: Date, phase: PomodoroPhase, body: String) async {
+        cancelFocusNotification()
+        guard fireDate > .now else { return }
+
+        if authorizationStatus == .notDetermined {
+            _ = await requestAuthorization()
+        }
+        guard authorizationStatus == .authorized || authorizationStatus == .provisional else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = phase.endedNotificationTitle
+        content.body = body
+        content.sound = .default
+        // หมายเหตุ: ถ้าอยากให้เด้งทะลุโหมด "ห้ามรบกวน" ต้องเพิ่ม capability
+        // "Time Sensitive Notifications" ใน Xcode ก่อน แล้วค่อยตั้ง
+        // content.interruptionLevel = .timeSensitive — ยังไม่เปิดในรอบนี้
+
+        let request = UNNotificationRequest(
+            identifier: Self.focusIdentifier,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(
+                timeInterval: max(1, fireDate.timeIntervalSinceNow),
+                repeats: false
+            )
+        )
+
+        do {
+            try await center.add(request)
+            AppLog.action("Notification", "ตั้งแจ้งเตือนจบ\(phase.label) อีก \(Int(fireDate.timeIntervalSinceNow)) วิ")
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func cancelFocusNotification() {
+        center.removePendingNotificationRequests(withIdentifiers: [Self.focusIdentifier])
+        center.removeDeliveredNotifications(withIdentifiers: [Self.focusIdentifier])
+    }
+
     func cancelAll() {
         center.removeAllPendingNotificationRequests()
         center.removeAllDeliveredNotifications()
