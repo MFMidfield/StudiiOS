@@ -50,9 +50,9 @@ struct GPAXSummaryCard: View {
             }
 
             if let state = result.state {
-                Text(copy(for: state))
+                Text(copy(for: state, gpax: gpax))
                     .font(.subheadline).fontWeight(.medium)
-                    .foregroundStyle(color(for: state))
+                    .foregroundStyle(color(for: state, gpax: gpax))
                     .padding(.top, Theme.Spacing.xs)
             } else {
                 // Data exists but no target yet (§7 edge case) — offer one inline.
@@ -100,7 +100,7 @@ struct GPAXSummaryCard: View {
         return text
     }
 
-    private func copy(for state: GPAXCalculator.State) -> String {
+    private func copy(for state: GPAXCalculator.State, gpax: Double) -> String {
         switch state {
         case .noData:
             return "ยังไม่มีข้อมูล — เพิ่มผลการเรียนเทอมแรก"
@@ -109,6 +109,9 @@ struct GPAXSummaryCard: View {
         case .onTrack(let required):
             return "ต้องได้เทอมละ \(GPAXCalculator.formatted(required)) ขึ้นไป"
         case .tight(let required):
+            if gpax >= 3.995 {
+                return "ทำได้ดีมากแล้ว รักษาระดับนี้ไว้"
+            }
             return "ต้องได้เทอมละ \(GPAXCalculator.formatted(required)) — เกือบเต็มทุกเทอม"
         case .outOfReach(let ceiling):
             return "เป้า \(GPAXCalculator.formatted(GPAXSettings.target)) เกินเอื้อมแล้ว · สูงสุดที่เป็นไปได้คือ \(GPAXCalculator.formatted(ceiling))"
@@ -117,11 +120,11 @@ struct GPAXSummaryCard: View {
         }
     }
 
-    private func color(for state: GPAXCalculator.State) -> Color {
+    private func color(for state: GPAXCalculator.State, gpax: Double) -> Color {
         switch state {
         case .achieved, .finished: return Theme.Colors.success
         case .onTrack: return Theme.Colors.textPrimary
-        case .tight: return Theme.Colors.warning
+        case .tight: return gpax >= 3.995 ? Theme.Colors.success : Theme.Colors.warning
         case .outOfReach: return Theme.Colors.danger
         case .noData: return Theme.Colors.textSecondary
         }
