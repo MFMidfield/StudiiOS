@@ -23,7 +23,7 @@
 
 ---
 
-## 2. โครงสร้างไฟล์จริง (~55 ไฟล์ Swift)
+## 2. โครงสร้างไฟล์จริง (~60 ไฟล์ Swift)
 
 ```
 PrototypeApp/                      ← โฟลเดอร์ซอร์ส (ชั้นในของ repo)
@@ -39,7 +39,7 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │   ├── Color+Hex.swift
 │   │   └── Date+Thai.swift              วันที่ไทย/พ.ศ. + thaiShortNoYear/thaiDayMonthYear
 │   ├── Logging/AppLog.swift             print-based console log (🔵🟠🔴)
-│   ├── Models/                          (13 ไฟล์ — ดูตาราง §3)
+│   ├── Models/                          (15 ไฟล์ — ดูตาราง §3, รวม Term.swift + TermSubject.swift)
 │   ├── Notifications/NotificationManager.swift  จัดการ UNUserNotificationCenter — 2 ส่วนแยกกันสิ้นเชิง คนละ identifier prefix
 │   │                                            · CalendarEvent: `event-{id}` 1 จุด ตาม EventAlert
 │   │                                            · Assignment: `assignment-{uid}-{d1|am|h1}` 3 จุด (1 วันก่อน · 07:00 วันกำหนด · 1 ชม.ก่อน)
@@ -93,6 +93,16 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │                                        **ใช้บน simulator ไม่ได้** guard ด้วย `.isSupported` ก่อนเปิดเสมอ (มี alert ไทยสำรอง)
 │   ├── Profile/StudentProfileStore.swift (71)
 │   ├── Schedule/  logic ล้วน ไม่มี View เลยทั้งโฟลเดอร์
+│   │   ├── TermStore.swift               **จุดเดียว**ที่ find/create/switch/delete Term — ห้าม View เขียน
+│   │   │                                 activeTermID หรือ insert Term เอง · เทอมสร้างแบบ lazy (D4 ใน
+│   │   │                                 PLAN_TermSystem) — DB เริ่มด้วย Term 0 แถว, มีแค่ 12 ตัวเลือกคงที่ในโค้ด
+│   │   │                                 `bootstrap(in:)` เรียกจาก RootContainerView.task ครั้งเดียว: การันตี
+│   │   │                                 active term มีอยู่เสมอ + ดึงแถว term==nil เข้าเทอม active (D7) +
+│   │   │                                 sync TermSubject · เรียกซ้ำได้ปลอดภัย
+│   │   │                                 `inTerm(_:)` extension บน [ScheduleEntry]/[Assignment]/[GradeComponent]
+│   │   │                                 อยู่ท้ายไฟล์นี้ — ทุก View กรองข้อมูลตามเทอมผ่านจุดนี้จุดเดียว
+│   │   │                                 ⚠️ ScheduleEntry ไม่มีเทอม = ซ่อน (บั๊ก) · Assignment/GradeComponent
+│   │   │                                 ไม่มีเทอม = ยังโชว์อยู่จนกว่า bootstrap จะดึงเข้าเทอม (D7, จงใจไม่สมมาตร)
 │   │   ├── PeriodShiftCalculator.swift   date(forDay:in:) + apply(override:to:) → [ResolvedPeriod]
 │   │   │                                 ร่นจาก `override.startPeriodNumber` เป็นต้นไป — แถวก่อนหน้า**ถูกซ่อน**
 │   │   │                                 (ไม่คืนใน result เลย) · **คาบพักถูกร่นและย่อด้วย** ไม่ข้ามแล้ว
@@ -108,8 +118,10 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │   │                                 + `ScheduleImportBuilder.build` แปลง [ScheduleDraftEntry] → [ImportedPeriod]
 │   │   │                                 ธง 3 ตัวแยกกันเด็ดขาด: codeNeedsReview · timeIsGuessed · nameIsGuessed
 │   │   │                                 (หน้าตรวจแสดงคำอธิบายคนละแบบ รวมเป็นตัวเดียวเมื่อไหร่ = เสียข้อมูล)
-│   │   └── ScheduleImportCommitter.swift **จุดเดียวที่เขียนผลนำเข้าลง SwiftData** — ลบ ScheduleEntry
-│   │                                     **ทุกแถวของวันที่รูปมี** แล้วใส่ใหม่ · วันที่ไม่มีในรูปไม่แตะเลย
+│   │   └── ScheduleImportCommitter.swift **จุดเดียวที่เขียนผลนำเข้าลง SwiftData** — `commit(_:into:in:)`
+│   │                                     รับ `Term` เป็น argument ตอนนี้ — ลบ ScheduleEntry **เฉพาะของเทอมนั้น**
+│   │                                     ในวันที่รูปมี แล้วใส่ใหม่ · วันที่ไม่มีในรูป/เทอมอื่นไม่แตะเลย
+│   │                                     ⚠️ ลืม scope ด้วย term = นำเข้าเทอมหนึ่งลบตารางอีกเทอมทิ้งแบบเงียบๆ
 │   │                                     จับคู่วิชา: รหัสก่อน → ชื่อ → ไม่เจอค่อยสร้าง (fetch Subject ครั้งเดียว)
 │   │                                     ⚠️ **ห้ามลบ Subject** — Assignment.subjectName ผูกด้วยชื่อแบบ lookup
 │   └── Tasks/AssignmentPriorityEngine.swift  logic ล้วน: priority(kind:dueDate:) + daysUntil() + dueLabel() — สูตรความสำคัญอัตโนมัติที่เดียว
@@ -164,13 +176,24 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │                (หน้าตรวจผลอ่านตารางจากรูป — ไม่เขียน SwiftData เอง ส่ง [ImportedPeriod]
     │                 กลับทาง onSave ให้ AddScheduleEntrySheet เรียก ScheduleImportCommitter)
     │              + ScheduleTodayTasksSection (งาน/การบ้านวันนี้ ผูก Assignment.subjectName แบบ lookup ชื่อ)
-    │              + PeriodShiftBanner · PeriodShiftSheet (ร่นคาบ — ใช้ PeriodShiftCalculator ที่เดียว ไม่มีสูตรซ้ำใน View)
+    │              + PeriodShiftBanner (แถบบอกว่าวันนี้ถูกร่นอยู่) · PeriodShiftSheet (ฟอร์มร่นคาบจริง —
+    │                ใช้ PeriodShiftCalculator ที่เดียว ไม่มีสูตรซ้ำใน View · เปิดจาก ScheduleSettingsSheet เท่านั้น
+    │                ไม่ได้เปิดตรงจาก ScheduleView แล้ว)
+    │              + ScheduleSettingsSheet (เปิดจากปุ่มเฟือง toolbar — แทนปุ่มนาฬิกาเดิม: สลับเทอมด้วย
+    │                segmented ม.ต้น/ม.ปลาย + menu 6 ช่อง, เลือกเทอม→ TermStore.findOrCreate+setActive+
+    │                syncTermSubjects **ทันที ไม่ dismiss sheet**, มีปุ่ม "ร่นคาบวันนี้" เปิด PeriodShiftSheet
+    │                ซ้อนข้างใน + ลิงก์ "จัดการเทอมทั้งหมด" push TermManagementView)
     ├── QuickAdd/QuickAddSheet.swift       (~340) half-sheet เมนู "เพิ่มอะไรดี?" (กริดไอคอน) ที่เด้งตอนกดปุ่ม `+` กลาง tab
     │                                              งาน → AddTaskSheet · ปฏิทิน/โน๊ต/Portfolio → CaptureDetailSheet (private ในไฟล์เดียวกัน)
     │                                              **เพิ่มโหมดใหม่ = เพิ่ม 1 บรรทัดใน `options`** (แทน SmartCaptureView เดิมที่ถูกลบ)
     ├── Settings/
-    │   ├── SettingsView.swift             (~375) section "สำหรับนักพัฒนา" อยู่ใน `developerSection`
+    │   ├── SettingsView.swift             (~500) section "สำหรับนักพัฒนา" อยู่ใน `developerSection`
     │   │                                         (computed property เพราะ `#if DEBUG` ใน ViewBuilder ทำ type-check เพี้ยน)
+    │   ├── TermManagementView.swift        List เทอมที่**มีอยู่จริงในฐานข้อมูล**เท่านั้น (เทอมสร้างแบบ lazy) เรียงตาม
+    │   │                                   `sortKey` · แตะแถว = TermStore.setActive + dismiss · ปัดซ้าย = alert ยืนยัน
+    │   │                                   บอกจำนวนคาบ/งาน/คะแนนที่จะหาย แล้ว TermStore.delete + TermStore.bootstrap
+    │   │                                   (การันตีมีเทอม active เสมอแม้ลบเทอมสุดท้าย) · เปิดจาก Settings และจาก
+    │   │                                   ScheduleSettingsSheet ("จัดการเทอมทั้งหมด")
     │   └── OCRDebugView.swift             ทั้งไฟล์ครอบ `#if DEBUG` — เลือกรูป → ดูทุกกล่องที่ Vision อ่านได้ + confidence
     │                                      ไม่ขึ้นใน Release · ไม่มี overlay (รอรอบ 2 ตาม PLAN_OCRDebug.md)
     │                                      โหมด "ตารางเรียน" ต่อท้ายแต่ละแถวด้วยผลของ `classifySubjectCode`
@@ -194,20 +217,22 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 
 ---
 
-## 3. SwiftData Models (18 @Model — ทั้งหมดต้องอยู่ใน Schema)
+## 3. SwiftData Models (20 @Model — ทั้งหมดต้องอยู่ใน Schema)
 
-Schema ประกาศที่ `App/PrototypeAppApp.swift:15-33`
+Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
 
 | Model | ไฟล์ |
 |---|---|
-| Assignment | Core/Models/Assignment.swift — `subjectName: String` (default "") · `kindRaw` (การบ้าน/งานทั่วไป) · `hasDueDate` (default **true**) · `isPriorityManual` · `remindersEnabled` · `uid` (เติมด้วย `ensureUID()`)<br>**อ่านวันส่งผ่าน `resolvedDueDate` เท่านั้น** (nil = ไม่กำหนด) · ความสำคัญใช้ `effectivePriority` (auto จาก `AssignmentPriorityEngine`, ห้าม cache ลง `priorityRaw`) |
+| Assignment | Core/Models/Assignment.swift — `subjectName: String` (default "") · `kindRaw` (การบ้าน/งานทั่วไป) · `hasDueDate` (default **true**) · `isPriorityManual` · `remindersEnabled` · `uid` (เติมด้วย `ensureUID()`) · `term: Term?` (term-scoped, D5)<br>**อ่านวันส่งผ่าน `resolvedDueDate` เท่านั้น** (nil = ไม่กำหนด) · ความสำคัญใช้ `effectivePriority` (auto จาก `AssignmentPriorityEngine`, ห้าม cache ลง `priorityRaw`) |
 | Note | Core/Models/Note.swift |
 | Flashcard | Core/Models/Flashcard.swift |
-| GradeComponent | Core/Models/GradeComponent.swift |
+| GradeComponent | Core/Models/GradeComponent.swift — `term: Term?` (term-scoped, D5) |
 | ExamEvent | Core/Models/ExamEvent.swift |
-| ScheduleEntry | Core/Models/ScheduleEntry.swift — เวลาเป็น `startMinute`/`endMinute: Int` (ไม่ใช่ Date แล้ว) + `subject: Subject?` relationship |
+| ScheduleEntry | Core/Models/ScheduleEntry.swift — เวลาเป็น `startMinute`/`endMinute: Int` (ไม่ใช่ Date แล้ว) + `subject: Subject?` + `term: Term?` relationship (term-scoped, D5 ใน PLAN_TermSystem) |
 | Subject | Core/Models/Subject.swift — วิชา/ช่วงพัก (`isBreak`), seed 3 ตัวตอนเปิดแอปครั้งแรก |
 | DayScheduleOverride | Core/Models/DayScheduleOverride.swift — ร่นคาบเฉพาะวัน จัดการผ่าน `PeriodShiftSheet`/`PeriodShiftBanner`, คำนวณผ่าน `PeriodShiftCalculator` เท่านั้น (ไม่แก้ `ScheduleEntry` จริง)<br>`startPeriodNumber: Int = 1` = คาบที่เริ่มร่น — **คาบก่อนหน้าถูกซ่อนทั้งวัน** และคาบพักตั้งแต่จุดนี้ไปถูกร่น+ย่อเหลือ `periodLengthMinutes` เท่าคาบอื่น |
+| Term | Core/Models/Term.swift — ระดับชั้น (1-6) + เทอม (1-2), ไม่มีปี พ.ศ. (D3) · สร้างแบบ lazy เท่านั้น (D4) — ห้ามมี `@Relationship` array ชี้ลง children, จัดการทั้งหมดผ่าน `TermStore` เท่านั้น |
+| TermSubject | Core/Models/TermSubject.swift — join `Term` ↔ `Subject`, มี `creditHours`/`gradePoint` รอรอบ GPA (§9 ใน PLAN_TermSystem) · sync อัตโนมัติผ่าน `TermStore.syncTermSubjects` ทุกครั้งที่ ScheduleEntry ถูกบันทึกเข้าเทอม |
 | FocusSession | Core/Models/FocusSession.swift — `kindRaw` (โฟกัส/พักสั้น/พักยาว, อ่านผ่าน `phase`) · `endedAt: Date?` · `wasLocked` (3 ตัวนี้มี default ครบ → migrate ของเดิมได้)<br>⚠️ **ช่วงพักถูกบันทึกเป็น FocusSession ด้วย** — สถิติ "นาทีโฟกัส" ต้องกรอง `phase == .focus` เสมอ (Dashboard + FocusModeView ทำแล้ว)<br>ไฟล์นี้ยังเป็นที่ประกาศ `enum PomodoroPhase` ด้วย |
 | PortfolioItem | Core/Models/PortfolioItem.swift — `startDate`/`endDate: Date?` (rename จาก `date` เดิม — breaking, ต้องลบแอปก่อนติดตั้งรุ่นนี้) · `images: [PortfolioImage]` (cascade) · `coverImage` = ตัวแรกตาม `sortOrder` · `dateRangeText` ใช้ `Date+Thai.swift` · `PortfolioCategory.color` ใหม่ (ใช้ `Theme.Colors`, ผูกกับ pill ในการ์ด) |
 | PortfolioImage | Core/Models/PortfolioImage.swift — เก็บแค่ `filename`/`sortOrder`/`createdAt` ตัวไฟล์จริงอยู่ `PortfolioImageStore` (Core/Portfolio/) |
@@ -216,7 +241,7 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-33`
 | SemesterRecord | Core/Models/SemesterRecord.swift |
 | CalendarEvent + CalendarTag + CalendarAttachmentItem | Features/Calendar/CalendarView.swift ⚠️ model ฝังอยู่ในไฟล์ view |
 
-**กฎเหล็ก:** เพิ่ม `@Model` ใหม่ → ต้องเพิ่มใน `Schema([...])` ด้วย ไม่งั้น crash ตอนรัน
+**กฎเหล็ก:** เพิ่ม `@Model` ใหม่ → ต้องเพิ่มใน `Schema([...])` ด้วย ไม่งั้น crash ตอนรัน (Term/TermSubject ทำแล้ว — ลบ TermSubject **ก่อน** Term เสมอ, และเคลียร์ `TermStore.activeTermKey` ออกจาก UserDefaults ด้วย)
 และต้องเพิ่มใน `SettingsView.resetAllData()` ด้วย (เคยลืมมาแล้วกับ Calendar 3 ตัว)
 `resetAllData()` ลบ `Subject` แล้วเรียก `PrototypeAppApp.seedBuiltInSubjects(in:)` ทันทีเพื่อ reseed 3 วิชาเริ่มต้น — ถ้าเพิ่ม built-in subject ใหม่ ต้องแก้ทั้งสองจุด (seed function + resetAllData ยังคงเรียก function เดิม จุดเดียวพอ)
 
@@ -231,7 +256,15 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-33`
   **นี่คือทางเข้าเดียวของ ปฏิทิน/โน๊ต/Portfolio** — ถ้าเปลี่ยนปุ่มนี้ให้เปิดฟอร์มใดฟอร์มหนึ่งตรงๆ อีก 3 โหมดจะกลายเป็นโค้ดตาย
 - Dashboard push ต่อผ่าน `DashboardDestination`: `.assignments` `.gradeCenter` `.tcasPlanner` `.portfolio` `.careerDiscovery` `.focusMode`
 - Onboarding gate อยู่ที่ `RootContainerView` (`PrototypeAppApp.swift:53-74`) ใช้ `@AppStorage` 5 ตัวเรียงลำดับหน้า
-- แท็บ "ตารางเรียน" (`ScheduleView`) toolbar มี 2 ปุ่ม: นาฬิกา (ซ้าย) เปิด `PeriodShiftSheet` (ร่นคาบ) · `+` (ขวา) เปิด `AddScheduleEntrySheet` (เพิ่ม/แก้คาบ, หรือแตะแถวคาบเพื่อแก้) → ซ้อน `AddSubjectSheet` (เพิ่มวิชาใหม่, เปิดจากปุ่ม "เพิ่มวิชาใหม่" ในฟอร์มคาบ)
+- แท็บ "ตารางเรียน" (`ScheduleView`) toolbar มี 2 ปุ่ม: เฟือง (ซ้าย) เปิด `ScheduleSettingsSheet`
+  (สลับเทอม + ร่นคาบ — เดิมนาฬิกาเปิด `PeriodShiftSheet` ตรงๆ, ตอนนี้ย้ายไปซ้อนข้างในแล้ว)
+  · `+` (ขวา) เปิด `AddScheduleEntrySheet` (เพิ่ม/แก้คาบ, หรือแตะแถวคาบเพื่อแก้) → ซ้อน `AddSubjectSheet`
+  (เพิ่มวิชาใหม่, เปิดจากปุ่ม "เพิ่มวิชาใหม่" ในฟอร์มคาบ)
+- **ระบบเทอม (`TermStore`)**: ทุก View ที่แสดง/บันทึก `ScheduleEntry`/`Assignment`/`GradeComponent`
+  ต้องมี trio `@AppStorage(TermStore.activeTermKey)` + `@Query private var terms: [Term]` +
+  `activeTerm` computed แล้วกรองข้อมูลผ่าน `.inTerm(activeTerm)` — สลับเทอมทำได้จาก `ScheduleSettingsSheet`
+  หรือ Settings → "เทอมปัจจุบัน" → `TermManagementView` (สลับ/ลบเทอมที่มีอยู่จริง)
+  `TermStore.bootstrap(in:)` รันครั้งเดียวใน `RootContainerView.task` ก่อน `.onChange(of: scenePhase)`
 - **ทางเข้าอ่านตารางจากรูปอยู่ใน `AddScheduleEntrySheet` เฉพาะโหมดเพิ่ม** (`editing == nil`) — โหมดแก้ไขไม่มีปุ่มนี้
   ปุ่ม "ถ่ายตารางสอน" → alert เตือนว่าอ่านผิดได้ → confirmationDialog ถ่าย/คลังภาพ → `ProfileImagePicker`
   → `ScheduleOCRParser` → `ScheduleImportBuilder` → `ScheduleImportReviewSheet` → `ScheduleImportCommitter`

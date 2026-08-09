@@ -12,8 +12,14 @@ import UIKit
 struct SetupSummaryView: View {
     @AppStorage("hasCompletedSetupSummary") private var hasCompletedSetupSummary = false
 
-    @Query private var scheduleEntries: [ScheduleEntry]
+    @Query private var allScheduleEntries: [ScheduleEntry]
     @Query private var semesterRecords: [SemesterRecord]
+
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+
+    private var scheduleEntries: [ScheduleEntry] { allScheduleEntries.inTerm(activeTerm) }
 
     private let profile = StudentProfileStore.shared
 
@@ -133,5 +139,5 @@ struct SetupSummaryView: View {
 
 #Preview {
     SetupSummaryView()
-        .modelContainer(for: [ScheduleEntry.self, SemesterRecord.self], inMemory: true)
+        .modelContainer(for: [ScheduleEntry.self, SemesterRecord.self, Term.self, TermSubject.self], inMemory: true)
 }

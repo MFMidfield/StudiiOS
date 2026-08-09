@@ -31,6 +31,8 @@ struct PrototypeAppApp: App {
             CalendarAttachmentItem.self,
             Subject.self,
             DayScheduleOverride.self,
+            Term.self,
+            TermSubject.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -91,6 +93,10 @@ private struct RootContainerView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var assignments: [Assignment]
 
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+
     var body: some View {
         Group {
             if !hasCompletedOnboarding {
@@ -107,11 +113,14 @@ private struct RootContainerView: View {
                 RootTabView()
             }
         }
+        .task {
+            TermStore.bootstrap(in: modelContext)
+        }
         .onChange(of: scenePhase) { _, newPhase in
             // ป้ายวัน ("พรุ่งนี้"/"วันนี้") และหน้าต่าง 14 วัน ขึ้นกับวันที่ปัจจุบัน
             // จึงต้องกวาดตั้งใหม่ทุกครั้งที่กลับเข้าแอป
             guard newPhase == .active else { return }
-            Task { await NotificationManager.shared.refreshAssignmentReminders(assignments) }
+            Task { await NotificationManager.shared.refreshAssignmentReminders(assignments.inTerm(activeTerm)) }
 
             // กันแอปอื่นถูกบล็อกค้าง: ถ้าเซสชันโฟกัสหมดเวลาไปแล้ว (หรือผู้ใช้
             // บังคับปิดแอปทิ้งไว้) ต้องปลดบล็อกให้ตั้งแต่เปิดแอปมา ไม่ใช่รอ

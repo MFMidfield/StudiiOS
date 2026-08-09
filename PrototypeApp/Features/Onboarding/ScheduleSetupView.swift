@@ -206,6 +206,11 @@ struct ScheduleSetupView: View {
     private func saveAndContinue() {
         let subjectCountBefore = (try? context.fetch(FetchDescriptor<Subject>()))?.count ?? 0
 
+        let term = TermStore.findOrCreate(gradeLevel: TermStore.defaultSlot.gradeLevel,
+                                          termNumber: TermStore.defaultSlot.termNumber,
+                                          in: context)
+        TermStore.setActive(term)
+
         for draft in draftEntries {
             let subject = ScheduleConstants.findOrCreateSubject(named: draft.subjectName, in: context)
             context.insert(
@@ -215,10 +220,13 @@ struct ScheduleSetupView: View {
                     endMinute: draft.endMinute,
                     periodNumber: 0,
                     subjectName: draft.subjectName,
-                    subject: subject
+                    subject: subject,
+                    term: term
                 )
             )
         }
+
+        TermStore.syncTermSubjects(for: term, in: context)
 
         let subjectCountAfter = (try? context.fetch(FetchDescriptor<Subject>()))?.count ?? subjectCountBefore
         AppLog.action("Onboarding", "บันทึกตาราง \(draftEntries.count) คาบ · สร้างวิชาใหม่ \(subjectCountAfter - subjectCountBefore) รายการ")
@@ -274,5 +282,5 @@ private struct ManualScheduleEntrySheet: View {
 
 #Preview {
     ScheduleSetupView()
-        .modelContainer(for: ScheduleEntry.self, inMemory: true)
+        .modelContainer(for: [ScheduleEntry.self, Term.self, TermSubject.self], inMemory: true)
 }

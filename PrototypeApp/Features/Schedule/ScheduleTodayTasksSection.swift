@@ -15,11 +15,15 @@ struct ScheduleTodayTasksSection: View {
     @Query private var allAssignments: [Assignment]
     @Query(sort: \Subject.createdAt) private var subjects: [Subject]
 
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+
     /// ตารางเรียนแสดงเฉพาะการบ้านเป็นค่าเริ่มต้น — เปิดรวมงานส่วนตัวได้ที่ Settings
     @AppStorage("scheduleShowsPersonalTasks") private var showsPersonalTasks = false
 
     private var tasks: [Assignment] {
-        allAssignments.filter {
+        allAssignments.inTerm(activeTerm).filter {
             guard !$0.isDone, let due = $0.resolvedDueDate else { return false }
             guard showsPersonalTasks || $0.kind == .homework else { return false }
             return Calendar.current.isDate(due, inSameDayAs: targetDate)
@@ -134,7 +138,7 @@ struct ScheduleTodayTasksSection: View {
 
 #Preview {
     let container = try! ModelContainer(
-        for: Subject.self, Assignment.self,
+        for: Subject.self, Assignment.self, Term.self, TermSubject.self,
         configurations: .init(isStoredInMemoryOnly: true)
     )
     let math = Subject(name: "คณิตศาสตร์เพิ่มเติม ม.5", colorHex: "4A7DFF", iconName: "function")

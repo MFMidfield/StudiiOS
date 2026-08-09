@@ -14,6 +14,10 @@ struct AddScheduleEntrySheet: View {
     @Query(sort: \Subject.createdAt) private var subjects: [Subject]
     @Query private var allEntries: [ScheduleEntry]
 
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+
     let editing: ScheduleEntry?
     let defaultDay: Int
     /// Called with the first day the import touched, so the Schedule tab can
@@ -69,7 +73,7 @@ struct AddScheduleEntrySheet: View {
     private var endMinuteValue: Int { endTime.minutesFromMidnight }
 
     private var overlappingEntry: ScheduleEntry? {
-        allEntries.first { other in
+        allEntries.inTerm(activeTerm).first { other in
             other.dayOfWeek == dayOfWeek && other !== editing &&
             startMinuteValue < other.endMinute && endMinuteValue > other.startMinute
         }
@@ -299,7 +303,13 @@ struct AddScheduleEntrySheet: View {
     }
 
     private func commitImport(_ periods: [ImportedPeriod]) {
-        let summary = ScheduleImportCommitter.commit(periods, in: context)
+        guard let activeTerm else {
+            reviewPayload = nil
+            scanError = "ไม่พบเทอมปัจจุบัน ลองใหม่อีกครั้ง"
+            AppLog.error("ScheduleImport", "commitImport ล้มเหลว: ไม่มี activeTerm")
+            return
+        }
+        let summary = ScheduleImportCommitter.commit(periods, into: activeTerm, in: context)
         reviewPayload = nil                       // closes the review sheet
         if let day = summary.firstDay { onImported?(day) }
         dismiss()                                 // closes this sheet
@@ -339,6 +349,9 @@ struct AddScheduleEntrySheet: View {
             editing.subjectName = subject.name
             editing.subject = subject
 
+            if let activeTerm {
+                TermStore.syncTermSubjects(for: activeTerm, in: context)
+            }
             do {
                 try context.save()
                 // Subject is logged as a before→after pair on purpose: a save
@@ -358,10 +371,14 @@ struct AddScheduleEntrySheet: View {
                 teacherName: trimmedTeacher,
                 location: trimmedLocation,
                 subjectName: subject.name,
-                subject: subject
+                subject: subject,
+                term: activeTerm
             )
             context.insert(entry)
 
+            if let activeTerm {
+                TermStore.syncTermSubjects(for: activeTerm, in: context)
+            }
             do {
                 try context.save()
                 AppLog.action("Schedule", "เพิ่มคาบสำเร็จ: คาบ \(periodNumber) · \(subject.name) · \(startMinuteValue.asClockString)-\(endMinuteValue.asClockString) · ห้อง \(trimmedLocation) · ครู\(trimmedTeacher)")
@@ -393,5 +410,5 @@ struct AddScheduleEntrySheet: View {
 
 #Preview {
     AddScheduleEntrySheet(editing: nil, defaultDay: 1)
-        .modelContainer(for: [Subject.self, ScheduleEntry.self], inMemory: true)
+        .modelContainer(for: [Subject.self, ScheduleEntry.self, Term.self, TermSubject.self], inMemory: true)
 }

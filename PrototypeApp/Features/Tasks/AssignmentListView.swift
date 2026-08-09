@@ -15,6 +15,11 @@ struct AssignmentListView: View {
     @Query(sort: \Subject.createdAt) private var subjects: [Subject]
     @Environment(\.modelContext) private var context
 
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+    private var scopedAssignments: [Assignment] { assignments.inTerm(activeTerm) }
+
     @State private var scope: TaskScope = .all
     @State private var searchText = ""
     @State private var kindFilter: TaskKindFilter = .all
@@ -181,7 +186,7 @@ struct AssignmentListView: View {
 
     @ViewBuilder
     private var emptyState: some View {
-        if assignments.isEmpty {
+        if scopedAssignments.isEmpty {
             ContentUnavailableView(
                 "ยังไม่มีงาน",
                 systemImage: "checkmark.square",
@@ -216,7 +221,7 @@ struct AssignmentListView: View {
 
     /// Everything matching the secondary filters, before the chip narrows it.
     private var filteredPool: [Assignment] {
-        assignments.filter(passesSecondaryFilters)
+        scopedAssignments.filter(passesSecondaryFilters)
     }
 
     /// The main list — chip applied. Finished tasks live in their own collapsed
@@ -241,7 +246,7 @@ struct AssignmentListView: View {
     private var counts: [TaskScope: Int] {
         var result: [TaskScope: Int] = [:]
         for stat in TaskScope.stats {
-            result[stat] = assignments.filter { stat.matches($0) }.count
+            result[stat] = scopedAssignments.filter { stat.matches($0) }.count
         }
         return result
     }
@@ -325,5 +330,5 @@ private extension View {
 
 #Preview {
     NavigationStack { AssignmentListView() }
-        .modelContainer(for: [Assignment.self, Subject.self], inMemory: true)
+        .modelContainer(for: [Assignment.self, Subject.self, Term.self, TermSubject.self], inMemory: true)
 }

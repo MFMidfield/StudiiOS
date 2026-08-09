@@ -15,16 +15,19 @@ final class GradeComponent {
     /// nil means not graded yet — used by the "what score do I need" calculator.
     var scoreObtained: Double?
     var order: Int
+    var term: Term?
 
     init(
         name: String,
         maxScore: Double,
         scoreObtained: Double? = nil,
-        order: Int = 0
+        order: Int = 0,
+        term: Term? = nil
     ) {
         self.name = name
         self.maxScore = maxScore
         self.scoreObtained = scoreObtained
         self.order = order
+        self.term = term
     }
 }

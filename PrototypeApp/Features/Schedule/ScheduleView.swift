@@ -13,10 +13,14 @@ struct ScheduleView: View {
     @Query private var allEntries: [ScheduleEntry]
     @Query private var overrides: [DayScheduleOverride]
 
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+
     @State private var selectedDay: Int
     @State private var editingEntry: ScheduleEntry?
     @State private var isAddingEntry = false
-    @State private var isShiftingPeriods = false
+    @State private var isShowingScheduleSettings = false
 
     init() {
         let raw = Calendar.current.component(.weekday, from: .now) // 1=Sun...7=Sat
@@ -26,6 +30,7 @@ struct ScheduleView: View {
 
     private var entriesForSelectedDay: [ScheduleEntry] {
         allEntries
+            .inTerm(activeTerm)
             .filter { $0.dayOfWeek == selectedDay }
             .sorted { $0.startMinute < $1.startMinute }
     }
@@ -69,14 +74,24 @@ struct ScheduleView: View {
             }
         }
         .background(Theme.Colors.background)
-        .navigationTitle("ตารางเรียน")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 2) {
+                    Text("ตารางเรียน")
+                        .font(.headline)
+                    if let activeTerm {
+                        Text(activeTerm.displayName)
+                            .font(.caption)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                }
+            }
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
-                    isShiftingPeriods = true
+                    isShowingScheduleSettings = true
                 } label: {
-                    Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                    Image(systemName: "gearshape")
                 }
 
                 Button {
@@ -98,19 +113,19 @@ struct ScheduleView: View {
         .sheet(item: $editingEntry) { entry in
             AddScheduleEntrySheet(editing: entry, defaultDay: selectedDay)
         }
-        .sheet(isPresented: $isShiftingPeriods) {
-            PeriodShiftSheet(
+        .sheet(isPresented: $isShowingScheduleSettings) {
+            ScheduleSettingsSheet(
                 day: selectedDay,
                 dayEntries: entriesForSelectedDay,
                 targetDate: targetDate,
-                existing: matchingOverride
+                existingOverride: matchingOverride
             )
         }
     }
 
     private var emptyState: some View {
         ContentUnavailableView {
-            Label("ยังไม่มีคาบเรียนในวัน\(ScheduleConstants.dayLabelsFull[selectedDay] ?? "")", systemImage: "calendar.badge.plus")
+            Label("ยังไม่มีคาบเรียนในวัน\(ScheduleConstants.dayLabelsFull[selectedDay] ?? "") (\(activeTerm?.displayName ?? ""))", systemImage: "calendar.badge.plus")
         } actions: {
             Button {
                 isAddingEntry = true
@@ -126,6 +141,7 @@ struct ScheduleView: View {
 #Preview {
     let container = try! ModelContainer(
         for: Subject.self, ScheduleEntry.self, DayScheduleOverride.self, Assignment.self,
+        Term.self, TermSubject.self,
         configurations: .init(isStoredInMemoryOnly: true)
     )
     let math = Subject(name: "คณิตศาสตร์เพิ่มเติม ม.5", colorHex: "4A7DFF", iconName: "function")

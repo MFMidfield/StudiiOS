@@ -27,7 +27,6 @@
 		D16C3DFD3017B61D00CE7D8C /* PrototypeApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrototypeApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D16C3E0E3017B61F00CE7D8C /* PrototypeAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrototypeAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D16C3E183017B61F00CE7D8C /* PrototypeAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrototypeAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D1EACEEF3018AE86005EF164 /* StudentOS_รวมเอกสาร.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "StudentOS_รวมเอกสาร.md"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -93,7 +92,6 @@
 				D16C3E113017B61F00CE7D8C /* PrototypeAppTests */,
 				D16C3E1B3017B61F00CE7D8C /* PrototypeAppUITests */,
 				D16C3DFE3017B61D00CE7D8C /* Products */,
-				D1EACEEF3018AE86005EF164 /* StudentOS_รวมเอกสาร.md */,
 			);
 			sourceTree = "<group>";
 		};

@@ -3,8 +3,9 @@
 //  Writes a reviewed import into SwiftData. The only destructive step in the
 //  whole feature, so it is deliberately blunt and easy to reason about:
 //
-//    every day the photo covers loses ALL its existing periods, then gets the
-//    reviewed rows — and days the photo did not cover are never touched.
+//    every day the photo covers loses ALL its existing periods **in the
+//    target term**, then gets the reviewed rows — days the photo did not
+//    cover, and other terms' rows on the same days, are never touched.
 //
 //  Per-row merging was rejected: a timetable photo is the authoritative view of
 //  those days, and half-merged rows leave duplicates that look exactly like the
@@ -30,16 +31,18 @@ enum ScheduleImportCommitter {
     }
 
     @discardableResult
-    static func commit(_ periods: [ImportedPeriod], in context: ModelContext) -> Summary {
+    static func commit(_ periods: [ImportedPeriod], into term: Term, in context: ModelContext) -> Summary {
         let days = Set(periods.map(\.dayOfWeek))
         guard !days.isEmpty else { return Summary() }
 
         var summary = Summary()
         summary.days = days.sorted()
 
-        // 1. Wipe the days this import covers.
+        // 1. Wipe the days this import covers — scoped to this term only.
+        //    Without the term check, importing one term's timetable would
+        //    silently delete another term's rows for the same weekdays.
         let existingEntries = (try? context.fetch(FetchDescriptor<ScheduleEntry>())) ?? []
-        for entry in existingEntries where days.contains(entry.dayOfWeek) {
+        for entry in existingEntries where days.contains(entry.dayOfWeek) && entry.term?.id == term.id {
             context.delete(entry)
             summary.deletedEntries += 1
         }
@@ -60,11 +63,14 @@ enum ScheduleImportCommitter {
                     teacherName: period.teacherName,
                     location: period.room,
                     subjectName: subject.name,
-                    subject: subject
+                    subject: subject,
+                    term: term
                 )
             )
             summary.insertedEntries += 1
         }
+
+        TermStore.syncTermSubjects(for: term, in: context)
 
         do {
             try context.save()

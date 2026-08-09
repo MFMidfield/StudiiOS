@@ -66,6 +66,7 @@ final class Assignment {
     /// `ensureUID()` rather than `UUID()` as a default value, because a default
     /// may be evaluated once during backfill and give every old row the same id.
     var uid: String = ""
+    var term: Term?
 
     var priority: AssignmentPriority {
         get { AssignmentPriority(rawValue: priorityRaw) ?? .medium }
@@ -112,7 +113,8 @@ final class Assignment {
         hasDueDate: Bool = true,
         isPriorityManual: Bool = false,
         remindersEnabled: Bool = false,
-        uid: String = ""
+        uid: String = "",
+        term: Term? = nil
     ) {
         self.title = title
         self.detail = detail
@@ -126,5 +128,6 @@ final class Assignment {
         self.isPriorityManual = isPriorityManual
         self.remindersEnabled = remindersEnabled
         self.uid = uid
+        self.term = term
     }
 }

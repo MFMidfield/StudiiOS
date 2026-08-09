@@ -12,6 +12,10 @@ struct AddTaskSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Subject.createdAt) private var subjects: [Subject]
 
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+
     /// `nil` = creating a new task.
     private let editing: Assignment?
     /// Called after a successful save, so a presenting sheet (QuickAddSheet)
@@ -183,7 +187,7 @@ struct AddTaskSheet: View {
     private func save() {
         guard canSave else { return }
 
-        let target = editing ?? Assignment(title: trimmedTitle)
+        let target = editing ?? Assignment(title: trimmedTitle, term: activeTerm)
         if editing == nil { context.insert(target) }
 
         target.title = trimmedTitle
@@ -253,5 +257,5 @@ struct AddTaskSheet: View {
 
 #Preview {
     AddTaskSheet()
-        .modelContainer(for: [Assignment.self, Subject.self], inMemory: true)
+        .modelContainer(for: [Assignment.self, Subject.self, Term.self, TermSubject.self], inMemory: true)
 }

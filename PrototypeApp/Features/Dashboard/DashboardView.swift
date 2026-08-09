@@ -11,10 +11,15 @@ struct DashboardView: View {
     @Query(sort: \Assignment.dueDate) private var assignments: [Assignment]
     @Query private var focusSessions: [FocusSession]
 
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+    private var scopedAssignments: [Assignment] { assignments.inTerm(activeTerm) }
+
     private var today: Date { .now }
 
     private var pendingAssignments: [Assignment] {
-        assignments.filter { !$0.isDone }
+        scopedAssignments.filter { !$0.isDone }
     }
 
     private var dueTodayAssignments: [Assignment] {
@@ -365,5 +370,5 @@ struct EmptyRow: View {
     NavigationStack {
         DashboardView()
     }
-    .modelContainer(for: [Assignment.self, FocusSession.self], inMemory: true)
+    .modelContainer(for: [Assignment.self, FocusSession.self, Term.self, TermSubject.self], inMemory: true)
 }

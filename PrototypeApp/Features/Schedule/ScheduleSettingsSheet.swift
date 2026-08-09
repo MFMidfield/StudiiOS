@@ -1,0 +1,141 @@
+//
+//  ScheduleSettingsSheet.swift
+//  Opened from ScheduleView's gear button. Lets the student switch which
+//  term's timetable is active, and holds "ร่นคาบวันนี้" (which used to be its
+//  own toolbar button). Switching term does NOT dismiss this sheet — the
+//  picker just updates in place.
+//
+
+import SwiftUI
+import SwiftData
+
+struct ScheduleSettingsSheet: View {
+    @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
+
+    let day: Int
+    let dayEntries: [ScheduleEntry]
+    let targetDate: Date
+    let existingOverride: DayScheduleOverride?
+
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    @Query private var allScheduleEntries: [ScheduleEntry]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+
+    @State private var selectedBand: SchoolBand = .upper
+    @State private var isShiftingPeriods = false
+
+    private var termSelection: Binding<Int> {
+        Binding(
+            get: { activeTerm?.sortKey ?? (selectedBand.gradeLevels.first ?? 4) * 10 + 1 },
+            set: { newSortKey in
+                let gradeLevel = newSortKey / 10
+                let termNumber = newSortKey % 10
+                let term = TermStore.findOrCreate(gradeLevel: gradeLevel, termNumber: termNumber, in: context)
+                TermStore.setActive(term)
+                TermStore.syncTermSubjects(for: term, in: context)
+                try? context.save()
+            }
+        )
+    }
+
+    private func entryCount(gradeLevel: Int, termNumber: Int) -> Int {
+        guard let term = terms.first(where: { $0.gradeLevel == gradeLevel && $0.termNumber == termNumber }) else {
+            return 0
+        }
+        return allScheduleEntries.filter { $0.term?.id == term.id }.count
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("ระดับชั้น", selection: $selectedBand) {
+                        ForEach(SchoolBand.allCases) { band in
+                            Text(band.label).tag(band)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Picker("เทอม", selection: termSelection) {
+                        ForEach(selectedBand.gradeLevels, id: \.self) { level in
+                            ForEach([1, 2], id: \.self) { termNumber in
+                                let count = entryCount(gradeLevel: level, termNumber: termNumber)
+                                Text(count > 0 ? "ม.\(level) เทอม \(termNumber) (\(count) คาบ)" : "ม.\(level) เทอม \(termNumber)")
+                                    .tag(level * 10 + termNumber)
+                            }
+                        }
+                    }
+                    .pickerStyle(.menu)
+                } header: {
+                    Text("เทอม")
+                } footer: {
+                    Text("ตารางสอน งาน และคะแนน จะแยกเก็บตามเทอม")
+                }
+
+                Section("วันนี้") {
+                    Button {
+                        isShiftingPeriods = true
+                    } label: {
+                        HStack {
+                            Label("ร่นคาบวันนี้", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                        }
+                    }
+                    .foregroundStyle(Theme.Colors.textPrimary)
+
+                    if let existingOverride {
+                        Text("ร่นจากคาบ \(existingOverride.startPeriodNumber) เวลา \(existingOverride.startMinute.asClockString)")
+                            .font(.caption)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                }
+
+                Section {
+                    NavigationLink {
+                        TermManagementView()
+                    } label: {
+                        Text("จัดการเทอมทั้งหมด")
+                    }
+                }
+            }
+            .navigationTitle("ตั้งค่าตารางสอน")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("เสร็จ") { dismiss() }
+                }
+            }
+            .onAppear {
+                selectedBand = activeTerm?.band ?? .upper
+            }
+            .sheet(isPresented: $isShiftingPeriods) {
+                PeriodShiftSheet(
+                    day: day,
+                    dayEntries: dayEntries,
+                    targetDate: targetDate,
+                    existing: existingOverride
+                )
+            }
+        }
+    }
+}
+
+#Preview {
+    let container = try! ModelContainer(
+        for: Subject.self, ScheduleEntry.self, DayScheduleOverride.self, Term.self, TermSubject.self,
+        configurations: .init(isStoredInMemoryOnly: true)
+    )
+    let term = Term(gradeLevel: 4, termNumber: 1)
+    container.mainContext.insert(term)
+    TermStore.setActive(term)
+
+    return Text("").sheet(isPresented: .constant(true)) {
+        ScheduleSettingsSheet(day: 1, dayEntries: [], targetDate: .now, existingOverride: nil)
+    }
+    .modelContainer(container)
+}

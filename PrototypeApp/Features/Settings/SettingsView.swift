@@ -28,6 +28,10 @@ struct SettingsView: View {
     @AppStorage("hasCompletedSetupSummary") private var hasCompletedSetupSummary = false
     @AppStorage("scheduleShowsPersonalTasks") private var scheduleShowsPersonalTasks = false
 
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+
     var body: some View {
         List {
             Section {
@@ -114,6 +118,11 @@ struct SettingsView: View {
             }
 
             Section("ตารางเรียน") {
+                NavigationLink {
+                    TermManagementView()
+                } label: {
+                    LabeledContent("เทอมปัจจุบัน", value: activeTerm?.displayName ?? "—")
+                }
                 Toggle("แสดงงานส่วนตัวในตารางเรียน", isOn: $scheduleShowsPersonalTasks)
                 Text("ปิดไว้ = การ์ด \"งาน / การบ้านวันนี้\" แสดงเฉพาะการบ้าน ไม่รวมงานทั่วไป")
                     .font(.caption2)
@@ -231,6 +240,8 @@ struct SettingsView: View {
         deleteAll(CalendarAttachmentItem.self)
         deleteAll(Subject.self)
         deleteAll(DayScheduleOverride.self)
+        deleteAll(TermSubject.self)
+        deleteAll(Term.self)
 
         NotificationManager.shared.cancelAll()
         StudentProfileStore.shared.reset()

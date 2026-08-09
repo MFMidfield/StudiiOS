@@ -20,6 +20,7 @@ final class ScheduleEntry {
     var subjectName: String
 
     var subject: Subject?
+    var term: Term?
 
     init(
         dayOfWeek: Int,
@@ -29,7 +30,8 @@ final class ScheduleEntry {
         teacherName: String = "",
         location: String = "",
         subjectName: String = "",
-        subject: Subject? = nil
+        subject: Subject? = nil,
+        term: Term? = nil
     ) {
         self.dayOfWeek = dayOfWeek
         self.startMinute = startMinute
@@ -39,6 +41,7 @@ final class ScheduleEntry {
         self.location = location
         self.subjectName = subjectName
         self.subject = subject
+        self.term = term
     }
 }
 

@@ -9,24 +9,31 @@ import SwiftUI
 import SwiftData
 
 struct GradeCenterView: View {
-    @Query(sort: \GradeComponent.order) private var components: [GradeComponent]
+    @Query(sort: \GradeComponent.order) private var allComponents: [GradeComponent]
     @State private var targetGrade: Double = 3.0
+
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    @Query private var terms: [Term]
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+
+    private var components: [GradeComponent] { allComponents.inTerm(activeTerm) }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                GradeBreakdownCard(components: components)
+                GradeBreakdownCard(components: components, term: activeTerm)
                 TargetScoreCalculatorCard(components: components, targetGrade: $targetGrade)
             }
             .padding()
         }
-        .navigationTitle("เกรด & GPA")
+        .navigationTitle(activeTerm.map { "เกรด & GPA · \($0.displayName)" } ?? "เกรด & GPA")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 private struct GradeBreakdownCard: View {
     let components: [GradeComponent]
+    let term: Term?
     @Environment(\.modelContext) private var context
     @State private var newComponentName = ""
     @State private var newMaxScore = ""
@@ -79,7 +86,7 @@ private struct GradeBreakdownCard: View {
     private func addComponent() {
         guard let max = Double(newMaxScore) else { return }
         let order = components.count
-        context.insert(GradeComponent(name: newComponentName, maxScore: max, order: order))
+        context.insert(GradeComponent(name: newComponentName, maxScore: max, order: order, term: term))
         newComponentName = ""; newMaxScore = ""
     }
 }
@@ -179,5 +186,5 @@ enum ThaiGrading {
 
 #Preview {
     NavigationStack { GradeCenterView() }
-        .modelContainer(for: GradeComponent.self, inMemory: true)
+        .modelContainer(for: [GradeComponent.self, Term.self, TermSubject.self], inMemory: true)
 }

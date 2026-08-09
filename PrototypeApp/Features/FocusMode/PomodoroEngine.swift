@@ -107,7 +107,7 @@ final class PomodoroEngine {
         pausedRemaining = max(0, Int(deadline.timeIntervalSinceNow.rounded(.up)))
         self.deadline = nil
         stopTicker()
-        Task { await NotificationManager.shared.cancelFocusNotification() }
+        NotificationManager.shared.cancelFocusNotification()
         // ระหว่างพักชั่วคราว ปลดบล็อกแอปด้วย ไม่งั้นผู้ใช้ติดค้างโดยที่นาฬิกาไม่เดิน
         AppBlockManager.shared.stopBlocking(reason: "หยุดชั่วคราว")
         persist()
@@ -139,7 +139,7 @@ final class PomodoroEngine {
         plannedDuration = PomodoroSettings.duration(for: .focus)
         phase = .focus
         stopTicker()
-        Task { await NotificationManager.shared.cancelFocusNotification() }
+        NotificationManager.shared.cancelFocusNotification()
         AppBlockManager.shared.stopBlocking(reason: "จบเซสชัน")
         persist()
         AppLog.action("Pomodoro", "หยุดเซสชัน")
@@ -267,7 +267,8 @@ final class PomodoroEngine {
     private func startTicker() {
         guard ticker == nil, deadline != nil else { return }
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.tick() }
+            guard let self else { return }
+            Task { @MainActor in self.tick() }
         }
         RunLoop.main.add(timer, forMode: .common)
         ticker = timer
