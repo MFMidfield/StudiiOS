@@ -2,7 +2,7 @@
 
 > Written for a Sonnet implementation session. Simple English on purpose.
 > Read `PROJECT_MAP.md` first. Read this file second. Do not start coding until §9 is understood.
-> Created: 2026-08-09
+> Created: 2026-08-09 · **Re-checked against the source: 2026-08-09 (commit `db0ae91` + uncommitted Portfolio work)**
 
 ---
 
@@ -15,6 +15,44 @@ The user picks which term is "active". The whole app then shows only that term's
 
 This is the foundation for a future GPA system, so the data model must already be able to answer:
 *"which subjects did the student take in ม.4 เทอม 1, how many credits, what grade?"*
+
+---
+
+## 0.1 What changed in the app after this plan was first written
+
+The plan was drafted at commit `3200bb4`. Four commits landed after that. None of them break the
+plan, but these details are now different from the first draft and are already corrected below.
+
+| What changed | Where | Effect on this plan |
+|---|---|---|
+| Focus/Pomodoro module rewritten | new `Features/FocusMode/` — `FocusModeView`, `PomodoroEngine`, `PomodoroSettings`, `AppBlockManager`. Old `Features/Portfolio/FocusModeView.swift` deleted | Not term-scoped. Added to §8. `RootContainerView.onChange` now also runs Pomodoro + app-block code — see §4.1. |
+| `RootContainerView` gained `@Environment(\.modelContext) private var modelContext` | `App/PrototypeAppApp.swift:91` | **Do not add a second one.** §4.1 now says reuse it. |
+| Portfolio module expanded | new `PortfolioImage` model, `Core/Portfolio/PortfolioImageStore.swift`, `Core/Portfolio/DocumentScannerView.swift`, `Features/Portfolio/PortfolioCard.swift`, `PortfolioItemSheet.swift`, `PortfolioDetailView.swift` | Not term-scoped. Added to §8. |
+| `PortfolioImage.self` added to `Schema` | `PrototypeAppApp.swift:24` — Schema is now **18 models** | §4.1 unchanged in substance; Term + TermSubject make it 20. |
+| `resetAllData()` gained `deleteAll(PortfolioImage.self)` + `PortfolioImageStore.deleteAll()` | `SettingsView.swift:223-224` | §4.11 updated with the current line numbers. |
+| Files grew | `SettingsView.swift` 375 → **488** · `DashboardView.swift` 350 → **369** | §7 trap 10 updated. |
+| `PortfolioView` sort key changed to `startDate` | `PortfolioView.swift:10` | No effect. |
+
+**Files this plan touches that did NOT change:** `ScheduleView.swift` (150), `AddScheduleEntrySheet.swift` (397),
+`ScheduleImportCommitter.swift` (123), `GradeCenterView.swift` (183), `AssignmentListView.swift` (329),
+`ScheduleTodayTasksSection.swift`, `SetupSummaryView.swift`, `ScheduleSetupView.swift`, and all three models
+in §2.3. Every line number quoted in §4 was re-verified today.
+
+### 0.2 Before writing any code — clean the working tree
+
+`git status` currently shows **uncommitted work**:
+
+```
+ M PrototypeApp/Features/Portfolio/PortfolioItemSheet.swift
+ M PrototypeApp/Features/Portfolio/PortfolioView.swift
+ M PrototypeApp/Info.plist
+ M claude plan/PROJECT_MAP.md
+?? PrototypeApp/Core/Portfolio/DocumentScannerView.swift
+?? PrototypeApp/Features/Portfolio/PortfolioDetailView.swift
+```
+
+Ask Few to commit or stash this Portfolio work first. Starting the term system on a dirty tree
+means `git checkout .` can no longer be used to roll back a bad step.
 
 ---
 
@@ -324,24 +362,28 @@ Work through this table top to bottom. Each row is small.
 
 ### 4.1 `App/PrototypeAppApp.swift`
 
-1. Add `Term.self` and `TermSubject.self` to the `Schema([...])` array. **Forgetting this crashes the app on launch** (there is a `fatalError`).
-2. In `RootContainerView`, add:
+1. Add `Term.self` and `TermSubject.self` to the `Schema([...])` array (currently 18 entries, ending
+   `Subject.self, DayScheduleOverride.self,` at lines 32–33). **Forgetting this crashes the app on
+   launch** — there is a `fatalError` at line 40.
+2. `RootContainerView` **already has** `@Environment(\.modelContext) private var modelContext` at
+   line 91 (added by the Pomodoro work). Reuse it — do not declare a second environment property.
+   Call bootstrap once when the view appears:
    ```swift
-   @Environment(\.modelContext) private var context
+   .task { TermStore.bootstrap(in: modelContext) }
    ```
-   and call bootstrap once when the view appears:
-   ```swift
-   .task { TermStore.bootstrap(in: context) }
-   ```
-   Put this **before** the existing `.onChange(of: scenePhase)` modifier.
-3. The existing notification refresh must only cover the active term:
+   Put this **before** the existing `.onChange(of: scenePhase)` modifier at line 110.
+3. The existing notification refresh must only cover the active term. Add to `RootContainerView`:
    ```swift
    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
    @Query private var terms: [Term]
    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
-   ...
+   ```
+   then change line 114 only:
+   ```swift
    Task { await NotificationManager.shared.refreshAssignmentReminders(assignments.inTerm(activeTerm)) }
    ```
+   **Leave the three lines below it alone** — `PomodoroEngine.shared.attach/syncToNow` and
+   `AppBlockManager.shared.reconcile()` belong to the focus module and have nothing to do with terms.
 
 ### 4.2 `Features/Schedule/ScheduleView.swift`
 
@@ -429,21 +471,27 @@ existing day/kind filtering.
 4. `addComponent()` sets `term: activeTerm` on the new `GradeComponent`.
 5. Add the term name to the nav title area so it is obvious the scores are per-term.
 
-### 4.11 `Features/Settings/SettingsView.swift`
+### 4.11 `Features/Settings/SettingsView.swift` (488 lines — read only the ranges you need)
 
-1. `resetAllData()` — add `deleteAll(TermSubject.self)` and `deleteAll(Term.self)`
-   (TermSubject **before** Term). Also clear the active term:
+1. `resetAllData()` starts at line 214 and currently ends its delete block with
+   `deleteAll(DayScheduleOverride.self)` at line 233. Add `deleteAll(TermSubject.self)` then
+   `deleteAll(Term.self)` after it (TermSubject **before** Term). Also clear the active term:
    ```swift
    UserDefaults.standard.removeObject(forKey: TermStore.activeTermKey)
    ```
-   Put this next to `StudentProfileStore.shared.reset()`.
+   Put this next to `StudentProfileStore.shared.reset()` (line 236).
    Do **not** re-seed a term here — `TermStore.bootstrap` will do it on the next launch.
-2. In the existing `Section("ตารางเรียน")`, add above the toggle:
-   ```
-   NavigationLink { TermManagementView() } label: {
+   Leave `deleteAll(PortfolioImage.self)` / `PortfolioImageStore.deleteAll()` (lines 223–224) alone.
+2. `Section("ตารางเรียน")` is at line 116 and currently holds one `Toggle` plus a caption.
+   Add above the toggle:
+   ```swift
+   NavigationLink {
+       TermManagementView()
+   } label: {
        LabeledContent("เทอมปัจจุบัน", value: activeTerm?.displayName ?? "—")
    }
    ```
+   `SettingsView` needs the `activeTermID` / `terms` / `activeTerm` trio for this label.
 
 ---
 
@@ -524,6 +572,7 @@ Do these in order. Each step should compile on its own.
 
 | Step | Work | Done when |
 |---|---|---|
+| 0 | Ask Few to commit or stash the in-flight Portfolio work (§0.2) | `git status` is clean |
 | 1 | Create `Term.swift` + `TermSubject.swift`. Add both to `Schema`. Add `deleteAll` lines in `resetAllData`. | App launches, nothing visibly changed |
 | 2 | Add `var term: Term?` to `ScheduleEntry`, `Assignment`, `GradeComponent` (+ last init param) | Still compiles, nothing changed |
 | 3 | Create `TermStore.swift` including the three `inTerm` extensions | Compiles |
@@ -548,9 +597,16 @@ Commit after step 5 and after step 9. Use `wip:` prefix if Few has not confirmed
 6. **No inverse relationships** — do not add `@Relationship(inverse:)` anywhere in this feature.
 7. **`Subject` is never deleted** — not on term delete, not anywhere. `Assignment.subjectName` is a loose string lookup and would silently orphan.
 8. **Break subjects skip `TermSubject`** — `subject.isBreak == true` must not create a link row, or พักกลางวัน shows up in the GPA later.
-9. **Previews** — every `#Preview` using `ModelContainer(for:)` in the Schedule/Tasks/Grade files needs `Term.self` and `TermSubject.self` added to the type list, or the preview crashes. Files affected: `ScheduleView`, `ScheduleTimetableSection`, `SchedulePeriodRow`, `ScheduleBreakRow`, `PeriodShiftSheet`, `AddScheduleEntrySheet`.
-10. **Big-file rule** — `SettingsView.swift` (~375) and `DashboardView.swift` (350) are large. Read only the line ranges you need with `Read` + `offset`/`limit`.
+9. **Previews** — any `#Preview` that builds a container holding `ScheduleEntry`, `Assignment` or `GradeComponent` needs `Term.self` and `TermSubject.self` added to its type list, or the preview crashes. There are two spellings in this codebase; both need fixing. Verified list as of today:
+
+   *`try! ModelContainer(` form:* `ScheduleView.swift:127` · `ScheduleTimetableSection.swift:68` · `SchedulePeriodRow.swift:98` · `ScheduleBreakRow.swift:52` · `PeriodShiftSheet.swift:298` · `PeriodShiftBanner.swift:60` · `ScheduleTodayTasksSection.swift:136`
+
+   *`.modelContainer(for:` form:* `AddScheduleEntrySheet.swift:396` · `AddTaskSheet.swift:256` · `AssignmentListView.swift:328` · `GradeCenterView.swift:182` · `DashboardView.swift:368` · `QuickAddSheet.swift:337` · `SetupSummaryView.swift:136` · `ScheduleSetupView.swift:277`
+
+   Previews that only hold `Subject`, `FocusSession`, `PortfolioItem`, `CareerInterestResult`, `TCASEntry` or `SemesterRecord` need no change.
+10. **Big-file rule** — `SettingsView.swift` (**488**), `CalendarView.swift` (687) and `DashboardView.swift` (**369**) are large. Read only the line ranges you need with `Read` + `offset`/`limit`.
 11. **Design tokens** — no hardcoded colours or spacing in the two new views. `Theme.Colors.*`, `Theme.Spacing.*` only. All UI text in Thai.
+12. **Do not touch the focus module** — `Features/FocusMode/*` (`FocusModeView`, `PomodoroEngine`, `PomodoroSettings`, `AppBlockManager`) was rewritten very recently and is unrelated to terms. Same for the in-flight Portfolio work. If a change seems to require editing either, stop and ask.
 
 ---
 
@@ -560,7 +616,9 @@ Commit after step 5 and after step 9. Use `wip:` prefix if Few has not confirmed
 |---|---|
 | `Subject` | D1 — global catalog. "คณิตศาสตร์เพิ่มเติม" is one row shared by ม.4 and ม.5. Which terms actually used it is answered by `TermSubject`. |
 | `DayScheduleOverride` | Keyed on a real calendar date. Only "today" is ever shown, and only one term can be the real current term, so a cross-term leak is cosmetic only. **Known limitation:** if the user switches to a past term while an override exists for today, the shift will also apply to that term's view. Accept for now; note it in PROJECT_MAP §8. |
-| `Note`, `CalendarEvent`, `PortfolioItem`, `FocusSession`, `TCASEntry` | Not school-term data. Notes and portfolio items span years by design. |
+| `Note`, `CalendarEvent`, `TCASEntry` | Not school-term data. Notes and calendar events span years by design. |
+| `PortfolioItem`, `PortfolioImage` | A portfolio is a multi-year record — that is the whole point of it. Also, this module has uncommitted work in flight (§0.2); do not touch it. |
+| `FocusSession` | Now a Pomodoro session log owned by `Features/FocusMode/`. Reading statistics are per-week, not per-term. |
 | `SemesterRecord` | Already has its own `semesterLabel` string and belongs to the GPA round (§9). Do not touch it this round. |
 
 ---

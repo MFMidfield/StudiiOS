@@ -12,6 +12,8 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 import UIKit
+import VisionKit
+import PDFKit
 
 struct PortfolioItemSheet: View {
     enum Mode {
@@ -36,6 +38,14 @@ struct PortfolioItemSheet: View {
     @State private var pendingImages: [UIImage] = []
     @State private var photosPickerItems: [PhotosPickerItem] = []
     @State private var saveErrorMessage: String?
+
+    @State private var isPresentingSourceDialog = false
+    @State private var isPresentingPhotoPicker = false
+    @State private var isPresentingScanner = false
+    @State private var isPresentingCamera = false
+    @State private var isPresentingFileImporter = false
+    @State private var isScannerUnavailable = false
+    @State private var isCameraUnavailable = false
 
     init(mode: Mode) {
         self.mode = mode
@@ -95,6 +105,50 @@ struct PortfolioItemSheet: View {
             } message: {
                 Text(saveErrorMessage ?? "")
             }
+            .confirmationDialog("เพิ่มรูป", isPresented: $isPresentingSourceDialog, titleVisibility: .visible) {
+                Button("สแกนเอกสาร") { presentScanner() }
+                Button("ถ่ายรูป") { presentCamera() }
+                Button("เลือกจากคลังรูป") { isPresentingPhotoPicker = true }
+                Button("เลือกจากไฟล์") { isPresentingFileImporter = true }
+                Button("ยกเลิก", role: .cancel) {}
+            }
+            .photosPicker(
+                isPresented: $isPresentingPhotoPicker,
+                selection: $photosPickerItems,
+                maxSelectionCount: nil,
+                matching: .images
+            )
+            .onChange(of: photosPickerItems) { _, newItems in
+                loadPickedImages(newItems)
+            }
+            .fullScreenCover(isPresented: $isPresentingScanner) {
+                DocumentScannerView(
+                    onScanned: { images in
+                        pendingImages.append(contentsOf: images)
+                        isPresentingScanner = false
+                    },
+                    onCancel: { isPresentingScanner = false }
+                )
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: $isPresentingCamera) {
+                ProfileImagePicker(source: .camera, allowsEditing: false) { image in
+                    pendingImages.append(image)
+                }
+            }
+            .fileImporter(
+                isPresented: $isPresentingFileImporter,
+                allowedContentTypes: [.image, .pdf],
+                allowsMultipleSelection: true
+            ) { result in
+                handleFileImport(result)
+            }
+            .alert("สแกนเอกสารใช้ได้เฉพาะบนเครื่องจริง", isPresented: $isScannerUnavailable) {
+                Button("ตกลง", role: .cancel) {}
+            }
+            .alert("ถ่ายรูปใช้ได้เฉพาะบนเครื่องจริง", isPresented: $isCameraUnavailable) {
+                Button("ตกลง", role: .cancel) {}
+            }
         }
     }
 
@@ -110,18 +164,13 @@ struct PortfolioItemSheet: View {
                     ForEach(Array(pendingImages.enumerated()), id: \.offset) { offset, image in
                         PendingImageThumbnail(image: image) { pendingImages.remove(at: offset) }
                     }
-                    PhotosPicker(
-                        selection: $photosPickerItems,
-                        maxSelectionCount: nil,
-                        matching: .images
-                    ) {
+                    Button {
+                        isPresentingSourceDialog = true
+                    } label: {
                         addImageCell
                     }
                 }
                 .padding(.vertical, Theme.Spacing.xs)
-            }
-            .onChange(of: photosPickerItems) { _, newItems in
-                loadPickedImages(newItems)
             }
         }
     }
@@ -182,6 +231,51 @@ struct PortfolioItemSheet: View {
     private func removeExisting(_ image: PortfolioImage) {
         existingImages.removeAll { $0.persistentModelID == image.persistentModelID }
         removedImages.append(image)
+    }
+
+    private func presentScanner() {
+        if VNDocumentCameraViewController.isSupported {
+            isPresentingScanner = true
+        } else {
+            isScannerUnavailable = true
+        }
+    }
+
+    private func presentCamera() {
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            isPresentingCamera = true
+        } else {
+            isCameraUnavailable = true
+        }
+    }
+
+    private func handleFileImport(_ result: Result<[URL], Error>) {
+        guard case .success(let urls) = result else { return }
+        for url in urls {
+            guard url.startAccessingSecurityScopedResource() else { continue }
+            defer { url.stopAccessingSecurityScopedResource() }
+
+            if url.pathExtension.lowercased() == "pdf" {
+                if let image = Self.renderFirstPage(ofPDFAt: url) {
+                    pendingImages.append(image)
+                }
+            } else if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
+                pendingImages.append(image)
+            }
+        }
+    }
+
+    private static func renderFirstPage(ofPDFAt url: URL) -> UIImage? {
+        guard let document = PDFDocument(url: url), let page = document.page(at: 0) else { return nil }
+        let pageRect = page.bounds(for: .mediaBox)
+        let renderer = UIGraphicsImageRenderer(size: pageRect.size)
+        return renderer.image { context in
+            UIColor.white.set()
+            context.fill(pageRect)
+            context.cgContext.translateBy(x: 0, y: pageRect.size.height)
+            context.cgContext.scaleBy(x: 1, y: -1)
+            page.draw(with: .mediaBox, to: context.cgContext)
+        }
     }
 
     private func loadPickedImages(_ items: [PhotosPickerItem]) {

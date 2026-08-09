@@ -89,6 +89,8 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │                                        ไฟล์จริงอยู่ Documents/PortfolioImages, ตามแบบ StudentProfileStore
 │   │                                        `save` ย่อรูปให้ด้านยาวสุด ≤2000px ก่อนเขียน · `loadThumbnail` ใช้ CGImageSource
 │   │                                        thumbnail (max 400px) + NSCache — ห้าม decode รูปเต็มในกริด/แถบเลือกรูป
+│   │              + DocumentScannerView.swift  wrapper `VNDocumentCameraViewController` (ตาม `ProfileImagePicker` เดิม)
+│   │                                        **ใช้บน simulator ไม่ได้** guard ด้วย `.isSupported` ก่อนเปิดเสมอ (มี alert ไทยสำรอง)
 │   ├── Profile/StudentProfileStore.swift (71)
 │   ├── Schedule/  logic ล้วน ไม่มี View เลยทั้งโฟลเดอร์
 │   │   ├── PeriodShiftCalculator.swift   date(forDay:in:) + apply(override:to:) → [ResolvedPeriod]
@@ -143,9 +145,12 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │                                      + presentation) จงใจ กัน type-check timeout
     ├── GradeCenter/GradeCenterView.swift  (183)
     ├── Onboarding/  (6 ไฟล์: Welcome→Profile→Schedule→GradeReport→Summary + ProfileImagePicker)
-    ├── Portfolio/   PortfolioView.swift (grid 2 คอลัมน์ + chip กรองหมวดหมู่) · PortfolioCard.swift (การ์ดกริด ไม่ใช้ CardContainer เพราะรูปต้อง bleed ถึงขอบบน)
-    │                + PortfolioItemSheet.swift (สร้าง/แก้ไข ใช้ `Mode` เดียวกัน — รูปที่เลือกอยู่ staged ใน memory จนกด "บันทึก" ถึงเขียนไฟล์+insert)
-    │                ยังไม่มี PortfolioDetailView (แผน step 4 ของ `PLAN_Portfolio.md`) การ์ดในกริดยังกดไม่ได้
+    ├── Portfolio/   PortfolioView.swift (grid 2 คอลัมน์ + chip กรองหมวดหมู่, `.navigationDestination(for: PortfolioItem.self)`) · PortfolioCard.swift (การ์ดกริด ไม่ใช้ CardContainer เพราะรูปต้อง bleed ถึงขอบบน)
+    │                + PortfolioItemSheet.swift (สร้าง/แก้ไข ใช้ `Mode` เดียวกัน — รูปที่เลือกอยู่ staged ใน memory จนกด "บันทึก" ถึงเขียนไฟล์+insert
+    │                  ปุ่ม "เพิ่มรูป" เปิด `.confirmationDialog` 4 ทาง: สแกนเอกสาร (`DocumentScannerView`) · ถ่ายรูป (`ProfileImagePicker(.camera, allowsEditing:false)`)
+    │                  · เลือกจากคลังรูป (`.photosPicker` แบบ programmatic) · เลือกจากไฟล์ (`.fileImporter` [.image, .pdf], PDF หน้าแรกเรนเดอร์ด้วย PDFKit)
+    │                  สแกน/กล้อง เช็ค `.isSupported`/`.isSourceTypeAvailable(.camera)` ก่อนเปิดเสมอ — ไม่มี guard = crash บน simulator)
+    │                + PortfolioDetailView.swift (gallery `TabView(.page)` โหลดรูปเต็ม + แก้ไข/ลบ — ลบจะลบทั้งแถว SwiftData และไฟล์บนดิสก์)
     ├── Schedule/  ScheduleView.swift (root) + ScheduleConstants.swift
     │                (visibleDays/dayLabels · `findOrCreateSubject` ใช้โดย onboarding เท่านั้น
     │                 · `resolveSubject(named:code:in:)` ใช้โดยฟอร์มคาบ — รหัสก่อน→ชื่อ, สี/ไอคอนจาก ThaiSubjectCatalog)

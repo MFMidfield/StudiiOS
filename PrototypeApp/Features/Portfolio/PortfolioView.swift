@@ -33,6 +33,9 @@ struct PortfolioView: View {
             .sheet(isPresented: $isPresentingNew) {
                 PortfolioItemSheet(mode: .create)
             }
+            .navigationDestination(for: PortfolioItem.self) { item in
+                PortfolioDetailView(item: item)
+            }
     }
 
     @ViewBuilder
@@ -73,7 +76,10 @@ struct PortfolioView: View {
     private var grid: some View {
         LazyVGrid(columns: columns, spacing: Theme.Spacing.md) {
             ForEach(filteredItems) { item in
-                PortfolioCard(item: item)
+                NavigationLink(value: item) {
+                    PortfolioCard(item: item)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
