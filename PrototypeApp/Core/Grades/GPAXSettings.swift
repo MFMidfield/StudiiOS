@@ -1,0 +1,106 @@
+//
+//  GPAXSettings.swift
+//  ค่าตั้งของ GPAX — จุดเดียวที่รู้จัก UserDefaults key พวกนี้ ห้ามเขียน key ตรงๆ ที่อื่น
+//
+//  currentGradeLevel/currentTermNumber คือเทอม "จริง" ของนักเรียน (D7) — คนละตัวกับ
+//  TermStore.activeTermKey ซึ่งเป็นแค่เทอมที่กำลังเปิดดู ห้ามใช้แทนกัน
+//
+
+import Foundation
+
+enum GPAXSettings {
+    enum Key {
+        static let currentGradeLevel = "com.studentos.gpax.currentGradeLevel"
+        static let currentTermNumber = "com.studentos.gpax.currentTermNumber"
+        static let target = "com.studentos.gpax.target"
+        static let targetSource = "com.studentos.gpax.targetSource"
+        static let entryMode = "com.studentos.gpax.entryMode"
+        static let priorGPAX = "com.studentos.gpax.priorGPAX"
+        static let priorCredits = "com.studentos.gpax.priorCredits"
+        static let priorTermCount = "com.studentos.gpax.priorTermCount"
+    }
+
+    enum EntryMode: String {
+        case perTerm
+        case cumulative
+    }
+
+    // MARK: - เทอมจริงของนักเรียน (D7)
+
+    static var currentGradeLevel: Int? {
+        let stored = UserDefaults.standard.integer(forKey: Key.currentGradeLevel)
+        return (1...6).contains(stored) ? stored : nil
+    }
+
+    static var currentTermNumber: Int? {
+        let stored = UserDefaults.standard.integer(forKey: Key.currentTermNumber)
+        return (1...2).contains(stored) ? stored : nil
+    }
+
+    /// nil = ยังไม่เคยผ่านหน้าเลือกระดับชั้น (Screen 1)
+    static var currentSortKey: Int? {
+        guard let level = currentGradeLevel, let term = currentTermNumber else { return nil }
+        return level * 10 + term
+    }
+
+    static func setCurrentTerm(gradeLevel: Int, termNumber: Int) {
+        UserDefaults.standard.set(gradeLevel, forKey: Key.currentGradeLevel)
+        UserDefaults.standard.set(termNumber, forKey: Key.currentTermNumber)
+    }
+
+    // MARK: - เป้า GPAX
+
+    /// 0 = ยังไม่ตั้งเป้า
+    static var target: Double {
+        UserDefaults.standard.double(forKey: Key.target)
+    }
+
+    static var hasTarget: Bool { target > 0 }
+
+    static var targetSource: String {
+        UserDefaults.standard.string(forKey: Key.targetSource) ?? ""
+    }
+
+    static func setTarget(_ value: Double, source: String) {
+        UserDefaults.standard.set(value, forKey: Key.target)
+        UserDefaults.standard.set(source, forKey: Key.targetSource)
+    }
+
+    // MARK: - โหมดกรอก (D3/D4)
+
+    static var entryMode: EntryMode {
+        EntryMode(rawValue: UserDefaults.standard.string(forKey: Key.entryMode) ?? "") ?? .perTerm
+    }
+
+    static func setEntryMode(_ mode: EntryMode) {
+        UserDefaults.standard.set(mode.rawValue, forKey: Key.entryMode)
+    }
+
+    static var priorGPAX: Double {
+        UserDefaults.standard.double(forKey: Key.priorGPAX)
+    }
+
+    static var priorTermCount: Int {
+        UserDefaults.standard.integer(forKey: Key.priorTermCount)
+    }
+
+    static var priorCredits: Double {
+        let stored = UserDefaults.standard.double(forKey: Key.priorCredits)
+        return stored > 0 ? stored : Double(priorTermCount) * GPAXCalculator.defaultTermCredits
+    }
+
+    static func setCumulative(gpax: Double, credits: Double?, termCount: Int) {
+        UserDefaults.standard.set(gpax, forKey: Key.priorGPAX)
+        UserDefaults.standard.set(termCount, forKey: Key.priorTermCount)
+        if let credits {
+            UserDefaults.standard.set(credits, forKey: Key.priorCredits)
+        }
+    }
+
+    /// nil เมื่อไม่ได้อยู่โหมดสะสม หรือยังไม่เคยกรอกตัวเลข — ใช้ส่งตรงเข้า
+    /// `GPAXCalculator.calculate(cumulative:)`
+    static var cumulativeOverride: GPAXCalculator.CumulativeOverride? {
+        guard entryMode == .cumulative, priorGPAX > 0 else { return nil }
+        return GPAXCalculator.CumulativeOverride(gpax: priorGPAX, credits: priorCredits)
+    }
+}

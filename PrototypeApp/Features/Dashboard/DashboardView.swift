@@ -38,6 +38,7 @@ struct DashboardView: View {
                     focusMinutesToday: focusMinutesToday,
                     pendingCount: pendingAssignments.count
                 )
+                GPAXDashboardCard()
                 MainMenuSection()
                 PendingWorkSection(dueToday: dueTodayAssignments, pending: pendingAssignments)
             }

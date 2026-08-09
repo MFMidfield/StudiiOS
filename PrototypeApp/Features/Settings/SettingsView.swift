@@ -32,6 +32,47 @@ struct SettingsView: View {
     @Query private var terms: [Term]
     private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
 
+    // MARK: - Level 1 GPAX (D7: currentGradeLevel/currentTermNumber below are
+    // the student's REAL term — unrelated to activeTermID above)
+
+    @State private var isPresentingGradeLevelSheet = false
+    @State private var isPresentingCumulativeSheet = false
+
+    // Ping pattern (see GradeCenterView) — makes SwiftUI redraw currentTermLabel
+    // after GradeLevelSheet or advanceToNextTerm() write these keys.
+    @AppStorage(GPAXSettings.Key.currentGradeLevel) private var gpaxGradeLevelPing = 0
+    @AppStorage(GPAXSettings.Key.currentTermNumber) private var gpaxTermNumberPing = 0
+
+    // These four are the actual bound values — SwiftUI's AppStorage supports
+    // RawRepresentable enums with a String RawValue directly (GPAXSettings.EntryMode).
+    @AppStorage(GPAXSettings.Key.target) private var gpaxTarget: Double = 0
+    @AppStorage(GPAXSettings.Key.targetSource) private var gpaxTargetSource: String = ""
+    @AppStorage(GPAXSettings.Key.entryMode) private var gpaxEntryMode: GPAXSettings.EntryMode = .perTerm
+    @AppStorage(GPAXSettings.Key.priorGPAX) private var gpaxPriorGPAX: Double = 0
+    @AppStorage(GPAXSettings.Key.priorTermCount) private var gpaxPriorTermCount: Int = 0
+
+    private var currentTermLabel: String {
+        guard let level = GPAXSettings.currentGradeLevel, let term = GPAXSettings.currentTermNumber else {
+            return "ยังไม่ได้ตั้ง"
+        }
+        return "ม.\(level) เทอม \(term)"
+    }
+
+    /// false once the student is already at ม.6 เทอม 2 — nothing further to advance to.
+    private var canAdvanceTerm: Bool {
+        guard let level = GPAXSettings.currentGradeLevel, let term = GPAXSettings.currentTermNumber else { return false }
+        return !(level == 6 && term == 2)
+    }
+
+    private func advanceToNextTerm() {
+        guard let level = GPAXSettings.currentGradeLevel, let term = GPAXSettings.currentTermNumber else { return }
+        if term == 1 {
+            GPAXSettings.setCurrentTerm(gradeLevel: level, termNumber: 2)
+        } else if level < 6 {
+            GPAXSettings.setCurrentTerm(gradeLevel: level + 1, termNumber: 1)
+        }
+    }
+
     var body: some View {
         List {
             Section {
@@ -129,6 +170,45 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("ระดับชั้นและเป้า GPAX") {
+                LabeledContent("ระดับชั้นปัจจุบัน", value: currentTermLabel)
+
+                Button(GPAXSettings.currentSortKey == nil ? "ตั้งระดับชั้น" : "แก้ระดับชั้น") {
+                    isPresentingGradeLevelSheet = true
+                }
+
+                if canAdvanceTerm {
+                    Button("ขึ้นชั้นแล้ว") { advanceToNextTerm() }
+                }
+
+                HStack {
+                    Text("เป้า GPAX")
+                    Spacer()
+                    TextField("เช่น 3.50", value: $gpaxTarget, format: .number.precision(.fractionLength(2)))
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 70)
+                }
+
+                if gpaxTarget > 0 {
+                    TextField("เป้ามาจากโปรแกรม/คณะไหน (ไม่บังคับ)", text: $gpaxTargetSource)
+                        .font(.caption)
+                }
+
+                Picker("วิธีกรอกเทอมที่ผ่านมา", selection: $gpaxEntryMode) {
+                    Text("กรอกทีละเทอม").tag(GPAXSettings.EntryMode.perTerm)
+                    Text("กรอก GPAX สะสม").tag(GPAXSettings.EntryMode.cumulative)
+                }
+
+                if gpaxEntryMode == .cumulative {
+                    LabeledContent(
+                        "GPAX สะสมที่กรอกไว้",
+                        value: gpaxPriorGPAX > 0 ? String(format: "%.2f · %d เทอม", gpaxPriorGPAX, gpaxPriorTermCount) : "ยังไม่ได้กรอก"
+                    )
+                    Button("กรอก GPAX สะสม") { isPresentingCumulativeSheet = true }
+                }
+            }
+
             Section("เกี่ยวกับ") {
                 LabeledContent("เวอร์ชัน", value: "1.0.0 (Prototype)")
                 LabeledContent("โหมด", value: "Offline-first")
@@ -159,6 +239,12 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $isPresentingEditProfile) {
             EditProfileView()
+        }
+        .sheet(isPresented: $isPresentingGradeLevelSheet) {
+            GradeLevelSheet()
+        }
+        .sheet(isPresented: $isPresentingCumulativeSheet) {
+            CumulativeGPAXSheet()
         }
         .confirmationDialog(
             "ล้างข้อมูลทั้งหมด",

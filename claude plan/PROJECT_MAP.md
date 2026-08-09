@@ -38,6 +38,21 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   ├── Extensions/
 │   │   ├── Color+Hex.swift
 │   │   └── Date+Thai.swift              วันที่ไทย/พ.ศ. + thaiShortNoYear/thaiDayMonthYear
+│   ├── Grades/                          Level 1 GPAX (PLAN_GPA.md) — ตัวเลขคำนวณจากเทอมที่กรอกเองเท่านั้น
+│   │   │                                ไม่แตะ GradeComponent/SemesterRecord (คนละ Level กัน ดู §12 ของแผน)
+│   │   ├── GPAXCalculator.swift  (166)  math ล้วน ไม่ import SwiftUI/SwiftData — เทสต์ได้โดยไม่ต้องมี ModelContainer
+│   │   │                                `TermInput` เป็น struct เปล่าคัดลอกจาก Term.gpa/totalCredits (ไม่ใช่ Term เอง)
+│   │   │                                `calculate(terms:currentSortKey:target:cumulative:)` คืน `Result` (gpax/floor/ceiling/
+│   │   │                                requiredAverage/state/provenance) · `state` เป็น `State?` — nil เฉพาะกรณีมีข้อมูลแล้ว
+│   │   │                                แต่ยังไม่ตั้งเป้า (ไม่ใช่ `.noData`) · ปัดเลขแสดงผลผ่าน `.formatted`/`.rounded` เท่านั้น
+│   │   │                                ห้ามปัดเลขระหว่างคำนวณ (§3.5 ของแผน)
+│   │   └── GPAXSettings.swift    (106)  จุดเดียวที่รู้จัก UserDefaults key ของ GPAX (`Key.*`) เหมือน PomodoroSettings
+│   │                                    `currentGradeLevel`/`currentTermNumber` = เทอม**จริง**ของนักเรียน (D7) — คนละตัวกับ
+│   │                                    `TermStore.activeTermKey` (เทอมที่กำลังเปิดดู) **ห้ามใช้แทนกันเด็ดขาด** ไม่งั้น
+│   │                                    จำนวนเทอมที่เหลือจะเพี้ยนแบบเงียบๆ (ไม่ crash) · `entryMode` สลับ perTerm/cumulative
+│   │                                    (D3/D4) · ทุก View ที่ต้องรีเฟรชตามค่าพวกนี้ต้องประกาศ `@AppStorage(GPAXSettings.Key.*)`
+│   │                                    ของตัวเองไว้เป็น "ping" แม้ไม่ได้อ่านค่าตรงๆ — ไม่งั้น SwiftUI ไม่รู้ว่า UserDefaults
+│   │                                    เปลี่ยน (ดูตัวอย่างที่ GradeCenterView/DashboardView/SettingsView)
 │   ├── Logging/AppLog.swift             print-based console log (🔵🟠🔴)
 │   ├── Models/                          (15 ไฟล์ — ดูตาราง §3, รวม Term.swift + TermSubject.swift)
 │   ├── Notifications/NotificationManager.swift  จัดการ UNUserNotificationCenter — 2 ส่วนแยกกันสิ้นเชิง คนละ identifier prefix
@@ -128,7 +143,10 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 └── Features/
     ├── Calendar/CalendarView.swift        (687) ← ไฟล์ใหญ่สุด
     ├── CareerDiscovery/CareerDiscoveryView.swift (163)
-    ├── Dashboard/DashboardView.swift      (350)
+    ├── Dashboard/DashboardView.swift      (375) เพิ่ม `GPAXDashboardCard()` เข้า body บรรทัดเดียว (กันไฟล์ 350+ บรรทัดนี้
+    │                                    type-check timeout) ตัวการ์ดจริงอยู่ไฟล์แยก
+    │              + GPAXDashboardCard.swift  (94)  สรุป GPAX 1 บรรทัด → `NavigationLink(value: .gradeCenter)` คืน
+    │                                    `EmptyView` ทั้งตอนยังไม่ตั้งเทอมจริงและตอนยังไม่มีเกรดเลย (ซ่อนสะอาด ไม่โชว์การ์ดว่าง)
     ├── FocusMode/   โหมดโฟกัส/Pomodoro — ย้ายออกจาก Portfolio แล้ว
     │                ⚠️ **ไม่มีหน้าจอล็อกในแอปแล้ว** — `FocusLockOverlay.swift` ถูกลบตามคำสั่ง Few
     │                  (2026-08-09) เหลือการบล็อกแอปอื่นผ่าน Screen Time API อย่างเดียว
@@ -155,7 +173,21 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │   │                                    **ห้ามลบ** ไม่งั้นแอปอื่นถูกบล็อกค้างถาวร
     │   └── FocusModeView.swift      (~430) UI ล้วน ไม่เก็บเวลาเอง · body แบ่ง 2 ชั้น (mainContent
     │                                      + presentation) จงใจ กัน type-check timeout
-    ├── GradeCenter/GradeCenterView.swift  (183)
+    ├── GradeCenter/GradeCenterView.swift  (225) Level 3 เดิม (`GradeBreakdownCard`/`TargetScoreCalculatorCard`, term-scoped
+    │                                    ผ่าน `activeTermID`) ไม่ถูกแตะ · Level 1 GPAX แทรกอยู่**เหนือ**การ์ดพวกนั้น อ่านเทอมจริง
+    │                                    ผ่าน `GPAXSettings.currentSortKey` เท่านั้น (D7 — ดู comment ที่จุดเรียกในไฟล์)
+    │              + GPAXSummaryCard.swift    (208) การ์ดสรุป: ตัวเลข GPAX + range bar (พื้น/เพดาน/เป้า) + ข้อความ state
+    │                                    ยังมี `TargetQuickSetter` (private) ฝังอยู่ — ตั้งเป้าแบบเร็วๆ ชั่วคราว ตัวเต็มควรย้ายไป
+    │                                    Settings ตอนขัดดีไซน์รอบหน้า (ตอนนี้มี 2 ที่ตั้งเป้าได้: การ์ดนี้ + Settings)
+    │              + TermGradeListSection.swift (128) 6 แถวคงที่ ม.4–ม.6 เสมอ แถวที่แตะได้ (ผ่าน/กำลังเรียน) เปิด
+    │                                    TermGradeEditSheet · แถวอนาคตกดไม่ได้ (แค่โชว์ "ต้องได้ X")
+    │              + TermGradeEditSheet.swift  (119) กรอก gpa/totalCredits ของ 1 เทอม — `save()` เรียก
+    │                                    `TermStore.findOrCreate` เท่านั้น ไม่มีที่ไหน insert `Term` ตรงๆ
+    │              + GradeLevelSheet.swift     (99)  Screen 1 (§6.1) ตั้ง `GPAXSettings.currentGradeLevel/currentTermNumber`
+    │                                    เปิดจาก 2 ที่: การ์ดว่างของ GPAXSummaryCard ครั้งแรก · Settings "แก้ระดับชั้น"
+    │              + CumulativeGPAXSheet.swift (87)  Screen 4 (§6.4) "จำเกรดไม่ได้" — ตัวเลือก 1 เขียน
+    │                                    `GPAXSettings.setCumulative` + entryMode `.cumulative` (D3) · ตัวเลือก 3 สร้าง
+    │                                    `CalendarEvent` เตือนขอ ปพ.1 จริง (ผ่าน initializer เดิม ไม่ได้แก้ CalendarView.swift)
     ├── Onboarding/  (6 ไฟล์: Welcome→Profile→Schedule→GradeReport→Summary + ProfileImagePicker)
     ├── Portfolio/   PortfolioView.swift (grid 2 คอลัมน์ + chip กรองหมวดหมู่, `.navigationDestination(for: PortfolioItem.self)`) · PortfolioCard.swift (การ์ดกริด ไม่ใช้ CardContainer เพราะรูปต้อง bleed ถึงขอบบน)
     │                + PortfolioItemSheet.swift (สร้าง/แก้ไข ใช้ `Mode` เดียวกัน — รูปที่เลือกอยู่ staged ใน memory จนกด "บันทึก" ถึงเขียนไฟล์+insert
@@ -187,8 +219,15 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │                                              งาน → AddTaskSheet · ปฏิทิน/โน๊ต/Portfolio → CaptureDetailSheet (private ในไฟล์เดียวกัน)
     │                                              **เพิ่มโหมดใหม่ = เพิ่ม 1 บรรทัดใน `options`** (แทน SmartCaptureView เดิมที่ถูกลบ)
     ├── Settings/
-    │   ├── SettingsView.swift             (~500) section "สำหรับนักพัฒนา" อยู่ใน `developerSection`
+    │   ├── SettingsView.swift             (585) section "สำหรับนักพัฒนา" อยู่ใน `developerSection`
     │   │                                         (computed property เพราะ `#if DEBUG` ใน ViewBuilder ทำ type-check เพี้ยน)
+    │   │                                         section "ระดับชั้นและเป้า GPAX": ระดับชั้นจริง+ปุ่ม "ขึ้นชั้นแล้ว"
+    │   │                                         (เขียนผ่าน `GPAXSettings.setCurrentTerm` เท่านั้น) · เป้า GPAX/entryMode
+    │   │                                         bind ตรงกับ `@AppStorage(GPAXSettings.Key.*)` (ไม่ผ่าน setter) · เปิด
+    │   │                                         `GradeLevelSheet`/`CumulativeGPAXSheet` ซ้ำจาก GradeCenter ไม่สร้างใหม่
+    │   │                                         **ไม่ได้แก้ resetAllData() ให้ล้าง GPAX UserDefaults** — ตั้งใจ ตรงกับ
+    │   │                                         convention เดิมที่ preference อื่น (Pomodoro, scheduleShowsPersonalTasks)
+    │   │                                         ก็รอดจากการรีเซ็ตเหมือนกัน (คนละกรณีกับกฎ "@Model ใหม่ต้องลง resetAllData")
     │   ├── TermManagementView.swift        List เทอมที่**มีอยู่จริงในฐานข้อมูล**เท่านั้น (เทอมสร้างแบบ lazy) เรียงตาม
     │   │                                   `sortKey` · แตะแถว = TermStore.setActive + dismiss · ปัดซ้าย = alert ยืนยัน
     │   │                                   บอกจำนวนคาบ/งาน/คะแนนที่จะหาย แล้ว TermStore.delete + TermStore.bootstrap
@@ -231,7 +270,7 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
 | ScheduleEntry | Core/Models/ScheduleEntry.swift — เวลาเป็น `startMinute`/`endMinute: Int` (ไม่ใช่ Date แล้ว) + `subject: Subject?` + `term: Term?` relationship (term-scoped, D5 ใน PLAN_TermSystem) |
 | Subject | Core/Models/Subject.swift — วิชา/ช่วงพัก (`isBreak`), seed 3 ตัวตอนเปิดแอปครั้งแรก |
 | DayScheduleOverride | Core/Models/DayScheduleOverride.swift — ร่นคาบเฉพาะวัน จัดการผ่าน `PeriodShiftSheet`/`PeriodShiftBanner`, คำนวณผ่าน `PeriodShiftCalculator` เท่านั้น (ไม่แก้ `ScheduleEntry` จริง)<br>`startPeriodNumber: Int = 1` = คาบที่เริ่มร่น — **คาบก่อนหน้าถูกซ่อนทั้งวัน** และคาบพักตั้งแต่จุดนี้ไปถูกร่น+ย่อเหลือ `periodLengthMinutes` เท่าคาบอื่น |
-| Term | Core/Models/Term.swift — ระดับชั้น (1-6) + เทอม (1-2), ไม่มีปี พ.ศ. (D3) · สร้างแบบ lazy เท่านั้น (D4) — ห้ามมี `@Relationship` array ชี้ลง children, จัดการทั้งหมดผ่าน `TermStore` เท่านั้น |
+| Term | Core/Models/Term.swift — ระดับชั้น (1-6) + เทอม (1-2), ไม่มีปี พ.ศ. (D3) · สร้างแบบ lazy เท่านั้น (D4) — ห้ามมี `@Relationship` array ชี้ลง children, จัดการทั้งหมดผ่าน `TermStore` เท่านั้น<br>`gpa: Double?` / `totalCredits: Double?` (default `nil` ทั้งคู่, additive migration) — ใช้โดย `GPAXCalculator` เท่านั้น เขียนได้จาก `TermGradeEditSheet.save()` ผ่าน `TermStore.findOrCreate` เท่านั้น |
 | TermSubject | Core/Models/TermSubject.swift — join `Term` ↔ `Subject`, มี `creditHours`/`gradePoint` รอรอบ GPA (§9 ใน PLAN_TermSystem) · sync อัตโนมัติผ่าน `TermStore.syncTermSubjects` ทุกครั้งที่ ScheduleEntry ถูกบันทึกเข้าเทอม |
 | FocusSession | Core/Models/FocusSession.swift — `kindRaw` (โฟกัส/พักสั้น/พักยาว, อ่านผ่าน `phase`) · `endedAt: Date?` · `wasLocked` (3 ตัวนี้มี default ครบ → migrate ของเดิมได้)<br>⚠️ **ช่วงพักถูกบันทึกเป็น FocusSession ด้วย** — สถิติ "นาทีโฟกัส" ต้องกรอง `phase == .focus` เสมอ (Dashboard + FocusModeView ทำแล้ว)<br>ไฟล์นี้ยังเป็นที่ประกาศ `enum PomodoroPhase` ด้วย |
 | PortfolioItem | Core/Models/PortfolioItem.swift — `startDate`/`endDate: Date?` (rename จาก `date` เดิม — breaking, ต้องลบแอปก่อนติดตั้งรุ่นนี้) · `images: [PortfolioImage]` (cascade) · `coverImage` = ตัวแรกตาม `sortOrder` · `dateRangeText` ใช้ `Date+Thai.swift` · `PortfolioCategory.color` ใหม่ (ใช้ `Theme.Colors`, ผูกกับ pill ในการ์ด) |
@@ -326,7 +365,8 @@ Gated: `PortfolioView`, `TCASPlannerView`
 - **ระบบบล็อกแอปยังไม่มี `DeviceActivityMonitor` extension** — ถ้าผู้ใช้บังคับปิด Student OS ทิ้ง แอปที่บล็อกไว้จะยังถูกบล็อกจนกว่าจะเปิด Student OS อีกครั้ง (`reconcile()` ปลดให้) มีปุ่มปลดฉุกเฉินใน ตั้งค่า Pomodoro เป็นทางออกสำรอง
 - **แจ้งเตือนจบ Pomodoro ยังไม่ใช่ `.timeSensitive`** — เด้งทะลุโหมดห้ามรบกวนไม่ได้ ต้องเพิ่ม capability "Time Sensitive Notifications" ก่อน
 - Calendar models ฝังใน `CalendarView.swift` แทนที่จะอยู่ `Core/Models/`
-- ไม่มี unit test จริงเลย (test target เป็น template)
+- ~~ไม่มี unit test จริงเลย~~ **มีแล้วบางส่วน** — `PrototypeAppTests/GPAXCalculatorTests.swift` (152 บรรทัด) ครอบ `GPAXCalculator`
+  ทั้ง 6 state + fixture §3.3 ของ PLAN_GPA.md + cumulative mode ส่วนที่เหลือของแอปยังไม่มีเทสต์
 - `QuickAddSheet.swift`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ (`Repeat` `Location` `Tags` `Alert` `Note` `Detail`) — ผิดกฎ "UI ทั้งหมดเป็นภาษาไทย" ของสกิล ยกมาทั้งดุ้นจาก `SmartCaptureView` เดิม ยังไม่ได้แก้
 - `Features/FocusMode/` เป็นโฟลเดอร์ว่าง (ของเหลือ) — `FocusModeView.swift` ยังอยู่ใน `Features/Portfolio/`
 - `ScheduleTodayTasksSection`: แตะแถวงาน ตอนนี้แค่ log อย่างเดียว ยังไม่เปิดฟอร์มแก้ไข (หน้า Todo เปิดได้แล้ว — เหลือแค่การ์ดในตารางเรียน)
@@ -336,5 +376,9 @@ Gated: `PortfolioView`, `TCASPlannerView`
   → งานที่เหลือคือย้าย onboarding มาใช้เส้นเดียวกัน แล้วลบโค้ดถ่ายรูปซ้ำทิ้ง
 - **`resolveSubject` มีตรรกะซ้ำ 2 ที่**: `ScheduleConstants.resolveSubject` (ฟอร์มคาบ) กับ `ScheduleImportCommitter.resolveSubject` (นำเข้า, มี `inout` cache ของตัวเอง) — กติกาเดียวกัน (รหัสก่อน→ชื่อ) แต่คนละ signature จงใจไม่รวมในรอบนี้
 - `refreshAssignmentReminders` ตัดที่ 16 งานแรก (× 3 จุด = 48 pending) กันชน 64 ของ iOS — งานที่กำหนดส่งไกลกว่านั้นจะยังไม่ถูกตั้งจนกว่าจะขยับเข้ามาในหน้าต่าง 14 วัน
+- **GPAX `.outOfReach` ยังไม่มีปุ่ม forward action** (§6.5/§11 ของ PLAN_GPA.md ต้องการอย่างน้อย 2 ปุ่ม เช่น ลิงก์ TCASPlannerView/PortfolioView/ปรับเป้า) — ตอนนี้การ์ดโชว์แค่ข้อความ copy เฉยๆ
+- **ช่องตั้งเป้า GPAX ตั้งได้ 2 ที่**: `GPAXSummaryCard`'s `TargetQuickSetter` (ชั่วคราว ใส่ไว้ให้ verify build order step 4 ได้ก่อน Settings เสร็จ) กับ Settings ตัวเต็ม (มี `targetSource`) — ทำงานถูกต้องทั้งคู่เพราะ bind key เดียวกัน แต่ UI ซ้ำซ้อน ควรลบตัวแรกทิ้งตอนขัดดีไซน์รอบหน้า
+
+**`PLAN_GPA.md` ครบทั้ง 7 step แล้ว** (logic+เทสต์ → model → read-only display → input → Dashboard → Settings → เอกสารนี้) — ฟีเจอร์ GPAX Level 1 ถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป (Level 2/3 อยู่ใน §12 ของแผน ยังไม่เริ่ม)
 
 **`PLAN_ScheduleView.md` ครบทั้ง 3 รอบแล้ว** (Models/Schema → UI ตาราง+ฟอร์ม → งานวันนี้+ร่นคาบ) — ฟีเจอร์ตารางเรียนถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป

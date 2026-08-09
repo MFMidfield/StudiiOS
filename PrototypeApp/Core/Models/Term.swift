@@ -43,6 +43,11 @@ final class Term {
     var termNumber: Int = 1
     var createdAt: Date = Date.now
 
+    /// เกรดเฉลี่ยของเทอมนี้ 0.00–4.00 — nil = ยังไม่กรอก (ดู GPAXCalculator)
+    var gpa: Double? = nil
+    /// หน่วยกิตรวมของเทอมนี้ — nil = ไม่ทราบ, GPAXCalculator จะแทนด้วยค่า default (D2)
+    var totalCredits: Double? = nil
+
     init(gradeLevel: Int, termNumber: Int, id: UUID = UUID(), createdAt: Date = .now) {
         self.id = id
         self.gradeLevel = gradeLevel

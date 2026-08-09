@@ -26,10 +26,17 @@ struct ScheduleSettingsSheet: View {
     @State private var selectedBand: SchoolBand = .upper
     @State private var isShiftingPeriods = false
 
-    private var termSelection: Binding<Int> {
+    /// nil เมื่อเทอมที่ใช้อยู่ไม่ได้อยู่ในระดับชั้นที่ segmented control เลือกค้างไว้
+    /// — เมนูจะไม่มี tag ตรงกับมัน ต้องคืน nil ให้ Picker แสดง "ยังไม่เลือก"
+    /// แทนที่จะยัดค่าเก่าที่ไม่มีอยู่ในเมนูเข้าไป
+    private var termSelection: Binding<Int?> {
         Binding(
-            get: { activeTerm?.sortKey ?? (selectedBand.gradeLevels.first ?? 4) * 10 + 1 },
+            get: {
+                guard let activeTerm, activeTerm.band == selectedBand else { return nil }
+                return activeTerm.sortKey
+            },
             set: { newSortKey in
+                guard let newSortKey else { return }
                 let gradeLevel = newSortKey / 10
                 let termNumber = newSortKey % 10
                 let term = TermStore.findOrCreate(gradeLevel: gradeLevel, termNumber: termNumber, in: context)
@@ -63,7 +70,7 @@ struct ScheduleSettingsSheet: View {
                             ForEach([1, 2], id: \.self) { termNumber in
                                 let count = entryCount(gradeLevel: level, termNumber: termNumber)
                                 Text(count > 0 ? "ม.\(level) เทอม \(termNumber) (\(count) คาบ)" : "ม.\(level) เทอม \(termNumber)")
-                                    .tag(level * 10 + termNumber)
+                                    .tag(Int?(level * 10 + termNumber))
                             }
                         }
                     }
@@ -71,7 +78,11 @@ struct ScheduleSettingsSheet: View {
                 } header: {
                     Text("เทอม")
                 } footer: {
-                    Text("ตารางสอน งาน และคะแนน จะแยกเก็บตามเทอม")
+                    if termSelection.wrappedValue == nil, let activeTerm {
+                        Text("ตอนนี้ใช้ \(activeTerm.displayName) อยู่ — เลือกเทอมด้านบนเพื่อสลับมา\(selectedBand.label)")
+                    } else {
+                        Text("ตารางสอน งาน และคะแนน จะแยกเก็บตามเทอม")
+                    }
                 }
 
                 Section("วันนี้") {
