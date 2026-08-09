@@ -1,7 +1,7 @@
 # PROJECT_MAP — Student OS (PrototypeApp)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-08 · **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
+> **อัปเดตล่าสุด:** 2026-08-09 · **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
 > ถ้าแก้โครงสร้าง (เพิ่ม/ลบไฟล์, เพิ่ม @Model, เปลี่ยน tab) → อัปเดตไฟล์นี้ในคอมมิตเดียวกัน
 
 ---
@@ -85,6 +85,10 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │   │                                `parseScheduleDetailed` คืน `ScheduleOCRResult` (entries + problem บอกสาเหตุ)
 │   │   │                                `usesLanguageCorrection` เป็น static var ไว้ A/B (PLAN_OCRFix C5)
 │   │   └── GradeReportOCRParser.swift
+│   ├── Portfolio/PortfolioImageStore.swift  รูป Portfolio ไม่เก็บใน SwiftData — เก็บแค่ filename (PortfolioImage model)
+│   │                                        ไฟล์จริงอยู่ Documents/PortfolioImages, ตามแบบ StudentProfileStore
+│   │                                        `save` ย่อรูปให้ด้านยาวสุด ≤2000px ก่อนเขียน · `loadThumbnail` ใช้ CGImageSource
+│   │                                        thumbnail (max 400px) + NSCache — ห้าม decode รูปเต็มในกริด/แถบเลือกรูป
 │   ├── Profile/StudentProfileStore.swift (71)
 │   ├── Schedule/  logic ล้วน ไม่มี View เลยทั้งโฟลเดอร์
 │   │   ├── PeriodShiftCalculator.swift   date(forDay:in:) + apply(override:to:) → [ResolvedPeriod]
@@ -139,7 +143,9 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │                                      + presentation) จงใจ กัน type-check timeout
     ├── GradeCenter/GradeCenterView.swift  (183)
     ├── Onboarding/  (6 ไฟล์: Welcome→Profile→Schedule→GradeReport→Summary + ProfileImagePicker)
-    ├── Portfolio/   PortfolioView.swift (89)
+    ├── Portfolio/   PortfolioView.swift (grid 2 คอลัมน์ + chip กรองหมวดหมู่) · PortfolioCard.swift (การ์ดกริด ไม่ใช้ CardContainer เพราะรูปต้อง bleed ถึงขอบบน)
+    │                + PortfolioItemSheet.swift (สร้าง/แก้ไข ใช้ `Mode` เดียวกัน — รูปที่เลือกอยู่ staged ใน memory จนกด "บันทึก" ถึงเขียนไฟล์+insert)
+    │                ยังไม่มี PortfolioDetailView (แผน step 4 ของ `PLAN_Portfolio.md`) การ์ดในกริดยังกดไม่ได้
     ├── Schedule/  ScheduleView.swift (root) + ScheduleConstants.swift
     │                (visibleDays/dayLabels · `findOrCreateSubject` ใช้โดย onboarding เท่านั้น
     │                 · `resolveSubject(named:code:in:)` ใช้โดยฟอร์มคาบ — รหัสก่อน→ชื่อ, สี/ไอคอนจาก ThaiSubjectCatalog)
@@ -183,7 +189,7 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 
 ---
 
-## 3. SwiftData Models (17 @Model — ทั้งหมดต้องอยู่ใน Schema)
+## 3. SwiftData Models (18 @Model — ทั้งหมดต้องอยู่ใน Schema)
 
 Schema ประกาศที่ `App/PrototypeAppApp.swift:15-33`
 
@@ -198,7 +204,8 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-33`
 | Subject | Core/Models/Subject.swift — วิชา/ช่วงพัก (`isBreak`), seed 3 ตัวตอนเปิดแอปครั้งแรก |
 | DayScheduleOverride | Core/Models/DayScheduleOverride.swift — ร่นคาบเฉพาะวัน จัดการผ่าน `PeriodShiftSheet`/`PeriodShiftBanner`, คำนวณผ่าน `PeriodShiftCalculator` เท่านั้น (ไม่แก้ `ScheduleEntry` จริง)<br>`startPeriodNumber: Int = 1` = คาบที่เริ่มร่น — **คาบก่อนหน้าถูกซ่อนทั้งวัน** และคาบพักตั้งแต่จุดนี้ไปถูกร่น+ย่อเหลือ `periodLengthMinutes` เท่าคาบอื่น |
 | FocusSession | Core/Models/FocusSession.swift — `kindRaw` (โฟกัส/พักสั้น/พักยาว, อ่านผ่าน `phase`) · `endedAt: Date?` · `wasLocked` (3 ตัวนี้มี default ครบ → migrate ของเดิมได้)<br>⚠️ **ช่วงพักถูกบันทึกเป็น FocusSession ด้วย** — สถิติ "นาทีโฟกัส" ต้องกรอง `phase == .focus` เสมอ (Dashboard + FocusModeView ทำแล้ว)<br>ไฟล์นี้ยังเป็นที่ประกาศ `enum PomodoroPhase` ด้วย |
-| PortfolioItem | Core/Models/PortfolioItem.swift |
+| PortfolioItem | Core/Models/PortfolioItem.swift — `startDate`/`endDate: Date?` (rename จาก `date` เดิม — breaking, ต้องลบแอปก่อนติดตั้งรุ่นนี้) · `images: [PortfolioImage]` (cascade) · `coverImage` = ตัวแรกตาม `sortOrder` · `dateRangeText` ใช้ `Date+Thai.swift` · `PortfolioCategory.color` ใหม่ (ใช้ `Theme.Colors`, ผูกกับ pill ในการ์ด) |
+| PortfolioImage | Core/Models/PortfolioImage.swift — เก็บแค่ `filename`/`sortOrder`/`createdAt` ตัวไฟล์จริงอยู่ `PortfolioImageStore` (Core/Portfolio/) |
 | CareerInterestResult | Core/Models/CareerInterestResult.swift |
 | TCASEntry + TCASChecklistItem | Core/Models/TCASEntry.swift |
 | SemesterRecord | Core/Models/SemesterRecord.swift |

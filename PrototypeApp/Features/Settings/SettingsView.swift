@@ -220,6 +220,8 @@ struct SettingsView: View {
         deleteAll(ScheduleEntry.self)
         deleteAll(FocusSession.self)
         deleteAll(PortfolioItem.self)
+        deleteAll(PortfolioImage.self)
+        PortfolioImageStore.deleteAll()
         deleteAll(CareerInterestResult.self)
         deleteAll(TCASChecklistItem.self)
         deleteAll(TCASEntry.self)

@@ -292,7 +292,7 @@ private struct CaptureDetailSheet: View {
             case .note:
                 context.insert(Note(title: title, content: noteBody))
             case .portfolio:
-                context.insert(PortfolioItem(title: title, detail: detail, category: portfolioCategory, date: portfolioCreatedAt))
+                context.insert(PortfolioItem(title: title, detail: detail, category: portfolioCategory, startDate: portfolioCreatedAt))
             }
             try context.save()
             if let scheduledEvent {

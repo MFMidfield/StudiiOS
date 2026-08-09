@@ -21,6 +21,7 @@ struct PrototypeAppApp: App {
             ScheduleEntry.self,
             FocusSession.self,
             PortfolioItem.self,
+            PortfolioImage.self,
             CareerInterestResult.self,
             TCASEntry.self,
             TCASChecklistItem.self,

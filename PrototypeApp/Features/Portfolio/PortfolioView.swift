@@ -7,79 +7,99 @@ import SwiftUI
 import SwiftData
 
 struct PortfolioView: View {
-    @Query(sort: \PortfolioItem.date, order: .reverse) private var items: [PortfolioItem]
-    @Environment(\.modelContext) private var context
+    @Query(sort: \PortfolioItem.startDate, order: .reverse) private var items: [PortfolioItem]
     @State private var isPresentingNew = false
+    @State private var selectedCategory: PortfolioCategory?
 
-    var body: some View {
-        unlockedContent
-            .navigationTitle("Portfolio")
-            .navigationBarTitleDisplayMode(.inline)
+    private let columns = [
+        GridItem(.flexible(), spacing: Theme.Spacing.md),
+        GridItem(.flexible(), spacing: Theme.Spacing.md)
+    ]
+
+    private var filteredItems: [PortfolioItem] {
+        guard let selectedCategory else { return items }
+        return items.filter { $0.category == selectedCategory }
     }
 
-    private var unlockedContent: some View {
-        List {
-            ForEach(PortfolioCategory.allCases, id: \.self) { category in
-                let categoryItems = items.filter { $0.category == category }
-                if !categoryItems.isEmpty {
-                    Section(category.label) {
-                        ForEach(categoryItems) { item in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Label(item.title, systemImage: category.icon)
-                                    .font(.system(size: 14, weight: .medium))
-                                Text(item.date.thaiShortString).font(.caption2).foregroundStyle(.secondary)
-                            }
-                        }
-                        .onDelete { offsets in
-                            for i in offsets { context.delete(categoryItems[i]) }
-                        }
+    var body: some View {
+        content
+            .navigationTitle("Portfolio")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { isPresentingNew = true } label: { Image(systemName: "plus") }
+                }
+            }
+            .sheet(isPresented: $isPresentingNew) {
+                PortfolioItemSheet(mode: .create)
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if items.isEmpty {
+            ContentUnavailableView(
+                "ยังไม่มีผลงาน",
+                systemImage: "folder",
+                description: Text("กดปุ่ม + เพื่อเพิ่มผลงานชิ้นแรก")
+            )
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    categoryChipRow
+                    grid
+                }
+                .padding(Theme.Spacing.lg)
+            }
+            .background(Theme.Colors.background)
+        }
+    }
+
+    private var categoryChipRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Theme.Spacing.sm) {
+                CategoryChip(label: "ทั้งหมด", isSelected: selectedCategory == nil) {
+                    selectedCategory = nil
+                }
+                ForEach(PortfolioCategory.allCases, id: \.self) { category in
+                    CategoryChip(label: category.label, isSelected: selectedCategory == category) {
+                        selectedCategory = category
                     }
                 }
             }
         }
-        .overlay { if items.isEmpty { ContentUnavailableView("ยังไม่มีผลงาน", systemImage: "folder") } }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { isPresentingNew = true } label: { Image(systemName: "plus") }
+    }
+
+    private var grid: some View {
+        LazyVGrid(columns: columns, spacing: Theme.Spacing.md) {
+            ForEach(filteredItems) { item in
+                PortfolioCard(item: item)
             }
-        }
-        .sheet(isPresented: $isPresentingNew) {
-            NewPortfolioItemSheet()
         }
     }
 }
 
-private struct NewPortfolioItemSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var context
-    @State private var title = ""
-    @State private var detail = ""
-    @State private var category: PortfolioCategory = .activity
-    @State private var date = Date.now
+private struct CategoryChip: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
 
     var body: some View {
-        NavigationStack {
-            Form {
-                TextField("ชื่อผลงาน", text: $title)
-                Picker("หมวดหมู่", selection: $category) {
-                    ForEach(PortfolioCategory.allCases, id: \.self) { Text($0.label).tag($0) }
-                }
-                DatePicker("วันที่", selection: $date, displayedComponents: .date)
-                TextField("รายละเอียด", text: $detail, axis: .vertical)
-            }
-            .navigationTitle("เพิ่มผลงาน")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("ยกเลิก") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("บันทึก") {
-                        context.insert(PortfolioItem(title: title, detail: detail, category: category, date: date))
-                        dismiss()
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.xs)
+                .background(isSelected ? Theme.Colors.primary : Theme.Colors.cardBackground)
+                .foregroundStyle(isSelected ? .white : Theme.Colors.textPrimary)
+                .clipShape(Capsule())
+                .overlay {
+                    if !isSelected {
+                        Capsule().strokeBorder(Theme.Colors.separator, lineWidth: 1)
                     }
-                    .disabled(title.isEmpty)
                 }
-            }
         }
+        .buttonStyle(.plain)
     }
 }
 
