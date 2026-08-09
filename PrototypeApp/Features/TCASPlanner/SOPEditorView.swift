@@ -144,13 +144,11 @@ struct SOPEditorView: View {
                 Button("บันทึก") { save(sop: sop) }
             }
         }
-        .confirmationDialog(
-            "รวมเป็นฉบับเดียวแล้วจะกลับไปแก้ทีละส่วนไม่ได้อีก ข้อความ 6 ช่องเดิมจะไม่แสดงอีก",
-            isPresented: $showMergeConfirm,
-            titleVisibility: .visible
-        ) {
+        .alert("รวมเป็นฉบับเดียว?", isPresented: $showMergeConfirm) {
             Button("รวมเลย", role: .destructive) { merge(sop: sop) }
             Button("ยกเลิก", role: .cancel) {}
+        } message: {
+            Text("รวมแล้วจะกลับไปแก้ทีละส่วนไม่ได้อีก ข้อความที่แยกไว้ 6 ช่องจะกลายเป็นเรียงความก้อนเดียว แก้ต่อได้เฉพาะแบบก้อนเดียวเท่านั้น")
         }
         .confirmationDialog(
             "ยังไม่ได้บันทึก",

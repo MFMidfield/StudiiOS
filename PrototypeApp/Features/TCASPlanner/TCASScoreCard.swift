@@ -66,19 +66,28 @@ struct TCASScoreCard: View {
     }
 
     private var scoreRangeRow: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text("คะแนนรวม")
-                .font(.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
-            Spacer()
-            if abs(current - ceiling) < 0.01 {
-                Text(current, format: .number.precision(.fractionLength(2)))
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Theme.Colors.textPrimary)
-            } else {
-                Text("\(current.formatted(.number.precision(.fractionLength(2)))) – \(ceiling.formatted(.number.precision(.fractionLength(2))))")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(Theme.Colors.textPrimary)
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("คะแนนรวม")
+                    .font(.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                Spacer()
+                if abs(current - ceiling) < 0.01 {
+                    Text(current, format: .number.precision(.fractionLength(2)))
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                } else {
+                    Text("\(current.formatted(.number.precision(.fractionLength(2)))) – \(ceiling.formatted(.number.precision(.fractionLength(2))))")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                }
+            }
+            // §4.4: วิชาที่ยังไม่กรอกคะแนนนับเป็น "ยังไม่ระบุ" ไม่ใช่ 0 จึงแสดงเป็นช่วงพร้อมป้ายกำกับ
+            if abs(current - ceiling) > 0.01 {
+                Text("ปัจจุบัน – เพดาน")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
     }
@@ -104,36 +113,91 @@ struct TCASScoreCard: View {
         }
     }
 
+    /// §4.2: ต้องแสดง leverage **คู่กับ** headroom เสมอ — วิชาที่คุ้มแต่ได้คะแนนสูงแล้ว
+    /// เหลือให้ดันน้อย ให้ผู้ใช้ตัดสินเอง ไม่ชี้นิ้วว่า "จงอ่านวิชานี้"
     private var leverageSection: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("คุ้มสุด 3 อันดับ")
-                .font(.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            HStack {
+                Text("คุ้มสุด 3 อันดับ")
+                    .font(.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                Spacer()
+                Text("คุ้ม · ดันได้อีก")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
             ForEach(topLeverage) { subject in
                 HStack {
                     Text(subject.displayName)
                         .font(.caption2)
                         .foregroundStyle(Theme.Colors.textPrimary)
+                        .lineLimit(1)
                     Spacer()
-                    Text(subject.leverage, format: .number.precision(.fractionLength(2)))
+                    Text(subject.leverage, format: .number.precision(.fractionLength(3)))
                         .font(.caption2.monospacedDigit())
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                    Text("·")
+                        .font(.caption2)
                         .foregroundStyle(Theme.Colors.textSecondary)
+                    Text(subject.headroom, format: .number.precision(.fractionLength(2)))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(subject.hasTaken ? Theme.Colors.textSecondary : Theme.Colors.info)
                 }
             }
+            Text("\"ดันได้อีก\" = คะแนนรวมที่จะเพิ่มถ้าวิชานั้นได้เต็ม")
+                .font(.caption2)
+                .foregroundStyle(Theme.Colors.textSecondary)
         }
     }
 
+    /// §4.3 โหมดล็อก — แสดงที่มาของตัวเลขครบทุกบรรทัดตามตัวอย่างในแผน
+    /// ไม่ใช่โยนผลลัพธ์บรรทัดเดียวให้ผู้ใช้เดาเอาเองว่าคำนวณมาจากไหน
     private func lockSection(_ result: TCASRequiredAverageResult) -> some View {
-        Group {
-            if result.requiredAveragePercent > 100 {
-                Text("ถึงได้เต็มทุกวิชาก็ยังไม่ถึงเป้าที่ตั้งไว้ ลองปรับเป้าหมาย หรือดูคณะอันดับรองที่บันทึกไว้")
-                    .font(.caption)
-                    .foregroundStyle(Theme.Colors.warning)
-            } else {
-                Text("วิชาที่เหลือต้องได้เฉลี่ย \(result.requiredAveragePercent.formatted(.number.precision(.fractionLength(1))))%")
-                    .font(.caption)
-                    .foregroundStyle(Theme.Colors.textPrimary)
-            }
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Divider()
+            lockLine(
+                "ล็อกแล้ว (\(result.lockedExamCodes.joined(separator: " + ")))",
+                value: result.lockedContribution.formatted(.number.precision(.fractionLength(2)))
+            )
+            lockLine(
+                "เป้าหมาย",
+                value: entry.targetScore.formatted(.number.precision(.fractionLength(2)))
+            )
+            lockLine(
+                "ที่เหลือต้องช่วยอีก",
+                value: result.neededFromRemaining.formatted(.number.precision(.fractionLength(2)))
+            )
+            lockLine(
+                "น้ำหนักรวมที่ยังไม่สอบ",
+                value: "\(result.remainingPercent.formatted(.number.precision(.fractionLength(0))))%"
+            )
+            lockConclusion(result)
+        }
+    }
+
+    private func lockLine(_ label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(Theme.Colors.textSecondary)
+            Spacer()
+            Text(value)
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(Theme.Colors.textPrimary)
+        }
+    }
+
+    @ViewBuilder
+    private func lockConclusion(_ result: TCASRequiredAverageResult) -> some View {
+        if result.requiredAveragePercent > 100 {
+            // §4.3: ห้ามแสดงเป็นตัวแดงว่า "เป็นไปไม่ได้" — ใช้ warning + ทางออกที่ทำต่อได้
+            Text("ถึงได้เต็มทุกวิชาก็ยังไม่ถึงเป้าที่ตั้งไว้ ลองปรับเป้าหมาย หรือดูคณะอันดับรองที่บันทึกไว้")
+                .font(.caption)
+                .foregroundStyle(Theme.Colors.warning)
+        } else {
+            Text("→ ต้องได้เฉลี่ย \(result.requiredAveragePercent.formatted(.number.precision(.fractionLength(1))))% ในวิชาที่เหลือ")
+                .font(.caption.bold())
+                .foregroundStyle(Theme.Colors.primary)
         }
     }
 }

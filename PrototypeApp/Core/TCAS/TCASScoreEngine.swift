@@ -68,6 +68,10 @@ struct TCASSubjectBreakdown: Identifiable {
 struct TCASRequiredAverageResult {
     let lockedContribution: Double
     let remainingPercent: Double
+    /// เป้า − ที่ล็อกไว้แล้ว = "ที่เหลือต้องช่วยอีก" ในตัวอย่าง §4.3
+    let neededFromRemaining: Double
+    /// ชื่อย่อวิชาที่ติ๊กว่าสอบแล้ว — ใช้กำกับบรรทัด "ล็อกแล้ว (…)" ใน §4.3
+    let lockedExamCodes: [String]
     /// อาจเกิน 100 ได้ (เป็นไปไม่ได้ต่อให้ได้เต็ม) — View เป็นคนตัดสินใจแสดงข้อความ/สี (§4.3)
     let requiredAveragePercent: Double
 }
@@ -136,10 +140,13 @@ enum TCASScoreEngine {
         let remainingPercent = remaining.reduce(0) { $0 + $1.percent }
         guard remainingPercent > 0 else { return nil }
 
-        let requiredAveragePercent = ((target - lockedContribution) / remainingPercent) * 100
+        let neededFromRemaining = target - lockedContribution
+        let requiredAveragePercent = (neededFromRemaining / remainingPercent) * 100
         return TCASRequiredAverageResult(
             lockedContribution: lockedContribution,
             remainingPercent: remainingPercent,
+            neededFromRemaining: neededFromRemaining,
+            lockedExamCodes: items.filter(\.hasTaken).map(\.examCode),
             requiredAveragePercent: requiredAveragePercent
         )
     }

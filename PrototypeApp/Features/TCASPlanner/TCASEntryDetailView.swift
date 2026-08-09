@@ -46,6 +46,13 @@ struct TCASEntryDetailView: View {
                 }
             }
 
+            Section("โน้ต") {
+                TextEditor(text: $entry.notes)
+                    .frame(minHeight: 100)
+            }
+
+            // §0.3 กฎเหล็ก: แอปไม่เก็บเกณฑ์/คะแนนต่ำสุดของคณะไหนเลย — ทุกอย่างที่เป็น
+            // ข้อมูลจริงส่งออกไป mytcas.com เสมอ
             Section("ระเบียบการ") {
                 TextField("วางลิงก์ระเบียบการจาก mytcas ที่นี่ (ถ้ามี)", text: $entry.admissionURL)
                     .keyboardType(.URL)
@@ -56,11 +63,6 @@ struct TCASEntryDetailView: View {
                 } label: {
                     Label("เปิดดูเกณฑ์ใน mytcas", systemImage: "safari")
                 }
-            }
-
-            Section("โน้ต") {
-                TextEditor(text: $entry.notes)
-                    .frame(minHeight: 100)
             }
         }
         .navigationTitle(entry.facultyName)

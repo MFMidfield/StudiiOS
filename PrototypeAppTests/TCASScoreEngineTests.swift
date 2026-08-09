@@ -86,9 +86,11 @@ struct TCASScoreEngineTests {
         let result = TCASScoreEngine.requiredAverage(target: 62.0, weights: weights, scores: scores)
 
         #expect(result != nil)
-        #expect(abs(result!.lockedContribution - 25.5) < 0.0001)
-        #expect(result!.remainingPercent == 50)
-        #expect(abs(result!.requiredAveragePercent - 73.0) < 0.0001)
+        #expect(abs(result!.lockedContribution - 25.5) < 0.0001)       // ล็อกแล้ว = 25.50
+        #expect(abs(result!.neededFromRemaining - 36.5) < 0.0001)      // ที่เหลือต้องช่วยอีก = 36.50
+        #expect(result!.remainingPercent == 50)                        // น้ำหนักรวมที่ยังไม่สอบ = 50%
+        #expect(abs(result!.requiredAveragePercent - 73.0) < 0.0001)   // ต้องได้เฉลี่ย 73.0%
+        #expect(result!.lockedExamCodes.sorted() == ["TGAT1", "TPAT3"])
     }
 
     @Test func requiredAverageNilWhenNoTarget() {
