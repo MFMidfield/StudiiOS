@@ -1,8 +1,9 @@
 //
 //  GradeComponent.swift
 //  One scored item in the Thai-style grading breakdown
-//  (เก็บคะแนน / กลางภาค / ปลายภาค / ...). Powers Grade Center's total score,
-//  grade computation, and "target score needed" calculator.
+//  (เก็บคะแนน / กลางภาค / ปลายภาค / ...).
+//  Kept only for SwiftData store compatibility — the UI that used this model
+//  (คะแนนรวม / ตัวคำนวณเป้า) was removed, see PLAN_2026-08-10_Fixes.md Task 4.
 //
 
 import Foundation

@@ -11,7 +11,6 @@ import UIKit
 struct AddScheduleEntrySheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \Subject.createdAt) private var subjects: [Subject]
     @Query private var allEntries: [ScheduleEntry]
 
     @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
@@ -30,10 +29,6 @@ struct AddScheduleEntrySheet: View {
     @State private var endTime: Date
     @State private var subjectName: String
     @State private var subjectCode: String
-    /// The Subject the user picked from the existing list, when they did.
-    /// Cleared as soon as the name stops matching, so the picker never claims
-    /// a row it no longer describes.
-    @State private var pickedExisting: Subject?
     @State private var teacherName: String
     @State private var location: String
     @State private var showDeleteConfirm = false
@@ -62,7 +57,6 @@ struct AddScheduleEntrySheet: View {
 
         _subjectName = State(initialValue: editing?.subject?.name ?? editing?.subjectName ?? "")
         _subjectCode = State(initialValue: editing?.subject?.code ?? "")
-        _pickedExisting = State(initialValue: editing?.subject)
         _teacherName = State(initialValue: editing?.teacherName ?? "")
         _location = State(initialValue: editing?.location ?? "")
     }
@@ -121,7 +115,6 @@ struct AddScheduleEntrySheet: View {
             }
             .sheet(isPresented: $isAddingSubject) {
                 AddSubjectSheet { subject in
-                    pickedExisting = subject
                     subjectName = subject.name
                     subjectCode = subject.code
                 }
@@ -195,13 +188,6 @@ struct AddScheduleEntrySheet: View {
 
     private var subjectSection: some View {
         Section("วิชา") {
-            Picker("เลือกจากวิชาที่มีอยู่", selection: $pickedExisting) {
-                Text("— ไม่เลือก —").tag(Subject?.none)
-                ForEach(subjects) { subject in
-                    Text(subject.name).tag(Subject?.some(subject))
-                }
-            }
-
             SubjectPickerFields(name: $subjectName, code: $subjectCode)
 
             Button {
@@ -209,25 +195,6 @@ struct AddScheduleEntrySheet: View {
             } label: {
                 Label("เพิ่มวิชาใหม่", systemImage: "plus.circle.fill")
             }
-        }
-        .onChange(of: pickedExisting) { _, new in
-            guard let new else { return }
-            subjectName = new.name
-            subjectCode = new.code
-        }
-        .onChange(of: subjectName) { _, new in
-            // Naming a different subject means the user has left the picked one
-            // behind; keeping the picker highlighted would be a lie.
-            guard let picked = pickedExisting,
-                  picked.name.caseInsensitiveCompare(new) != .orderedSame
-            else { return }
-            // The code still in the field belongs to the subject being replaced.
-            // Left there, resolveSubject matches on it and hands back the old
-            // Subject — the row saves "successfully" and nothing changes.
-            if !subjectCode.isEmpty, subjectCode.caseInsensitiveCompare(picked.code) == .orderedSame {
-                subjectCode = ""
-            }
-            pickedExisting = nil
         }
     }
 

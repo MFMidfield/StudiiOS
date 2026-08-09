@@ -23,16 +23,15 @@ struct ScheduleSettingsSheet: View {
     @Query private var allScheduleEntries: [ScheduleEntry]
     private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
 
-    @State private var selectedBand: SchoolBand = .upper
     @State private var isShiftingPeriods = false
 
-    /// nil เมื่อเทอมที่ใช้อยู่ไม่ได้อยู่ในระดับชั้นที่ segmented control เลือกค้างไว้
+    /// nil เมื่อเทอมที่ใช้อยู่ไม่ได้อยู่ในเมนูนี้ (เช่น เทอม ม.ต้น ที่เคยสร้างไว้ก่อนหน้า)
     /// — เมนูจะไม่มี tag ตรงกับมัน ต้องคืน nil ให้ Picker แสดง "ยังไม่เลือก"
     /// แทนที่จะยัดค่าเก่าที่ไม่มีอยู่ในเมนูเข้าไป
     private var termSelection: Binding<Int?> {
         Binding(
             get: {
-                guard let activeTerm, activeTerm.band == selectedBand else { return nil }
+                guard let activeTerm, SchoolBand.upper.gradeLevels.contains(activeTerm.gradeLevel) else { return nil }
                 return activeTerm.sortKey
             },
             set: { newSortKey in
@@ -58,15 +57,8 @@ struct ScheduleSettingsSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("ระดับชั้น", selection: $selectedBand) {
-                        ForEach(SchoolBand.allCases) { band in
-                            Text(band.label).tag(band)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
                     Picker("เทอม", selection: termSelection) {
-                        ForEach(selectedBand.gradeLevels, id: \.self) { level in
+                        ForEach(SchoolBand.upper.gradeLevels, id: \.self) { level in
                             ForEach([1, 2], id: \.self) { termNumber in
                                 let count = entryCount(gradeLevel: level, termNumber: termNumber)
                                 Text(count > 0 ? "ม.\(level) เทอม \(termNumber) (\(count) คาบ)" : "ม.\(level) เทอม \(termNumber)")
@@ -79,7 +71,7 @@ struct ScheduleSettingsSheet: View {
                     Text("เทอม")
                 } footer: {
                     if termSelection.wrappedValue == nil, let activeTerm {
-                        Text("ตอนนี้ใช้ \(activeTerm.displayName) อยู่ — เลือกเทอมด้านบนเพื่อสลับมา\(selectedBand.label)")
+                        Text("ตอนนี้ใช้ \(activeTerm.displayName) อยู่ — เลือกเทอมด้านบนเพื่อสลับมา")
                     } else {
                         Text("ตารางสอน งาน และคะแนน จะแยกเก็บตามเทอม")
                     }
@@ -120,9 +112,6 @@ struct ScheduleSettingsSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("เสร็จ") { dismiss() }
                 }
-            }
-            .onAppear {
-                selectedBand = activeTerm?.band ?? .upper
             }
             .sheet(isPresented: $isShiftingPeriods) {
                 PeriodShiftSheet(

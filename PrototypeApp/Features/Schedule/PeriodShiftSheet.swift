@@ -119,7 +119,6 @@ struct PeriodShiftSheet: View {
         NavigationStack {
             Form {
                 infoSection
-                previewSection
                 actionSection
             }
             .navigationTitle("ร่นคาบ")
@@ -169,38 +168,6 @@ struct PeriodShiftSheet: View {
                 Text("คาบละต้องอยู่ระหว่าง 1-240 นาที")
                     .font(.caption)
                     .foregroundStyle(Theme.Colors.danger)
-            }
-        }
-    }
-
-    private var previewSection: some View {
-        Section("ตัวอย่างผลลัพธ์") {
-            if previewPeriods.isEmpty {
-                Text("กรอกข้อมูลให้ครบเพื่อดูตัวอย่าง")
-                    .font(.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-            } else {
-                ForEach(previewPeriods) { period in
-                    previewRow(period)
-                }
-            }
-        }
-    }
-
-    private func previewRow(_ period: ResolvedPeriod) -> some View {
-        HStack {
-            Text(period.entry.periodNumber == 0
-                 ? (period.entry.subject?.name ?? period.entry.subjectName)
-                 : "คาบ \(period.entry.periodNumber)")
-                .font(.caption)
-            Spacer()
-            Text("\(period.startMinute.asClockString) – \(period.endMinute.asClockString)")
-                .font(.caption)
-                .foregroundStyle(period.isShifted ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
-            if !period.isShifted {
-                Text("(ไม่ร่น)")
-                    .font(.caption2)
-                    .foregroundStyle(Theme.Colors.textSecondary)
             }
         }
     }
