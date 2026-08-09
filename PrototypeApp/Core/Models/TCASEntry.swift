@@ -1,24 +1,11 @@
 //
 //  TCASEntry.swift
-//  TCAS Planner (Pro feature): faculties/universities of interest, a
-//  readiness checklist per entry, and an overall roadmap timeframe (ม.4–ม.6).
+//  TCAS Planner (Free feature): faculties/universities of interest, ระบบ
+//  คิดคะแนนย้อนกลับ (TCASScoreWeight) และ SOP (TCASSOP) ต่อคณะ.
 //
 
 import Foundation
 import SwiftData
-
-@Model
-final class TCASChecklistItem {
-    var title: String
-    var isDone: Bool
-    var entry: TCASEntry?
-
-    init(title: String, isDone: Bool = false, entry: TCASEntry? = nil) {
-        self.title = title
-        self.isDone = isDone
-        self.entry = entry
-    }
-}
 
 @Model
 final class TCASEntry {
@@ -27,14 +14,20 @@ final class TCASEntry {
     var notes: String
     var createdAt: Date
 
-    @Relationship(deleteRule: .cascade, inverse: \TCASChecklistItem.entry)
-    var checklist: [TCASChecklistItem] = []
+    var roundRaw: String = "รอบ 1"
+    var sortOrder: Int = 0
+    var targetScore: Double = 0
+    var admissionURL: String = ""
 
-    var readinessPercent: Double {
-        guard !checklist.isEmpty else { return 0 }
-        let done = checklist.filter(\.isDone).count
-        return Double(done) / Double(checklist.count)
-    }
+    @Relationship(deleteRule: .cascade, inverse: \TCASScoreWeight.entry)
+    var weights: [TCASScoreWeight] = []
+
+    // SwiftData ยังงอแงกับ to-one optional relationship — เก็บเป็น array
+    // แล้วเปิด `sop` เป็น computed property แทน (มีได้ 0 หรือ 1 ตัวเท่านั้น)
+    @Relationship(deleteRule: .cascade, inverse: \TCASSOP.entry)
+    var sopStore: [TCASSOP] = []
+
+    var sop: TCASSOP? { sopStore.first }
 
     init(
         facultyName: String,
