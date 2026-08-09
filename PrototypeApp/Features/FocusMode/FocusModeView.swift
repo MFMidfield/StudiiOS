@@ -2,6 +2,10 @@
 //  FocusModeView.swift
 //  หน้า "โฟกัส" — ตั้งเวลา Pomodoro, เลือกแอปที่จะบล็อก, ดูสถิติ
 //
+//  หมายเหตุ: เคยมีหน้าจอล็อกเต็มจอ (`FocusLockOverlay`) ตอนโฟกัส — **ถอดออกแล้ว**
+//  ตั้งใจ เหลือการบล็อกแอปอื่นผ่าน Screen Time API อย่างเดียว ห้ามใส่กลับ
+//  โดยไม่ถามก่อน
+//
 //  เวลาและสถานะทั้งหมดอยู่ที่ `PomodoroEngine.shared` ไฟล์นี้แค่วาด
 //  ห้ามเก็บ secondsRemaining เป็น @State ที่นี่เด็ดขาด (ของเดิมพังเพราะเรื่องนี้)
 //
@@ -23,7 +27,6 @@ struct FocusModeView: View {
     @AppStorage(PomodoroSettings.Key.longBreakMinutes) private var longBreakMinutes = PomodoroSettings.defaultLongBreakMinutes
     @AppStorage(PomodoroSettings.Key.roundsBeforeLong) private var roundsBeforeLong = PomodoroSettings.defaultRoundsBeforeLongBreak
     @AppStorage(PomodoroSettings.Key.autoContinue) private var autoContinue = true
-    @AppStorage(PomodoroSettings.Key.lockEnabled) private var lockEnabled = true
     @AppStorage(PomodoroSettings.Key.blockAppsEnabled) private var blockAppsEnabled = false
 
     @State private var showCustomPicker = false
@@ -37,9 +40,6 @@ struct FocusModeView: View {
     // "unable to type-check this expression in reasonable time"
     var body: some View {
         mainContent
-            .fullScreenCover(isPresented: .constant(shouldShowLock)) {
-                FocusLockOverlay(engine: engine)
-            }
             .sheet(isPresented: $showCustomPicker) { customPickerSheet }
             .sheet(isPresented: $showSettings) { settingsSheet }
             .familyActivityPicker(isPresented: $showAppPicker, selection: $blocker.selection)
@@ -55,7 +55,7 @@ struct FocusModeView: View {
             VStack(spacing: Theme.Spacing.xl) {
                 timerCard
                 if engine.isIdle { presetCard }
-                lockCard
+                blockCard
                 statsCard
             }
             .padding(Theme.Spacing.lg)
@@ -82,18 +82,9 @@ struct FocusModeView: View {
         case .active:
             engine.syncToNow()
             blocker.reconcile()
-        case .background:
-            // นับเฉพาะ .background — `.inactive` เกิดตอนเปิด sheet/แถบแจ้งเตือน
-            // ด้วย ถ้านับรวมตัวเลข "หนีออกไป" จะเฟ้อทั้งที่ผู้ใช้ไม่ได้ออกไปไหน
-            engine.noteLeftApp()
         default:
             break
         }
-    }
-
-    /// หน้าล็อกขึ้นเฉพาะตอน "โฟกัสอยู่ + เปิดโหมดล็อก" — ช่วงพักไม่ล็อก
-    private var shouldShowLock: Bool {
-        engine.isLocked && engine.isRunning && engine.phase == .focus
     }
 
     // MARK: - การ์ดนาฬิกา
@@ -273,28 +264,17 @@ struct FocusModeView: View {
         .presentationDetents([.medium])
     }
 
-    // MARK: - การ์ดล็อก
+    // MARK: - การ์ดบล็อกแอป
 
-    private var lockCard: some View {
+    private var blockCard: some View {
         CardContainer {
-            Text("โหมดล็อก")
+            Text("บล็อกแอปอื่น")
                 .font(.subheadline).fontWeight(.semibold)
-
-            Toggle(isOn: $lockEnabled) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("ล็อกหน้าจอตอนโฟกัส")
-                    Text("เปิดหน้าจอเต็มจอ ออกก่อนเวลาต้องกดค้าง 3 วินาที")
-                        .font(.caption2).foregroundStyle(Theme.Colors.textSecondary)
-                }
-            }
-            .disabled(!engine.isIdle)
-
-            Divider()
 
             Toggle(isOn: $blockAppsEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: Theme.Spacing.xs) {
-                        Text("บล็อกแอปอื่นจริง")
+                        Text("เปิดใช้งาน")
                         if blocker.isBlocking {
                             Text("กำลังบล็อก")
                                 .font(.system(size: 9, weight: .bold))
@@ -340,7 +320,7 @@ struct FocusModeView: View {
                 .disabled(!engine.isIdle)
 
                 if !blocker.hasSelection {
-                    Label("ยังไม่ได้เลือกแอป — โฟกัสจะล็อกแค่ในแอปนี้", systemImage: "exclamationmark.triangle.fill")
+                    Label("ยังไม่ได้เลือกแอป — เริ่มโฟกัสไปก็ยังไม่บล็อกอะไร", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption2)
                         .foregroundStyle(Theme.Colors.warning)
                 }
@@ -431,7 +411,7 @@ struct FocusModeView: View {
 
     private func startFocus(minutes: Int) {
         engine.attach(context: context)
-        engine.startFocus(minutes: minutes, locked: lockEnabled)
+        engine.startFocus(minutes: minutes)
     }
 }
 

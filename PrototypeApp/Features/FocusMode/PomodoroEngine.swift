@@ -16,7 +16,6 @@
 import Foundation
 import SwiftData
 import SwiftUI
-import UIKit
 
 @Observable
 @MainActor
@@ -37,10 +36,6 @@ final class PomodoroEngine {
     private(set) var completedFocusRounds: Int = 0
     /// เวลาที่ช่วงปัจจุบันเริ่ม
     private(set) var phaseStartedAt: Date = .now
-    /// เปิดโหมดล็อกอยู่ไหม (หน้าจอล็อก + บล็อกแอป)
-    private(set) var isLocked: Bool = false
-    /// นับจำนวนครั้งที่ผู้ใช้สลับออกจากแอปตอนล็อก — โชว์เตือนตอนกลับมา
-    private(set) var escapeCount: Int = 0
 
     /// ตัวขับการวาดใหม่ — เปลี่ยนทุก 0.5 วิ ให้ View คำนวณ remaining ใหม่
     private(set) var tickToken: Int = 0
@@ -100,14 +95,10 @@ final class PomodoroEngine {
     // MARK: - คำสั่งหลัก
 
     /// เริ่มช่วงโฟกัสใหม่ตั้งแต่ต้น
-    /// - Parameters:
-    ///   - minutes: ความยาว (นาที) — ถ้า nil ใช้ค่าจากการตั้งค่า
-    ///   - locked: เปิดโหมดล็อก (หน้าจอล็อก + บล็อกแอป) ไหม
-    func startFocus(minutes: Int? = nil, locked: Bool) {
+    /// - Parameter minutes: ความยาว (นาที) — ถ้า nil ใช้ค่าจากการตั้งค่า
+    func startFocus(minutes: Int? = nil) {
         let seconds = (minutes ?? PomodoroSettings.focusMinutes) * 60
         completedFocusRounds = 0
-        escapeCount = 0
-        isLocked = locked
         begin(phase: .focus, seconds: seconds, at: .now)
     }
 
@@ -145,13 +136,11 @@ final class PomodoroEngine {
         }
         deadline = nil
         pausedRemaining = nil
-        isLocked = false
         plannedDuration = PomodoroSettings.duration(for: .focus)
         phase = .focus
         stopTicker()
         Task { await NotificationManager.shared.cancelFocusNotification() }
         AppBlockManager.shared.stopBlocking(reason: "จบเซสชัน")
-        UIApplication.shared.isIdleTimerDisabled = false
         persist()
         AppLog.action("Pomodoro", "หยุดเซสชัน")
     }
@@ -184,25 +173,10 @@ final class PomodoroEngine {
             // กลับมาช้าเกินไป หรือปิด auto — จบชุดนี้และปลดล็อกทุกอย่าง
             self.deadline = nil
             pausedRemaining = nil
-            isLocked = false
             stopTicker()
             AppBlockManager.shared.stopBlocking(reason: "หมดเวลาแล้ว")
-            UIApplication.shared.isIdleTimerDisabled = false
             persist()
         }
-    }
-
-    /// เรียกตอน scenePhase ออกจาก .active ระหว่างล็อกอยู่ — นับว่า "หนีออกไป"
-    func noteLeftApp() {
-        guard isLocked, isRunning, phase == .focus else { return }
-        escapeCount += 1
-        persist()
-        AppLog.action("Pomodoro", "ผู้ใช้ออกจากแอประหว่างล็อก (ครั้งที่ \(escapeCount))")
-    }
-
-    func clearEscapeCount() {
-        escapeCount = 0
-        persist()
     }
 
     // MARK: - ภายใน
@@ -217,9 +191,8 @@ final class PomodoroEngine {
         startTicker()
         scheduleEndNotification()
         applyBlockingIfNeeded()
-        UIApplication.shared.isIdleTimerDisabled = isLocked && newPhase == .focus
         persist()
-        AppLog.action("Pomodoro", "เริ่ม \(newPhase.label) \(plannedDuration / 60) นาที (ล็อก: \(isLocked))")
+        AppLog.action("Pomodoro", "เริ่ม \(newPhase.label) \(plannedDuration / 60) นาที")
     }
 
     /// บันทึกช่วงที่เพิ่งจบลง SwiftData
@@ -240,10 +213,9 @@ final class PomodoroEngine {
             next = .focus
         }
 
-        // ช่วงพักไม่ล็อกแอป — ผู้ใช้ควรได้พักจริง
+        // ช่วงพักไม่บล็อกแอป — ผู้ใช้ควรได้พักจริง
         if next.isBreak {
             AppBlockManager.shared.stopBlocking(reason: "ถึงเวลาพัก")
-            UIApplication.shared.isIdleTimerDisabled = false
         }
 
         begin(phase: next, seconds: PomodoroSettings.duration(for: next), at: start)
@@ -257,14 +229,14 @@ final class PomodoroEngine {
             completed: completed,
             phase: phase,
             endedAt: endedAt,
-            wasLocked: isLocked
+            wasLocked: PomodoroSettings.blockAppsEnabled
         )
         context.insert(session)
         try? context.save()
     }
 
     private func applyBlockingIfNeeded() {
-        guard isLocked, phase == .focus, let deadline, PomodoroSettings.blockAppsEnabled else { return }
+        guard phase == .focus, let deadline, PomodoroSettings.blockAppsEnabled else { return }
         AppBlockManager.shared.startBlocking(until: deadline)
     }
 
@@ -320,8 +292,6 @@ final class PomodoroEngine {
         static let paused = "pomodoroStatePausedRemaining"
         static let planned = "pomodoroStatePlanned"
         static let rounds = "pomodoroStateRounds"
-        static let locked = "pomodoroStateLocked"
-        static let escapes = "pomodoroStateEscapes"
         static let startedAt = "pomodoroStatePhaseStartedAt"
     }
 
@@ -332,8 +302,6 @@ final class PomodoroEngine {
         d.set(pausedRemaining ?? -1, forKey: Store.paused)
         d.set(plannedDuration, forKey: Store.planned)
         d.set(completedFocusRounds, forKey: Store.rounds)
-        d.set(isLocked, forKey: Store.locked)
-        d.set(escapeCount, forKey: Store.escapes)
         d.set(phaseStartedAt.timeIntervalSince1970, forKey: Store.startedAt)
     }
 
@@ -342,8 +310,6 @@ final class PomodoroEngine {
         phase = PomodoroPhase(rawValue: d.string(forKey: Store.phase) ?? "") ?? .focus
         plannedDuration = max(60, d.integer(forKey: Store.planned))
         completedFocusRounds = d.integer(forKey: Store.rounds)
-        isLocked = d.bool(forKey: Store.locked)
-        escapeCount = d.integer(forKey: Store.escapes)
 
         let started = d.double(forKey: Store.startedAt)
         phaseStartedAt = started > 0 ? Date(timeIntervalSince1970: started) : .now
@@ -355,7 +321,6 @@ final class PomodoroEngine {
         deadline = stored > 0 ? Date(timeIntervalSince1970: stored) : nil
 
         if deadline == nil && pausedRemaining == nil {
-            isLocked = false
             plannedDuration = PomodoroSettings.duration(for: .focus)
         }
     }

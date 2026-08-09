@@ -112,6 +112,9 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     ├── CareerDiscovery/CareerDiscoveryView.swift (163)
     ├── Dashboard/DashboardView.swift      (350)
     ├── FocusMode/   โหมดโฟกัส/Pomodoro — ย้ายออกจาก Portfolio แล้ว
+    │                ⚠️ **ไม่มีหน้าจอล็อกในแอปแล้ว** — `FocusLockOverlay.swift` ถูกลบตามคำสั่ง Few
+    │                  (2026-08-09) เหลือการบล็อกแอปอื่นผ่าน Screen Time API อย่างเดียว
+    │                  ห้ามใส่กลับโดยไม่ถามก่อน · โค้ดเดิมอยู่ใน commit `4626607`
     │   ├── PomodoroSettings.swift   (76)  **จุดเดียวที่รู้จัก UserDefaults key ของ Pomodoro**
     │   │                                  ห้ามเขียน key ตรงๆ ที่อื่น · duration(for:) แปลง phase → วินาที
     │   ├── PomodoroEngine.swift     (362) `@Observable @MainActor` singleton — **หัวใจของโหมดโฟกัส**
@@ -132,9 +135,8 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │   │                                  ทุก method ออกแบบให้ล้มเหลวแบบเงียบ ไม่ crash
     │   │                                  `reconcile()` เรียกจาก RootContainerView ตอน .active —
     │   │                                    **ห้ามลบ** ไม่งั้นแอปอื่นถูกบล็อกค้างถาวร
-    │   ├── FocusModeView.swift      (~450) UI ล้วน ไม่เก็บเวลาเอง · body แบ่ง 2 ชั้น (mainContent
-    │   │                                  + presentation) จงใจ กัน type-check timeout
-    │   └── FocusLockOverlay.swift   (156) fullScreenCover ตอนโฟกัส · ปุ่มยอมแพ้ต้องกดค้าง 3 วิ
+    │   └── FocusModeView.swift      (~430) UI ล้วน ไม่เก็บเวลาเอง · body แบ่ง 2 ชั้น (mainContent
+    │                                      + presentation) จงใจ กัน type-check timeout
     ├── GradeCenter/GradeCenterView.swift  (183)
     ├── Onboarding/  (6 ไฟล์: Welcome→Profile→Schedule→GradeReport→Summary + ProfileImagePicker)
     ├── Portfolio/   PortfolioView.swift (89)

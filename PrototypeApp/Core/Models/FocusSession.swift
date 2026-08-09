@@ -47,7 +47,8 @@ final class FocusSession {
     /// เวลาที่จบจริง (nil = ข้อมูลเก่าก่อนมีฟิลด์นี้)
     var endedAt: Date?
 
-    /// เซสชันนี้เปิดโหมดล็อกแอปไว้ไหม — ใช้โชว์ในสถิติ
+    /// เซสชันนี้เปิดการบล็อกแอปอื่นไว้ไหม — ใช้โชว์ในสถิติ
+    /// (ชื่อ `wasLocked` คงไว้ตามเดิม เปลี่ยนชื่อ property = เปลี่ยน schema = crash)
     var wasLocked: Bool = false
 
     var phase: PomodoroPhase {

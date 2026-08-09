@@ -16,7 +16,6 @@ enum PomodoroSettings {
         static let longBreakMinutes  = "pomodoroLongBreakMinutes"
         static let roundsBeforeLong  = "pomodoroRoundsBeforeLongBreak"
         static let autoContinue      = "pomodoroAutoContinue"
-        static let lockEnabled       = "pomodoroLockEnabled"
         static let blockAppsEnabled  = "pomodoroBlockAppsEnabled"
     }
 
@@ -53,11 +52,6 @@ enum PomodoroSettings {
     /// ไปช่วงถัดไปเองโดยไม่ต้องกดเริ่มใหม่ (ค่าเริ่มต้น = เปิด)
     static var autoContinue: Bool {
         UserDefaults.standard.object(forKey: Key.autoContinue) as? Bool ?? true
-    }
-
-    /// เปิดหน้าจอล็อกเต็มจอตอนโฟกัส (ค่าเริ่มต้น = เปิด)
-    static var lockEnabled: Bool {
-        UserDefaults.standard.object(forKey: Key.lockEnabled) as? Bool ?? true
     }
 
     /// บล็อกแอปอื่นด้วย Screen Time API ตอนโฟกัส (ค่าเริ่มต้น = ปิด — ต้องขออนุญาตก่อน)
