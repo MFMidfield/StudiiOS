@@ -48,6 +48,10 @@ final class Term {
     /// หน่วยกิตรวมของเทอมนี้ — nil = ไม่ทราบ, GPAXCalculator จะแทนด้วยค่า default (D2)
     var totalCredits: Double? = nil
 
+    /// true = กรอกเกรดแบบรายวิชา (TermGradeSubject) แล้วคำนวณ gpa/totalCredits ให้เอง
+    /// false = กรอก gpa/totalCredits ตรงๆ (ค่าเริ่มต้น, ตามพฤติกรรมเดิม)
+    var usesDetailedGrades: Bool = false
+
     init(gradeLevel: Int, termNumber: Int, id: UUID = UUID(), createdAt: Date = .now) {
         self.id = id
         self.gradeLevel = gradeLevel

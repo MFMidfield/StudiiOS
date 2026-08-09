@@ -1,7 +1,7 @@
 //
 //  GPAXSummaryCard.swift
 //  Level 1 GPAX — the big card: GPAX, floor/ceiling range bar, required average.
-//  Read-only in this round; input lands in TermGradeEditSheet/GradeLevelSheet.
+//  Read-only in this round; input lands in TermGradeEditView/GradeLevelSheet.
 //  Math lives entirely in GPAXCalculator — this file only formats.
 //
 

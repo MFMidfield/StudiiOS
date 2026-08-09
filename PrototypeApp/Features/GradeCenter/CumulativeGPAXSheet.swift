@@ -1,7 +1,7 @@
 //
 //  CumulativeGPAXSheet.swift
 //  Screen 4 (§6.4) — "I don't remember individual terms."
-//  Reached from TermGradeEditSheet's "จำเกรดเทอมนี้ไม่ได้" link.
+//  Reached from TermGradeEditView's "จำเกรดเทอมนี้ไม่ได้" link.
 //
 
 import SwiftUI
@@ -11,7 +11,7 @@ struct CumulativeGPAXSheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
-    /// Lets the presenting TermGradeEditSheet close too once this flow finishes.
+    /// Lets the presenting screen (or its own sheet) close too once this flow finishes.
     var onDone: () -> Void = {}
 
     @State private var gpaxText = ""

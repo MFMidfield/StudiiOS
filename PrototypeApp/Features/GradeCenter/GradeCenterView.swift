@@ -19,7 +19,7 @@ struct GradeCenterView: View {
     //
     // These @AppStorage vars are never read directly below — GPAXSettings'
     // getters re-apply validation/fallbacks. Declaring them here is what makes
-    // SwiftUI redraw gpaxResult when GradeLevelSheet / TermGradeEditSheet's
+    // SwiftUI redraw gpaxResult when GradeLevelSheet / TermGradeEditView's
     // "จำเกรดเทอมนี้ไม่ได้" / the inline target setter write to UserDefaults.
     @AppStorage(GPAXSettings.Key.currentGradeLevel) private var gpaxGradeLevelPing = 0
     @AppStorage(GPAXSettings.Key.currentTermNumber) private var gpaxTermNumberPing = 0
@@ -61,5 +61,5 @@ struct GradeCenterView: View {
 
 #Preview {
     NavigationStack { GradeCenterView() }
-        .modelContainer(for: [GradeComponent.self, Term.self, TermSubject.self], inMemory: true)
+        .modelContainer(for: [GradeComponent.self, Term.self, TermSubject.self, TermGradeSubject.self, ScheduleEntry.self, Subject.self], inMemory: true)
 }

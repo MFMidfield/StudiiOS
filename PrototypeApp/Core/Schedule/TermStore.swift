@@ -128,6 +128,8 @@ enum TermStore {
             where g.term?.id == id { context.delete(g) }
         for ts in (try? context.fetch(FetchDescriptor<TermSubject>())) ?? []
             where ts.term?.id == id { context.delete(ts) }
+        for tgs in (try? context.fetch(FetchDescriptor<TermGradeSubject>())) ?? []
+            where tgs.term?.id == id { context.delete(tgs) }
         context.delete(term)
         try? context.save()
         AppLog.action("Term", "ลบเทอม \(term.displayName) พร้อมข้อมูลทั้งหมด")

@@ -2,10 +2,11 @@
 //  TermGradeListSection.swift
 //  Level 1 GPAX — always exactly 6 rows for ม.ปลาย (ม.4–ม.6), in sortKey order.
 //  Read-only in this round: rows are not tappable yet. Editing lands in
-//  TermGradeEditSheet (build order step 4).
+//  TermGradeEditView.
 //
 
 import SwiftUI
+import SwiftData
 
 struct TermGradeListSection: View {
     /// Same result GPAXSummaryCard shows — passed down so this section never
@@ -47,38 +48,41 @@ private struct TermGradeRow: View {
     let currentSortKey: Int?
     let requiredAverage: Double?
 
-    @State private var showingEditSheet = false
-
     private var displayName: String { "ม.\(sortKey / 10) เทอม \(sortKey % 10)" }
     private var gradeLevel: Int { sortKey / 10 }
     private var termNumber: Int { sortKey % 10 }
 
-    /// Only past/current rows open the edit sheet (§6.2) — future rows are
-    /// informational only, so there is nothing to enter there yet.
+    /// Only terms that are already over can be edited. The term in progress is
+    /// deliberately excluded: GPAXCalculator counts `sortKey < currentSortKey`
+    /// as completed, so a grade entered for the current term is silently
+    /// dropped from every GPAX number. It becomes editable once Few advances
+    /// the real term with "ขึ้นชั้นแล้ว" in Settings.
     private var isEditable: Bool {
         guard let current = currentSortKey else { return false }
-        return sortKey <= current
+        return sortKey < current
     }
 
     var body: some View {
-        Button {
-            showingEditSheet = true
-        } label: {
-            HStack {
-                Text(displayName)
-                    .font(.system(size: 14))
-                    .foregroundStyle(Theme.Colors.textPrimary)
-                Spacer()
-                trailing
+        if isEditable {
+            NavigationLink {
+                TermGradeEditView(gradeLevel: gradeLevel, termNumber: termNumber, existingTerm: term)
+            } label: {
+                rowLabel
             }
-            .padding(.vertical, Theme.Spacing.xs)
-            .contentShape(Rectangle())
+        } else {
+            rowLabel
         }
-        .buttonStyle(.plain)
-        .disabled(!isEditable)
-        .sheet(isPresented: $showingEditSheet) {
-            TermGradeEditSheet(gradeLevel: gradeLevel, termNumber: termNumber, existingTerm: term)
+    }
+
+    private var rowLabel: some View {
+        HStack {
+            Text(displayName)
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.Colors.textPrimary)
+            Spacer()
+            trailing
         }
+        .padding(.vertical, Theme.Spacing.xs)
     }
 
     @ViewBuilder
@@ -113,16 +117,19 @@ private struct TermGradeRow: View {
 }
 
 #Preview {
-    TermGradeListSection(
-        result: GPAXCalculator.calculate(
-            terms: [
-                .init(sortKey: 41, gpa: 3.15, totalCredits: 21.0),
-                .init(sortKey: 42, gpa: 3.32, totalCredits: 20.5),
-            ],
-            currentSortKey: 51,
-            target: 3.5
-        ),
-        terms: []
-    )
-    .padding()
+    NavigationStack {
+        TermGradeListSection(
+            result: GPAXCalculator.calculate(
+                terms: [
+                    .init(sortKey: 41, gpa: 3.15, totalCredits: 21.0),
+                    .init(sortKey: 42, gpa: 3.32, totalCredits: 20.5),
+                ],
+                currentSortKey: 51,
+                target: 3.5
+            ),
+            terms: []
+        )
+        .padding()
+    }
+    .modelContainer(for: [Term.self, TermSubject.self, TermGradeSubject.self, ScheduleEntry.self, Subject.self], inMemory: true)
 }

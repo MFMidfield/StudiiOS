@@ -1,7 +1,7 @@
 # PROJECT_MAP — Student OS (PrototypeApp)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-09 · **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
+> **อัปเดตล่าสุด:** 2026-08-10 (PLAN_2026-08-10_Fixes: ลบ UI ที่ไม่ใช้ 4 จุด, ข้อความ GPAX 4.00, กรอกเกรดรายวิชาแบบละเอียด) · **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
 > ถ้าแก้โครงสร้าง (เพิ่ม/ลบไฟล์, เพิ่ม @Model, เปลี่ยน tab) → อัปเดตไฟล์นี้ในคอมมิตเดียวกัน
 
 ---
@@ -55,6 +55,12 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │                                    เปลี่ยน (ดูตัวอย่างที่ GradeCenterView/DashboardView/SettingsView)
 │   ├── Logging/AppLog.swift             print-based console log (🔵🟠🔴)
 │   ├── Models/                          (15 ไฟล์ — ดูตาราง §3, รวม Term.swift + TermSubject.swift)
+│   ├── Career/                          RIASEC screening inventory v2 (PLAN_RIASEC.md) — logic ล้วน ไม่มี View
+│   │   ├── RIASECDimension.swift        enum R/I/A/S/E/C (CaseIterable — **ลำดับ declaration คือลำดับ tie-break หลัก**) + thaiName/groupName/color/symbolName
+│   │   ├── RIASECItem.swift             18 ข้อ (`.all`) + Likert label 1-5 — น้ำหนัก secondary balance ทุกมิติรวม 1.0 (RIASECScorerTests คุ้ม invariant นี้)
+│   │   ├── RIASECScorer.swift           **ห้าม import SwiftUI/SwiftData** — `RIASECScorer.score(answers:) -> RIASECProfile` ล้วน pure function
+│   │   │                                testable โดยไม่ต้องมี ModelContainer · ห้ามวน `Dictionary` เพื่อสร้างลำดับ ranked ต้อง build จาก `.allCases` เท่านั้น
+│   │   └── FacultyMapping.swift         ตาราง dimension → คณะ TCAS + focusSubjects — expert mapping ไม่ใช่ empirical research (บอกไว้ในคอมเมนต์หัวไฟล์)
 │   ├── Notifications/NotificationManager.swift  จัดการ UNUserNotificationCenter — 2 ส่วนแยกกันสิ้นเชิง คนละ identifier prefix
 │   │                                            · CalendarEvent: `event-{id}` 1 จุด ตาม EventAlert
 │   │                                            · Assignment: `assignment-{uid}-{d1|am|h1}` 3 จุด (1 วันก่อน · 07:00 วันกำหนด · 1 ชม.ก่อน)
@@ -142,7 +148,13 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   └── Tasks/AssignmentPriorityEngine.swift  logic ล้วน: priority(kind:dueDate:) + daysUntil() + dueLabel() — สูตรความสำคัญอัตโนมัติที่เดียว
 └── Features/
     ├── Calendar/CalendarView.swift        (687) ← ไฟล์ใหญ่สุด
-    ├── CareerDiscovery/CareerDiscoveryView.swift (163)
+    ├── CareerDiscovery/  RIASEC v2 (PLAN_RIASEC.md) — 18 ข้อ Likert แทนที่ chip picker เดิม
+    │   ├── CareerDiscoveryView.swift     หน้า hub: intro card เริ่มแบบสำรวจ + การ์ดผลล่าสุด + ประวัติ 5 รายการ
+    │   │                                 ทุกลิงก์ push `RIASECResultView(result:)` ที่สร้างจากแถวที่บันทึกไว้ ไม่ re-run scorer
+    │   ├── RIASECQuizView.swift          1 คำถามต่อหน้า บังคับตอบครบ 18 ไม่มีปุ่มข้าม auto-advance 0.2s
+    │   │                                 จบแล้วสลับเป็น RIASECResultView ผ่าน `@State` (ไม่ push ซ้อน) → back จากผลลัพธ์กลับ hub ตรงๆ
+    │   └── RIASECResultView.swift        รับได้ทั้ง `RIASECProfile` (สดจากแบบสำรวจ) และ `CareerInterestResult` (ประวัติ) ผ่าน 2 initializer
+    │                                     มี inconclusive state (`sd < 0.30`) แยกจาก borderline state (top1-top3 ห่างกัน <8%)
     ├── Dashboard/DashboardView.swift      (375) เพิ่ม `GPAXDashboardCard()` เข้า body บรรทัดเดียว (กันไฟล์ 350+ บรรทัดนี้
     │                                    type-check timeout) ตัวการ์ดจริงอยู่ไฟล์แยก
     │              + GPAXDashboardCard.swift  (94)  สรุป GPAX 1 บรรทัด → `NavigationLink(value: .gradeCenter)` คืน
@@ -173,16 +185,29 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │   │                                    **ห้ามลบ** ไม่งั้นแอปอื่นถูกบล็อกค้างถาวร
     │   └── FocusModeView.swift      (~430) UI ล้วน ไม่เก็บเวลาเอง · body แบ่ง 2 ชั้น (mainContent
     │                                      + presentation) จงใจ กัน type-check timeout
-    ├── GradeCenter/GradeCenterView.swift  (225) Level 3 เดิม (`GradeBreakdownCard`/`TargetScoreCalculatorCard`, term-scoped
-    │                                    ผ่าน `activeTermID`) ไม่ถูกแตะ · Level 1 GPAX แทรกอยู่**เหนือ**การ์ดพวกนั้น อ่านเทอมจริง
+    ├── GradeCenter/GradeCenterView.swift  (~60) GPAX summary + per-term list เท่านั้น — `GradeBreakdownCard`/
+    │                                    `TargetScoreCalculatorCard`/`ThaiGrading` (Level 3 เดิม) ถูกลบแล้ว (2026-08-10,
+    │                                    PLAN_2026-08-10_Fixes Task 4) `GradeComponent` model **ยังอยู่** (เก็บไว้เพื่อ
+    │                                    ความเข้ากันได้ของ store เท่านั้น ไม่มี UI แล้ว) Level 1 GPAX อ่านเทอมจริง
     │                                    ผ่าน `GPAXSettings.currentSortKey` เท่านั้น (D7 — ดู comment ที่จุดเรียกในไฟล์)
-    │              + GPAXSummaryCard.swift    (208) การ์ดสรุป: ตัวเลข GPAX + range bar (พื้น/เพดาน/เป้า) + ข้อความ state
+    │              + GPAXSummaryCard.swift    (~210) การ์ดสรุป: ตัวเลข GPAX + range bar (พื้น/เพดาน/เป้า) + ข้อความ state
+    │                                    `.tight` ที่ gpax >= 3.995 ขึ้นข้อความ/สีเขียวแทนส้ม (เพิ่งแก้)
     │                                    ยังมี `TargetQuickSetter` (private) ฝังอยู่ — ตั้งเป้าแบบเร็วๆ ชั่วคราว ตัวเต็มควรย้ายไป
     │                                    Settings ตอนขัดดีไซน์รอบหน้า (ตอนนี้มี 2 ที่ตั้งเป้าได้: การ์ดนี้ + Settings)
-    │              + TermGradeListSection.swift (128) 6 แถวคงที่ ม.4–ม.6 เสมอ แถวที่แตะได้ (ผ่าน/กำลังเรียน) เปิด
-    │                                    TermGradeEditSheet · แถวอนาคตกดไม่ได้ (แค่โชว์ "ต้องได้ X")
-    │              + TermGradeEditSheet.swift  (119) กรอก gpa/totalCredits ของ 1 เทอม — `save()` เรียก
-    │                                    `TermStore.findOrCreate` เท่านั้น ไม่มีที่ไหน insert `Term` ตรงๆ
+    │              + TermGradeListSection.swift (~135) 6 แถวคงที่ ม.4–ม.6 เสมอ · **แตะได้เฉพาะเทอมที่จบไปแล้ว**
+    │                                    (`sortKey < currentSortKey`) เป็น `NavigationLink` **push** ไป `TermGradeEditView`
+    │                                    (ไม่ใช่ sheet แล้ว) · เทอมที่กำลังเรียนอยู่และเทอมอนาคตกดไม่ได้
+    │                                    ⚠️ เทอมปัจจุบันกดไม่ได้**โดยตั้งใจ**: `GPAXCalculator` นับเฉพาะ `sortKey < currentSortKey`
+    │                                    เป็นเทอมที่จบแล้ว เกรดที่กรอกให้เทอมปัจจุบันจึงถูกเมินทั้งหมด (ข้อมูลหายเงียบๆ)
+    │                                    จะกรอกได้ต่อเมื่อกด "ขึ้นชั้นแล้ว" ใน Settings เพื่อเลื่อนเทอมจริงก่อน
+    │              + TermGradeEditView.swift  (~330) แทนที่ `TermGradeEditSheet` เดิม — pushed page มี Toggle "กรอกละเอียด"
+    │                                    บนสุด · โหมดปกติ: กรอก gpa/totalCredits ตรงๆ (prefill 2.00 ถ้าเทอมยังไม่มีข้อมูล)
+    │                                    · โหมดละเอียด (`Term.usesDetailedGrades`): List ของ `TermGradeSubject` ต่อวิชา
+    │                                    (ชื่อ/หน่วยกิต Stepper 0.5–4.0/เกรด Stepper 8-step ไทย) seed จาก ScheduleEntry
+    │                                    ของเทอมนั้นครั้งแรกที่เปิดโหมดนี้ (ข้าม isBreak) ปุ่ม "ดึงวิชาจากตารางสอนอีกครั้ง"
+    │                                    เพิ่มเฉพาะชื่อที่ยังไม่มี ไม่เคยลบ · ทุกการแก้ไข autosave แล้วคำนวณ
+    │                                    `term.gpa`/`totalCredits` ใหม่ทันที (ผลรวมถ่วงน้ำหนักหน่วยกิต) — ทุกจุดสร้าง
+    │                                    `Term` ผ่าน `TermStore.findOrCreate` เท่านั้น
     │              + GradeLevelSheet.swift     (99)  Screen 1 (§6.1) ตั้ง `GPAXSettings.currentGradeLevel/currentTermNumber`
     │                                    เปิดจาก 2 ที่: การ์ดว่างของ GPAXSummaryCard ครั้งแรก · Settings "แก้ระดับชั้น"
     │              + CumulativeGPAXSheet.swift (87)  Screen 4 (§6.4) "จำเกรดไม่ได้" — ตัวเลือก 1 เขียน
@@ -256,7 +281,7 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 
 ---
 
-## 3. SwiftData Models (20 @Model — ทั้งหมดต้องอยู่ใน Schema)
+## 3. SwiftData Models (21 @Model — ทั้งหมดต้องอยู่ใน Schema)
 
 Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
 
@@ -270,17 +295,18 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
 | ScheduleEntry | Core/Models/ScheduleEntry.swift — เวลาเป็น `startMinute`/`endMinute: Int` (ไม่ใช่ Date แล้ว) + `subject: Subject?` + `term: Term?` relationship (term-scoped, D5 ใน PLAN_TermSystem) |
 | Subject | Core/Models/Subject.swift — วิชา/ช่วงพัก (`isBreak`), seed 3 ตัวตอนเปิดแอปครั้งแรก |
 | DayScheduleOverride | Core/Models/DayScheduleOverride.swift — ร่นคาบเฉพาะวัน จัดการผ่าน `PeriodShiftSheet`/`PeriodShiftBanner`, คำนวณผ่าน `PeriodShiftCalculator` เท่านั้น (ไม่แก้ `ScheduleEntry` จริง)<br>`startPeriodNumber: Int = 1` = คาบที่เริ่มร่น — **คาบก่อนหน้าถูกซ่อนทั้งวัน** และคาบพักตั้งแต่จุดนี้ไปถูกร่น+ย่อเหลือ `periodLengthMinutes` เท่าคาบอื่น |
-| Term | Core/Models/Term.swift — ระดับชั้น (1-6) + เทอม (1-2), ไม่มีปี พ.ศ. (D3) · สร้างแบบ lazy เท่านั้น (D4) — ห้ามมี `@Relationship` array ชี้ลง children, จัดการทั้งหมดผ่าน `TermStore` เท่านั้น<br>`gpa: Double?` / `totalCredits: Double?` (default `nil` ทั้งคู่, additive migration) — ใช้โดย `GPAXCalculator` เท่านั้น เขียนได้จาก `TermGradeEditSheet.save()` ผ่าน `TermStore.findOrCreate` เท่านั้น |
-| TermSubject | Core/Models/TermSubject.swift — join `Term` ↔ `Subject`, มี `creditHours`/`gradePoint` รอรอบ GPA (§9 ใน PLAN_TermSystem) · sync อัตโนมัติผ่าน `TermStore.syncTermSubjects` ทุกครั้งที่ ScheduleEntry ถูกบันทึกเข้าเทอม |
+| Term | Core/Models/Term.swift — ระดับชั้น (1-6) + เทอม (1-2), ไม่มีปี พ.ศ. (D3) · สร้างแบบ lazy เท่านั้น (D4) — ห้ามมี `@Relationship` array ชี้ลง children, จัดการทั้งหมดผ่าน `TermStore` เท่านั้น<br>`gpa: Double?` / `totalCredits: Double?` (default `nil` ทั้งคู่, additive migration) — ใช้โดย `GPAXCalculator` เท่านั้น เขียนได้จาก `TermGradeEditView` ผ่าน `TermStore.findOrCreate` เท่านั้น (ไม่ว่าโหมดง่ายหรือละเอียด)<br>`usesDetailedGrades: Bool = false` (additive) — true = เทอมนี้กรอกเกรดรายวิชาผ่าน `TermGradeSubject` แทนกรอก gpa ตรงๆ |
+| TermSubject | Core/Models/TermSubject.swift — join `Term` ↔ `Subject`, มี `creditHours`/`gradePoint` รอรอบ GPA (§9 ใน PLAN_TermSystem) · sync อัตโนมัติผ่าน `TermStore.syncTermSubjects` ทุกครั้งที่ ScheduleEntry ถูกบันทึกเข้าเทอม · **ไม่ใช่** ตัวเดียวกับ `TermGradeSubject` ด้านล่าง |
+| TermGradeSubject | Core/Models/TermGradeSubject.swift — เพิ่ม 2026-08-10 (PLAN_2026-08-10_Fixes Task 5) วิชา+เกรดรายวิชาของโหมด "กรอกละเอียด" ต่อเทอม แยกจาก `TermSubject` โดยตั้งใจ (กันข้อมูลเกรดหายเงียบๆ ถ้าคาบถูกลบจากตาราง) `name`/`code`/`creditHours`/`gradePoint`/`sortOrder` — seed จาก `ScheduleEntry` ของเทอมนั้นครั้งแรกที่เปิดโหมดละเอียด แก้ไข/ลบผ่าน `TermGradeEditView` เท่านั้น |
 | FocusSession | Core/Models/FocusSession.swift — `kindRaw` (โฟกัส/พักสั้น/พักยาว, อ่านผ่าน `phase`) · `endedAt: Date?` · `wasLocked` (3 ตัวนี้มี default ครบ → migrate ของเดิมได้)<br>⚠️ **ช่วงพักถูกบันทึกเป็น FocusSession ด้วย** — สถิติ "นาทีโฟกัส" ต้องกรอง `phase == .focus` เสมอ (Dashboard + FocusModeView ทำแล้ว)<br>ไฟล์นี้ยังเป็นที่ประกาศ `enum PomodoroPhase` ด้วย |
 | PortfolioItem | Core/Models/PortfolioItem.swift — `startDate`/`endDate: Date?` (rename จาก `date` เดิม — breaking, ต้องลบแอปก่อนติดตั้งรุ่นนี้) · `images: [PortfolioImage]` (cascade) · `coverImage` = ตัวแรกตาม `sortOrder` · `dateRangeText` ใช้ `Date+Thai.swift` · `PortfolioCategory.color` ใหม่ (ใช้ `Theme.Colors`, ผูกกับ pill ในการ์ด) |
 | PortfolioImage | Core/Models/PortfolioImage.swift — เก็บแค่ `filename`/`sortOrder`/`createdAt` ตัวไฟล์จริงอยู่ `PortfolioImageStore` (Core/Portfolio/) |
-| CareerInterestResult | Core/Models/CareerInterestResult.swift |
+| CareerInterestResult | Core/Models/CareerInterestResult.swift — 5 field เดิม (`interestTags`/`recommendedCareer`/`recommendedFaculty`/`recommendedSkills`/`takenAt`) + field ใหม่จาก RIASEC v2 (additive, มี default ครบ): `scoreR..scoreC: Int`, `hollandCode: String`, `isInconclusive: Bool`, `answers: [Int]` (18 คำตอบ Likert เรียงตาม item id, ไว้ re-score ย้อนหลังได้โดยไม่ต้องให้ทำแบบสำรวจใหม่) · `riasecScores` computed property คืน `[RIASECDimension: Int]` |
 | TCASEntry + TCASChecklistItem | Core/Models/TCASEntry.swift |
 | SemesterRecord | Core/Models/SemesterRecord.swift |
 | CalendarEvent + CalendarTag + CalendarAttachmentItem | Features/Calendar/CalendarView.swift ⚠️ model ฝังอยู่ในไฟล์ view |
 
-**กฎเหล็ก:** เพิ่ม `@Model` ใหม่ → ต้องเพิ่มใน `Schema([...])` ด้วย ไม่งั้น crash ตอนรัน (Term/TermSubject ทำแล้ว — ลบ TermSubject **ก่อน** Term เสมอ, และเคลียร์ `TermStore.activeTermKey` ออกจาก UserDefaults ด้วย)
+**กฎเหล็ก:** เพิ่ม `@Model` ใหม่ → ต้องเพิ่มใน `Schema([...])` ด้วย ไม่งั้น crash ตอนรัน (Term/TermSubject/TermGradeSubject ทำแล้ว — ลบ TermSubject **และ** TermGradeSubject **ก่อน** Term เสมอ, และเคลียร์ `TermStore.activeTermKey` ออกจาก UserDefaults ด้วย)
 และต้องเพิ่มใน `SettingsView.resetAllData()` ด้วย (เคยลืมมาแล้วกับ Calendar 3 ตัว)
 `resetAllData()` ลบ `Subject` แล้วเรียก `PrototypeAppApp.seedBuiltInSubjects(in:)` ทันทีเพื่อ reseed 3 วิชาเริ่มต้น — ถ้าเพิ่ม built-in subject ใหม่ ต้องแก้ทั้งสองจุด (seed function + resetAllData ยังคงเรียก function เดิม จุดเดียวพอ)
 
@@ -366,7 +392,11 @@ Gated: `PortfolioView`, `TCASPlannerView`
 - **แจ้งเตือนจบ Pomodoro ยังไม่ใช่ `.timeSensitive`** — เด้งทะลุโหมดห้ามรบกวนไม่ได้ ต้องเพิ่ม capability "Time Sensitive Notifications" ก่อน
 - Calendar models ฝังใน `CalendarView.swift` แทนที่จะอยู่ `Core/Models/`
 - ~~ไม่มี unit test จริงเลย~~ **มีแล้วบางส่วน** — `PrototypeAppTests/GPAXCalculatorTests.swift` (152 บรรทัด) ครอบ `GPAXCalculator`
-  ทั้ง 6 state + fixture §3.3 ของ PLAN_GPA.md + cumulative mode ส่วนที่เหลือของแอปยังไม่มีเทสต์
+  ทั้ง 6 state + fixture §3.3 ของ PLAN_GPA.md + cumulative mode · `PrototypeAppTests/RIASECScorerTests.swift` ครอบ `RIASECScorer`
+  9 เคส (worked example §3.3, invariant น้ำหนักรวม, flat profiles, straight-lining, missing answer, deterministic tie-break)
+  ของ PLAN_RIASEC.md ส่วนที่เหลือของแอปยังไม่มีเทสต์
+- **`CareerInterestResult` เพิ่ม field ใหม่ (RIASEC v2)** — ถ้าเครื่อง/simulator มีแถวเก่าอยู่แล้วต้อง **ลบแอปก่อนติดตั้งรุ่นนี้**
+  (lightweight migration เพิ่ม property ปกติมักผ่าน แต่ไม่การันตี 100% — ดู PLAN_RIASEC.md §4)
 - `QuickAddSheet.swift`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ (`Repeat` `Location` `Tags` `Alert` `Note` `Detail`) — ผิดกฎ "UI ทั้งหมดเป็นภาษาไทย" ของสกิล ยกมาทั้งดุ้นจาก `SmartCaptureView` เดิม ยังไม่ได้แก้
 - `Features/FocusMode/` เป็นโฟลเดอร์ว่าง (ของเหลือ) — `FocusModeView.swift` ยังอยู่ใน `Features/Portfolio/`
 - `ScheduleTodayTasksSection`: แตะแถวงาน ตอนนี้แค่ log อย่างเดียว ยังไม่เปิดฟอร์มแก้ไข (หน้า Todo เปิดได้แล้ว — เหลือแค่การ์ดในตารางเรียน)

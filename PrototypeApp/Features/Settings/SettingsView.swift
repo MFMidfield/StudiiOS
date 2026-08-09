@@ -327,6 +327,7 @@ struct SettingsView: View {
         deleteAll(Subject.self)
         deleteAll(DayScheduleOverride.self)
         deleteAll(TermSubject.self)
+        deleteAll(TermGradeSubject.self)
         deleteAll(Term.self)
 
         NotificationManager.shared.cancelAll()

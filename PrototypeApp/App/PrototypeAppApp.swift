@@ -33,6 +33,7 @@ struct PrototypeAppApp: App {
             DayScheduleOverride.self,
             Term.self,
             TermSubject.self,
+            TermGradeSubject.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
