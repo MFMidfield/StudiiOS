@@ -3,6 +3,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 extension Color {
     init(hex: String) {
@@ -13,5 +14,13 @@ extension Color {
         let g = Double((rgb >> 8) & 0xFF) / 255
         let b = Double(rgb & 0xFF) / 255
         self.init(red: r, green: g, blue: b)
+    }
+
+    /// Adaptive color that switches hex value between light and dark appearance —
+    /// used by design tokens so a single `Theme.Colors.*` call is dark-mode-safe.
+    init(light: String, dark: String) {
+        self.init(uiColor: UIColor { traits in
+            UIColor(Color(hex: traits.userInterfaceStyle == .dark ? dark : light))
+        })
     }
 }

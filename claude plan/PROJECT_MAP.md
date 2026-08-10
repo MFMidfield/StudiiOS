@@ -1,7 +1,11 @@
 # PROJECT_MAP — Student OS (PrototypeApp)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-10 (PLAN_TCASPlanner ครบทั้ง 4 รอบแล้ว — models ใหม่ → TCASScoreEngine/เทสต์ → ลิสต์คณะ/ตั้งน้ำหนัก/คะแนนของฉัน → SOPEditorView/SOPGuideSheet · โมดูล TCAS Planner ถือว่าสมบูรณ์ตามแผน รอ Few verify build จริง) · **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
+> **อัปเดตล่าสุด:** 2026-08-10 — Dashboard redesign: dark mode (Theme.Colors adaptive ทั้งหมด) + คาบเรียนถัดไป
+> + ติ๊กงานเสร็จตรงจากการ์ด + animation เข้าหน้า (ดู §5 Design tokens + Dashboard ใน §2) · ก่อนหน้านั้น
+> PLAN_TCASPlanner ครบทั้ง 4 รอบแล้ว — models ใหม่ → TCASScoreEngine/เทสต์ → ลิสต์คณะ/ตั้งน้ำหนัก/คะแนนของฉัน →
+> SOPEditorView/SOPGuideSheet · โมดูล TCAS Planner ถือว่าสมบูรณ์ตามแผน รอ Few verify build จริง
+> **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
 > ถ้าแก้โครงสร้าง (เพิ่ม/ลบไฟล์, เพิ่ม @Model, เปลี่ยน tab) → อัปเดตไฟล์นี้ในคอมมิตเดียวกัน
 
 ---
@@ -155,10 +159,25 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
     │   │                                 จบแล้วสลับเป็น RIASECResultView ผ่าน `@State` (ไม่ push ซ้อน) → back จากผลลัพธ์กลับ hub ตรงๆ
     │   └── RIASECResultView.swift        รับได้ทั้ง `RIASECProfile` (สดจากแบบสำรวจ) และ `CareerInterestResult` (ประวัติ) ผ่าน 2 initializer
     │                                     มี inconclusive state (`sd < 0.30`) แยกจาก borderline state (top1-top3 ห่างกัน <8%)
-    ├── Dashboard/DashboardView.swift      (375) เพิ่ม `GPAXDashboardCard()` เข้า body บรรทัดเดียว (กันไฟล์ 350+ บรรทัดนี้
-    │                                    type-check timeout) ตัวการ์ดจริงอยู่ไฟล์แยก
-    │              + GPAXDashboardCard.swift  (94)  สรุป GPAX 1 บรรทัด → `NavigationLink(value: .gradeCenter)` คืน
+    ├── Dashboard/DashboardView.swift      root — ประกอบ section ต่างๆ, ทักทายตามเวลาจริง (เช้า/บ่าย/เย็น/ดึก
+    │                                    แทน hardcode "สวัสดีตอนเช้า" เดิม) + entrance fade/offset ตอนเข้าหน้า
+    │                                    (2026-08-10 dark mode redesign) แต่ละ section แยกไฟล์กันไฟล์นี้
+    │                                    ยาวเกิน type-check timeout — เพิ่ม section ใหม่ = เพิ่มไฟล์ใหม่ ไม่ inline ที่นี่
+    │              + GPAXDashboardCard.swift  สรุป GPAX 1 บรรทัด → `NavigationLink(value: .gradeCenter)` คืน
     │                                    `EmptyView` ทั้งตอนยังไม่ตั้งเทอมจริงและตอนยังไม่มีเกรดเลย (ซ่อนสะอาด ไม่โชว์การ์ดว่าง)
+    │              + DashboardNextClassCard.swift  การ์ด hero "คาบเรียนถัดไป/กำลังเรียน" — ใช้
+    │                                    `PeriodShiftCalculator.apply` ตัวเดียวกับ ScheduleView (เคารพการร่นคาบ)
+    │                                    `TimelineView(.periodic(from:by:60))` รีเฟรชนาทีละครั้งแทน Timer เอง
+    │                                    **ไม่ใช่ NavigationLink** (ตั้งใจ — Dashboard tab ไม่มีทางสลับไป Schedule
+    │                                    tab จาก NavigationStack ของตัวเอง ถ้าจะทำต้องเพิ่ม tab-switch plumbing ใน
+    │                                    RootTabView ก่อน ยังไม่ทำรอบนี้)
+    │              + DashboardStatsCard.swift      สถิติ "การเรียนวันนี้" (โฟกัส/งานค้าง) ตัวเลข
+    │                                    `.contentTransition(.numericText())` เวลาเปลี่ยน
+    │              + DashboardMenuGrid.swift       เมนูหลัก 2×3 — ปุ่มใช้ `PressScaleButtonStyle` (shrink เวลากด)
+    │                                    ร่วมกับปุ่มอื่นในอนาคตได้
+    │              + DashboardPendingCard.swift    งานค้าง — ติ๊กเสร็จได้ตรงจากการ์ด (เขียน `Assignment.isDone`
+    │                                    รูปแบบเดียวกับ `AssignmentListView.toggleDone`) ประกาศ `EmptyRow` (ใช้ร่วม
+    │                                    ในโมดูล Dashboard เท่านั้น)
     ├── FocusMode/   โหมดโฟกัส/Pomodoro — ย้ายออกจาก Portfolio แล้ว
     │                ⚠️ **ไม่มีหน้าจอล็อกในแอปแล้ว** — `FocusLockOverlay.swift` ถูกลบตามคำสั่ง Few
     │                  (2026-08-09) เหลือการบล็อกแอปอื่นผ่าน Screen Time API อย่างเดียว
@@ -400,17 +419,24 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
 ## 5. Design tokens (Core/DesignSystem/Theme.swift)
 
 ```
-Theme.Colors:  primary #4A7DFF · danger #FF6B6B · warning #FFB347 · success #4CAF50
-               info #00BCD4 · purple #9C27B0 · pink #E91E63 · indigo #3F51B5
-               textPrimary #1A1A2E · background #F5F6FA · cardBackground .white
-               breakBackground #FFF8E7 · separator #E8EAF0 · textSecondary #6B7280
-               subjectPalette / subjectPaletteHex — 8 สีให้เลือกตอนสร้างวิชา (หมุนตามลำดับนี้)
+Theme.Colors (accent สีคงที่ทั้ง 2 โหมด): primary #4A7DFF · danger #FF6B6B · warning #FFB347
+               success #4CAF50 · info #00BCD4 · purple #9C27B0 · pink #E91E63 · indigo #3F51B5
+Theme.Colors (adaptive light/dark — Color(light:dark:) ผ่าน Color+Hex.swift, 2026-08-10):
+               textPrimary 1A1A2E/F2F3F7 · textSecondary 6B7280/9A9FB0 · background F5F6FA/0E0F14
+               cardBackground FFFFFF/1B1D26 · surfaceRaised F5F6FA/252836 (การ์ดซ้อนบนการ์ด)
+               breakBackground FFF8E7/2A2416 · separator E8EAF0/2C2F3A
+               cardStroke E8EAF0/323544 (เส้นขอบบางบนการ์ด — แบก edge definition แทนเงาในโหมดมืด)
+               subjectPalette / subjectPaletteHex — 8 สีให้เลือกตอนสร้างวิชา (หมุนตามลำดับนี้, คงที่ทั้ง 2 โหมด)
 Theme.Spacing: xs 4 · sm 8 · md 12 · lg 16 · xl 20 · xxl 24
-Theme.Radius:  card 16 · control 12
-Components:    CardContainer<Content>  ·  TierBadge(tier:)
+Theme.Radius:  card 16 · control 12 · hero 22 (ยังไม่มีใครใช้ hero จริง เผื่อการ์ดใหญ่รอบหน้า)
+Components:    CardContainer<Content> (มี stroke(cardStroke) + shadow) · TierBadge(tier:)
+               PressScaleButtonStyle (Dashboard/DashboardMenuGrid.swift) — shrink 0.94 ตอนกด ใช้ร่วมได้
 ```
 
 **ห้าม hardcode สี/ระยะห่างใน View** — ถ้าโทเคนที่ต้องการยังไม่มี ให้เพิ่มใน Theme ก่อน
+**Dark mode**: `Theme.Colors` ทั้งหมด adaptive แล้ว (2026-08-10) ยกเว้นจุดที่ยัง `Color.white`/`Color.black` ตรงๆ
+5 ไฟล์เดิม — `CalendarView.swift` · `ScheduleBreakRow.swift` · `ScheduleDayPickerBar.swift` ·
+`TaskFilterChips.swift` · `PortfolioItemSheet.swift` — **ยังไม่แก้** (นอกสโคปรอบที่แก้แค่ Dashboard)
 
 ---
 
