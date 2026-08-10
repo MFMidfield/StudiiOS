@@ -144,7 +144,7 @@ struct ScheduleView: View {
         Term.self, TermSubject.self,
         configurations: .init(isStoredInMemoryOnly: true)
     )
-    let math = Subject(name: "คณิตศาสตร์เพิ่มเติม ม.5", colorHex: "4A7DFF", iconName: "function")
+    let math = Subject(name: "คณิตศาสตร์เพิ่มเติม ม.5", colorHex: "E1802F", iconName: "function")
     let physics = Subject(name: "ฟิสิกส์", code: "ว31201", colorHex: "4CAF50", iconName: "atom")
     let lunch = Subject(name: "พักกลางวัน", colorHex: "FFB347", iconName: "fork.knife", isBreak: true, isBuiltIn: true)
     [math, physics, lunch].forEach { container.mainContext.insert($0) }

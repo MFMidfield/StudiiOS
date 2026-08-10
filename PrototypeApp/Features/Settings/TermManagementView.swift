@@ -83,7 +83,7 @@ struct TermManagementView: View {
                 Spacer()
                 if term.id == activeTerm?.id {
                     Image(systemName: "checkmark")
-                        .foregroundStyle(Theme.Colors.primary)
+                        .foregroundStyle(Theme.Colors.primaryDeep)
                 }
             }
         }

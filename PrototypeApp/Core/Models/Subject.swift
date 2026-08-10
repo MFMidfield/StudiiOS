@@ -23,7 +23,7 @@ final class Subject {
     init(
         name: String,
         code: String = "",
-        colorHex: String = "4A7DFF",
+        colorHex: String = "E1802F",
         iconName: String = "book.closed.fill",
         isBreak: Bool = false,
         isBuiltIn: Bool = false,

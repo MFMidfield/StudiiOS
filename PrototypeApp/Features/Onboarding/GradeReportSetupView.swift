@@ -176,7 +176,7 @@ struct GradeReportSetupView: View {
                 .foregroundStyle(.secondary)
             Text(String(format: "%.1f", entry.gradePoint))
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.Colors.primary)
+                .foregroundStyle(Theme.Colors.primaryDeep)
                 .frame(width: 32)
         }
         .swipeActions {

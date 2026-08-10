@@ -139,7 +139,7 @@ struct AvatarView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 50, height: 50)
-                    .foregroundStyle(Theme.Colors.primary)
+                    .foregroundStyle(Theme.Colors.primaryDeep)
                     .padding(.top, 10)
             }
         }
@@ -154,7 +154,7 @@ struct DateBadge: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "calendar")
-                .foregroundStyle(Theme.Colors.primary)
+                .foregroundStyle(Theme.Colors.primaryDeep)
                 .font(.subheadline)
             Text(date.thaiFullString)
                 .font(.caption)

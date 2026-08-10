@@ -285,7 +285,7 @@ private struct CaptureDetailSheet: View {
                     customAlertMinutes: 10,
                     notes: [calendarNote, detail].filter { !$0.isEmpty }.joined(separator: "\n"),
                     urlString: "",
-                    colorHex: "4A7DFF"
+                    colorHex: "E1802F"
                 )
                 context.insert(event)
                 scheduledEvent = event

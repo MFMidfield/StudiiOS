@@ -151,7 +151,8 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 │   │                                     ⚠️ **ห้ามลบ Subject** — Assignment.subjectName ผูกด้วยชื่อแบบ lookup
 │   └── Tasks/AssignmentPriorityEngine.swift  logic ล้วน: priority(kind:dueDate:) + daysUntil() + dueLabel() — สูตรความสำคัญอัตโนมัติที่เดียว
 └── Features/
-    ├── Calendar/CalendarView.swift        (687) ← ไฟล์ใหญ่สุด
+    ├── Calendar/CalendarView.swift        (~900+) ← ไฟล์ใหญ่สุด — ยังไม่แยกไฟล์ ตามที่ PROMPT_Calendar_MonthView.md §13 เตือนไว้ว่าต้องแยกก่อนทำ Ghost Event (Round 4)
+    │   └── CalendarItem.swift             เพิ่ม 10 ส.ค. 2569 (Round 2) — struct รวม CalendarEvent+Assignment ไม่ใช่ @Model
     ├── CareerDiscovery/  RIASEC v2 (PLAN_RIASEC.md) — 18 ข้อ Likert แทนที่ chip picker เดิม
     │   ├── CareerDiscoveryView.swift     หน้า hub: intro card เริ่มแบบสำรวจ + การ์ดผลล่าสุด + ประวัติ 5 รายการ
     │   │                                 ทุกลิงก์ push `RIASECResultView(result:)` ที่สร้างจากแถวที่บันทึกไว้ ไม่ re-run scorer
@@ -360,7 +361,7 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
 
 | Model | ไฟล์ |
 |---|---|
-| Assignment | Core/Models/Assignment.swift — `subjectName: String` (default "") · `kindRaw` (การบ้าน/งานทั่วไป) · `hasDueDate` (default **true**) · `isPriorityManual` · `remindersEnabled` · `uid` (เติมด้วย `ensureUID()`) · `term: Term?` (term-scoped, D5)<br>**อ่านวันส่งผ่าน `resolvedDueDate` เท่านั้น** (nil = ไม่กำหนด) · ความสำคัญใช้ `effectivePriority` (auto จาก `AssignmentPriorityEngine`, ห้าม cache ลง `priorityRaw`) |
+| Assignment | Core/Models/Assignment.swift — `subjectName: String` (default "") · `kindRaw` (การบ้าน/งานทั่วไป/**สอบ** — เพิ่ม `.exam` 10 ส.ค. 2569, Round 2 ของ PROMPT_Calendar_MonthView.md) · `examScopeRaw: String = ""` → `examScope: ExamScope?` (กลางภาค/ปลายภาค/เก็บคะแนน, เฉพาะ `.exam`) · `hasDueDate` (default **true**, บังคับ `true` เสมอเมื่อ `.exam`) · `isPriorityManual` · `remindersEnabled` · `uid` (เติมด้วย `ensureUID()`) · `term: Term?` (term-scoped, D5)<br>**อ่านวันส่งผ่าน `resolvedDueDate` เท่านั้น** (nil = ไม่กำหนด) · ความสำคัญใช้ `effectivePriority` (auto จาก `AssignmentPriorityEngine`, ห้าม cache ลง `priorityRaw` — `.exam` ได้ bonus +2 สูงกว่า `.homework` +1) |
 | Note | Core/Models/Note.swift |
 | Flashcard | Core/Models/Flashcard.swift |
 | GradeComponent | Core/Models/GradeComponent.swift — `term: Term?` (term-scoped, D5) |
@@ -381,6 +382,12 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
 | TCASSOP | Core/Models/TCASSOP.swift — 1 ฉบับต่อ 1 คณะ · โหมด `single`/`sections` (6 ช่อง) · `isMerged = true` แล้วกลับไปแก้ทีละส่วนไม่ได้อีก |
 | SemesterRecord | Core/Models/SemesterRecord.swift |
 | CalendarEvent + CalendarTag + CalendarAttachmentItem | Features/Calendar/CalendarView.swift ⚠️ model ฝังอยู่ในไฟล์ view |
+
+`CalendarView` (10 ส.ค. 2569, Round 2) รวม `CalendarEvent` + `Assignment.inTerm(activeTerm)` เป็น `CalendarItem` (struct ธรรมดา ไม่ใช่ `@Model` — `Features/Calendar/CalendarItem.swift`) index เป็น `[Date: [CalendarItem]]` คีย์ `startOfDay` ครั้งเดียวต่อ render (ไม่ใช่วน filter 42 รอบแบบเดิม) — ช่องวันแสดง pill สูงสุด 2 + "+X" เรียง สอบ→การบ้าน/งานทั่วไป→กิจกรรม, assignment ที่ `hasDueDate == false` ไม่ขึ้นในปฏิทิน
+
+**Round 3 (10 ส.ค. 2569):** `CalendarEvent` เพิ่ม `subjectName: String = ""` (เหมือน `Assignment.subjectName` — ใช้แทน title ใน pill/shortLabel เมื่อมีค่า) · `EventFormSheet` เพิ่มช่องสถานที่/โน้ต(`TextEditor` 80pt)/วิชา(`Picker` แบบเดียวกับ `AddTaskSheet`, **ไม่ใช่** `SubjectPickerFields` — ตัวนั้นออกแบบมาสำหรับสร้างวิชาใหม่พร้อมกลุ่มสาระ/รหัส ไม่ใช่เลือกวิชาที่มีอยู่)/แท็ก (chip เลือก/สร้างใหม่ ผูก `CalendarTag` ผ่านชื่อ) · จานสีอ้างจาก `Theme.Colors.subjectPalette` ตรง (8 สี ไม่ hardcode ซ้ำ) · `.presentationDetents([.medium, .large])` + auto-focus ช่องชื่อ<br>`CalendarView` เอา custom `topBar`/ปุ่ม test-notification/ปัดเปลี่ยนเดือนออกทั้งหมด (ชนกับ scroll ตามที่พรอมต์เตือน) ครอบด้วย `.navigationTitle(monthTitle)` + `.toolbar`(‹ ›/วันนี้) แทน — **อาศัย `NavigationStack` ที่ `RootTabView` ครอบไว้ให้แล้ว ไม่ได้เพิ่มอันใหม่ซ้อน** · เพิ่ม `.searchable` ค้นทั้ง event+assignment จัดกลุ่มตามเดือน แตะแล้ว `jumpToSearchResult` เคลียร์ค้นหา+ตั้ง `currentMonth`/`selectedDate`<br>ไฟล์ยาวขึ้นเป็น ~1080 บรรทัด — ยังไม่แยกไฟล์ ตาม §13 ของพรอมต์ที่เตือนว่าต้องแยกก่อน Round 4 (Ghost Event)
+
+**Round 4 (10 ส.ค. 2569):** ก่อนเริ่ม Ghost Event แยก `CalendarView.swift` ออกเป็น 3 ไฟล์ — `CalendarModels.swift` (EventAlert/CalendarTag/CalendarAttachmentItem/CalendarEvent), `EventFormSheet.swift`, `GhostEventLayer.swift` (แค่ `GhostPillView` — visual ล้วน) ตัว `CalendarView.swift` เหลือ ~963 บรรทัด (โค้ด Ghost Event ใหม่ยาวพอๆกับที่ตัดออกไป) **ตัดสินใจไม่แยก gesture/state logic ของ Ghost Event ออกไฟล์แยกเพิ่ม** เพราะต้อง cascade เปลี่ยน `private`→internal ทั้ง @State และ helper function จำนวนมากที่ Ghost logic เรียกใช้ (modelContext, cal, calendarDays, itemsFor, activeSheet, CalendarSheet เอง ฯลฯ) เสี่ยงพลาดจุดใดจุดหนึ่งโดยไม่มี compiler ยืนยันในนี้ — เก็บไว้เป็น extension ในไฟล์เดียวกันแทน ปลอดภัยกว่า<br>Ghost gesture: `LongPressGesture(0.5).sequenced(before: DragGesture(minimumDistance:0, coordinateSpace:.named("monthGrid")))` แนบที่ `monthGrid` ด้วย `.simultaneousGesture` (ไม่ใช้ `.gesture` เฉยๆ กัน block `dayCell`'s `.onTapGesture`) วัดขนาดกริดครั้งเดียวด้วย `.onGeometryChange` แล้วคำนวณ cell ด้วยเลขคณิตล้วน (`cellIndex`/`cellCenter`/`hitTestItem` — ค่าคงที่ 27/16 ผูกกับ layout จริงใน `dayCell`/`dayPills` ห้ามแก้ที่เดียวไม่แก้อีกที่) เอา `dayCell`'s เดิม `.onLongPressGesture` (เปิด add sheet ตรงๆ) ออกแล้ว เพราะ mode A drop-in-same-cell ทำหน้าที่แทนอยู่แล้ว<br>⚠️ **จุดเสี่ยงที่ยังไม่ได้ทดสอบจริง**: tap (เลือกวัน) ที่ `dayCell` กับ long-press-drag ที่ `monthGrid` เป็น gesture recognizer คนละตัวคนละระดับ — ถ้ากดค้างแล้วปล่อยโดยไม่ลาก อาจ fire ทั้ง `selectedDate` (จาก tap) และเปิด sheet สร้างกิจกรรมใหม่ (จาก ghost) พร้อมกัน ต้องให้ Few ทดสอบจริงบนเครื่อง<br>สร้างกิจกรรมจากการลากใช้ `CalendarSheet.editNewGhost(CalendarEvent)` แยกจาก `.edit` ปกติ — `EventFormSheet` มี `deleteOnCancel: Bool` param กด "ยกเลิก" แล้วลบ event ที่สร้างไว้ล่วงหน้าทิ้ง<br>ย้าย event/assignment ที่มีอยู่: เก็บ `originalStart/originalEnd`/`originalDue` ไว้ก่อน mutate เพื่อรองรับปุ่ม "เลิกทำ" ใน toast (`@State toastUndo`, auto-dismiss 4 วิด้วย `Task.sleep`)<br>Assignment ที่ `hasDueDate == false` ไม่เคยขึ้นเป็น pill ในกริดอยู่แล้ว (กรองออกตั้งแต่ Round 2) จึงลากไม่ได้โดยธรรมชาติ ไม่ต้องเขียน guard/haptic `.warning` เพิ่ม (unreachable case)
 
 **กฎเหล็ก:** เพิ่ม `@Model` ใหม่ → ต้องเพิ่มใน `Schema([...])` ด้วย ไม่งั้น crash ตอนรัน (Term/TermSubject/TermGradeSubject ทำแล้ว — ลบ TermSubject **และ** TermGradeSubject **ก่อน** Term เสมอ, และเคลียร์ `TermStore.activeTermKey` ออกจาก UserDefaults ด้วย)
 และต้องเพิ่มใน `SettingsView.resetAllData()` ด้วย (เคยลืมมาแล้วกับ Calendar 3 ตัว)
@@ -419,14 +426,20 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
 ## 5. Design tokens (Core/DesignSystem/Theme.swift)
 
 ```
-Theme.Colors (accent สีคงที่ทั้ง 2 โหมด): primary #4A7DFF · danger #FF6B6B · warning #FFB347
+Theme.Colors — โทน warm (เปลี่ยนจากน้ำเงิน/เย็นเดิม 10 ส.ค. 2569, Round 1 ของ PROMPT_Calendar_MonthView.md):
+Accent (2 ระดับ ห้ามสลับใช้ผิดที่ — ดูกฎด้านล่าง):
+               primary E1802F/F2A65A (light/dark) — ใช้เป็น "พื้น" เท่านั้น (fill/highlight/opacity fill)
+               primaryDeep A85C1C/F2A65A — ใช้กับ "ข้อความ/ไอคอน" เท่านั้น
+               onPrimary FFFFFF/1A1512 — สีข้อความ/ไอคอนบน primaryDeep (หรือ primary แบบ solid fill ไม่มี opacity)
+Semantic (ไม่เปลี่ยน — คงความหมาย error/success ชัดเจน): danger #FF6B6B · warning #FFB347
                success #4CAF50 · info #00BCD4 · purple #9C27B0 · pink #E91E63 · indigo #3F51B5
-Theme.Colors (adaptive light/dark — Color(light:dark:) ผ่าน Color+Hex.swift, 2026-08-10):
-               textPrimary 1A1A2E/F2F3F7 · textSecondary 6B7280/9A9FB0 · background F5F6FA/0E0F14
-               cardBackground FFFFFF/1B1D26 · surfaceRaised F5F6FA/252836 (การ์ดซ้อนบนการ์ด)
-               breakBackground FFF8E7/2A2416 · separator E8EAF0/2C2F3A
-               cardStroke E8EAF0/323544 (เส้นขอบบางบนการ์ด — แบก edge definition แทนเงาในโหมดมืด)
-               subjectPalette / subjectPaletteHex — 8 สีให้เลือกตอนสร้างวิชา (หมุนตามลำดับนี้, คงที่ทั้ง 2 โหมด)
+Surfaces/text (adaptive light/dark ผ่าน Color(light:dark:) ใน Color+Hex.swift):
+               textPrimary 2A2320/F4EEE7 · textSecondary 7A6E62/A79A8B · background FBF7F2/14110E
+               cardBackground FFFFFF/1F1B17 · surfaceRaised F6F0E8/2A241E (การ์ดซ้อนบนการ์ด, unselected fill)
+               breakBackground FDF3E0/2A2416 · separator EDE3D6/3A322A
+               cardStroke EDE3D6/3A322A (เส้นขอบบางบนการ์ด — แบก edge definition แทนเงาในโหมดมืด)
+subjectPalette / subjectPaletteHex — 8 สี warm muted [E1802F,7D8F69,C25B4E,6B7FA3,8E6B9E,B08D57,5F8A8B,C2703C]
+               ใช้ร่วมกันทั้งสีวิชา (Schedule) และสีกิจกรรม (Calendar event picker) — ตัวแรกคือ primary เอง
 Theme.Spacing: xs 4 · sm 8 · md 12 · lg 16 · xl 20 · xxl 24
 Theme.Radius:  card 16 · control 12 · hero 22 (ยังไม่มีใครใช้ hero จริง เผื่อการ์ดใหญ่รอบหน้า)
 Components:    CardContainer<Content> (มี stroke(cardStroke) + shadow) · TierBadge(tier:)
@@ -434,9 +447,8 @@ Components:    CardContainer<Content> (มี stroke(cardStroke) + shadow) · Ti
 ```
 
 **ห้าม hardcode สี/ระยะห่างใน View** — ถ้าโทเคนที่ต้องการยังไม่มี ให้เพิ่มใน Theme ก่อน
-**Dark mode**: `Theme.Colors` ทั้งหมด adaptive แล้ว (2026-08-10) ยกเว้นจุดที่ยัง `Color.white`/`Color.black` ตรงๆ
-5 ไฟล์เดิม — `CalendarView.swift` · `ScheduleBreakRow.swift` · `ScheduleDayPickerBar.swift` ·
-`TaskFilterChips.swift` · `PortfolioItemSheet.swift` — **ยังไม่แก้** (นอกสโคปรอบที่แก้แค่ Dashboard)
+**กฎ primary vs primaryDeep (ผิดง่าย ต้องจำ):** ขาวบน `primary` (light mode) contrast แค่ 2.86 → ห้ามวางข้อความ/ไอคอนบน `primary` fill ตรงๆ เด็ดขาด จุดที่ fill ทึบ+มีข้อความ/ไอคอนสีขาวข้างใน (วงกลม "วันนี้", FAB, chip ที่เลือกอยู่) ต้องแก้คู่กันเสมอ: fill = `primaryDeep`, ข้อความ/ไอคอน = `Theme.Colors.onPrimary` (**ห้าม hardcode `.white`** เพราะ `onPrimary` ต้องพลิกเป็นสีเข้มในโหมดมืด — `primaryDeep` โหมดมืดเท่ากับ `primary` ที่สว่างอยู่แล้ว)
+**Dark mode**: `Theme.Colors` ทั้งหมด adaptive แล้ว hardcoded `Color.white`/`Color(.system*)` ถูกเก็บหมดแล้วใน Round 1 (10 ส.ค. 2569) ยกเว้น 2 กรณีที่ตั้งใจปล่อยไว้ตรงๆ: `Color(hex: colorHex)` ที่อ่านสีที่ผู้ใช้เลือกเอง (`Subject`/`CalendarEvent`) และสีบน scrim/overlay ทับรูปภาพหรือ PDF render ที่ไม่ควรขึ้นกับธีม (`PortfolioCard`, `PortfolioItemSheet`)
 
 ---
 

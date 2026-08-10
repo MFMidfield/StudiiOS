@@ -31,10 +31,10 @@ struct TaskFilterChips: View {
         } label: {
             Text(scope.label)
                 .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? Color.white : Theme.Colors.textSecondary)
+                .foregroundStyle(isSelected ? Theme.Colors.onPrimary : Theme.Colors.textSecondary)
                 .padding(.horizontal, Theme.Spacing.md)
                 .padding(.vertical, Theme.Spacing.sm)
-                .background(isSelected ? Theme.Colors.primary : Theme.Colors.cardBackground)
+                .background(isSelected ? Theme.Colors.primaryDeep : Theme.Colors.cardBackground)
                 .clipShape(Capsule())
                 .overlay(
                     Capsule().stroke(Theme.Colors.separator, lineWidth: isSelected ? 0 : 1)

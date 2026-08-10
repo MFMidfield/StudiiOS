@@ -50,7 +50,7 @@ struct GPAXDashboardCard: View {
                                 .foregroundStyle(Theme.Colors.textSecondary)
                             Text(GPAXCalculator.formatted(gpax))
                                 .font(.system(size: 22, weight: .bold))
-                                .foregroundStyle(Theme.Colors.primary)
+                                .foregroundStyle(Theme.Colors.primaryDeep)
                         }
                         Spacer()
                         if let required = result.requiredAverage {

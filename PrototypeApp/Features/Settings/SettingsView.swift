@@ -295,7 +295,7 @@ struct SettingsView: View {
                 .clipShape(Circle())
         } else {
             Circle()
-                .fill(Color(.systemGray5))
+                .fill(Theme.Colors.surfaceRaised)
                 .overlay {
                     Image(systemName: "person.fill")
                         .font(.title2)
@@ -479,7 +479,7 @@ private struct EditProfileView: View {
                 .clipShape(Circle())
         } else {
             Circle()
-                .fill(Color(.systemGray5))
+                .fill(Theme.Colors.surfaceRaised)
                 .overlay {
                     Image(systemName: "person.fill")
                         .font(.largeTitle)

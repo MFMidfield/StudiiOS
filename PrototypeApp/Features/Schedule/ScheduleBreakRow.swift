@@ -19,7 +19,7 @@ struct ScheduleBreakRow: View {
             HStack(spacing: Theme.Spacing.md) {
                 ZStack {
                     Circle()
-                        .fill(Color.white)
+                        .fill(Theme.Colors.cardBackground)
                         .overlay(Circle().strokeBorder(Theme.Colors.warning, lineWidth: 1.5))
                         .frame(width: 36, height: 36)
                     Image(systemName: entry.subject?.iconName ?? "fork.knife")

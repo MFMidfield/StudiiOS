@@ -207,7 +207,7 @@ struct ScheduleImportReviewSheet: View {
             .padding(.horizontal, Theme.Spacing.sm)
             .padding(.vertical, 2)
             .background(Theme.Colors.primary.opacity(0.12), in: Capsule())
-            .foregroundStyle(Theme.Colors.primary)
+            .foregroundStyle(Theme.Colors.primaryDeep)
     }
 
     private func detailLine(_ period: ImportedPeriod) -> String {

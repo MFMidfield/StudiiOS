@@ -85,7 +85,7 @@ struct AssignmentListView: View {
             sectionHeader(title: TaskScope.dueSoon.label) {
                 Button("ดูทั้งหมด ›") { scope = .dueSoon }
                     .font(.caption)
-                    .foregroundStyle(Theme.Colors.primary)
+                    .foregroundStyle(Theme.Colors.primaryDeep)
             }
         }
     }

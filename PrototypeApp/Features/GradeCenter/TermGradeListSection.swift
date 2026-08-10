@@ -99,11 +99,11 @@ private struct TermGradeRow: View {
         } else if let current = currentSortKey, sortKey == current {
             Text("กำลังเรียน")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.Colors.primary)
+                .foregroundStyle(Theme.Colors.primaryDeep)
         } else if let current = currentSortKey, sortKey < current {
             Text("เพิ่ม")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Theme.Colors.primary)
+                .foregroundStyle(Theme.Colors.primaryDeep)
         } else if let current = currentSortKey, sortKey > current, let required = requiredAverage {
             Text("ต้องได้ \(GPAXCalculator.formatted(required))")
                 .font(.system(size: 13))

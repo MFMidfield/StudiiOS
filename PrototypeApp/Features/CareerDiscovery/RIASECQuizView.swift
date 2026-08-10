@@ -147,8 +147,8 @@ private struct LikertButton: View {
                 .font(.body.weight(.medium))
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 48)
-                .background(isSelected ? Theme.Colors.primary.opacity(0.15) : Color(.systemGray6))
-                .foregroundStyle(isSelected ? Theme.Colors.primary : Theme.Colors.textPrimary)
+                .background(isSelected ? Theme.Colors.primary.opacity(0.15) : Theme.Colors.surfaceRaised)
+                .foregroundStyle(isSelected ? Theme.Colors.primaryDeep : Theme.Colors.textPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control))
         }
         .buttonStyle(.plain)

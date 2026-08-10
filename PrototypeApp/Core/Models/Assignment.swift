@@ -22,12 +22,13 @@ enum AssignmentPriority: String, Codable, CaseIterable {
 /// Distinguishes school homework from personal to-dos. Both live in the same
 /// model so the Todo screen can show one merged list.
 enum AssignmentKind: String, Codable, CaseIterable {
-    case homework, personal
+    case homework, personal, exam
 
     var label: String {
         switch self {
         case .homework: return "การบ้าน"
         case .personal: return "งานทั่วไป"
+        case .exam: return "สอบ"
         }
     }
 
@@ -35,6 +36,21 @@ enum AssignmentKind: String, Codable, CaseIterable {
         switch self {
         case .homework: return "book.closed.fill"
         case .personal: return "checkmark.circle.fill"
+        case .exam: return "pencil.and.list.clipboard"
+        }
+    }
+}
+
+/// Only meaningful when `kind == .exam`. A plain field, not its own model —
+/// exams live on `Assignment` so they sort/prioritize alongside homework.
+enum ExamScope: String, Codable, CaseIterable {
+    case midterm, final, quiz
+
+    var label: String {
+        switch self {
+        case .midterm: return "กลางภาค"
+        case .final: return "ปลายภาค"
+        case .quiz: return "เก็บคะแนน"
         }
     }
 }
@@ -67,6 +83,12 @@ final class Assignment {
     /// may be evaluated once during backfill and give every old row the same id.
     var uid: String = ""
     var term: Term?
+    var examScopeRaw: String = ""
+
+    var examScope: ExamScope? {
+        get { ExamScope(rawValue: examScopeRaw) }
+        set { examScopeRaw = newValue?.rawValue ?? "" }
+    }
 
     var priority: AssignmentPriority {
         get { AssignmentPriority(rawValue: priorityRaw) ?? .medium }
@@ -114,7 +136,8 @@ final class Assignment {
         isPriorityManual: Bool = false,
         remindersEnabled: Bool = false,
         uid: String = "",
-        term: Term? = nil
+        term: Term? = nil,
+        examScope: ExamScope? = nil
     ) {
         self.title = title
         self.detail = detail
@@ -129,5 +152,6 @@ final class Assignment {
         self.remindersEnabled = remindersEnabled
         self.uid = uid
         self.term = term
+        self.examScopeRaw = examScope?.rawValue ?? ""
     }
 }

@@ -31,12 +31,21 @@ enum AssignmentPriorityEngine {
         }
     }
 
+    /// สอบได้น้ำหนักสูงกว่าการบ้าน งานทั่วไปไม่ได้บวกเพิ่ม
+    private static func kindBonus(_ kind: AssignmentKind) -> Int {
+        switch kind {
+        case .exam: return 2
+        case .homework: return 1
+        case .personal: return 0
+        }
+    }
+
     static func priority(
         kind: AssignmentKind,
         dueDate: Date?,
         now: Date = .now
     ) -> AssignmentPriority {
-        let score = timeScore(for: dueDate, now: now) + (kind == .homework ? 1 : 0)
+        let score = timeScore(for: dueDate, now: now) + kindBonus(kind)
         switch score {
         case 3...: return .high
         case 1...2: return .medium

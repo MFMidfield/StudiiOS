@@ -120,7 +120,7 @@ struct ProfileSetupView: View {
                     Circle().fill(Theme.Colors.primary.opacity(0.12))
                     Image(systemName: "person.fill")
                         .font(.system(size: 44))
-                        .foregroundStyle(Theme.Colors.primary)
+                        .foregroundStyle(Theme.Colors.primaryDeep)
                 }
             }
         }

@@ -31,7 +31,7 @@ struct DashboardPendingCard: View {
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 18))
-                        .foregroundStyle(Theme.Colors.primary)
+                        .foregroundStyle(Theme.Colors.primaryDeep)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("เพิ่มงาน")
@@ -77,7 +77,7 @@ private struct DashboardAssignmentRow: View {
             Button(action: onToggleDone) {
                 Image(systemName: assignment.isDone ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 18))
-                    .foregroundStyle(assignment.isDone ? Theme.Colors.success : (isDueToday ? Theme.Colors.danger : Theme.Colors.primary))
+                    .foregroundStyle(assignment.isDone ? Theme.Colors.success : (isDueToday ? Theme.Colors.danger : Theme.Colors.primaryDeep))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(assignment.isDone ? "ทำเครื่องหมายว่ายังไม่เสร็จ" : "ทำเครื่องหมายว่าเสร็จแล้ว")

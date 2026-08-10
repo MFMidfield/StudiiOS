@@ -57,7 +57,7 @@ enum TaskScope: String, CaseIterable, Identifiable {
 
 /// Type filter inside TaskFilterSheet.
 enum TaskKindFilter: String, CaseIterable, Identifiable {
-    case all, homework, personal
+    case all, homework, personal, exam
 
     var id: String { rawValue }
 
@@ -66,6 +66,7 @@ enum TaskKindFilter: String, CaseIterable, Identifiable {
         case .all: return "ทั้งหมด"
         case .homework: return AssignmentKind.homework.label
         case .personal: return AssignmentKind.personal.label
+        case .exam: return AssignmentKind.exam.label
         }
     }
 
@@ -74,6 +75,7 @@ enum TaskKindFilter: String, CaseIterable, Identifiable {
         case .all: return true
         case .homework: return assignment.kind == .homework
         case .personal: return assignment.kind == .personal
+        case .exam: return assignment.kind == .exam
         }
     }
 }

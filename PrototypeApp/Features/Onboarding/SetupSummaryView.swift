@@ -112,7 +112,7 @@ struct SetupSummaryView: View {
                     Circle().fill(Theme.Colors.primary.opacity(0.12))
                     Image(systemName: "person.fill")
                         .font(.system(size: 24))
-                        .foregroundStyle(Theme.Colors.primary)
+                        .foregroundStyle(Theme.Colors.primaryDeep)
                 }
             }
         }
@@ -124,7 +124,7 @@ struct SetupSummaryView: View {
         CardContainer {
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .foregroundStyle(Theme.Colors.primary)
+                    .foregroundStyle(Theme.Colors.primaryDeep)
                     .frame(width: 24)
                 Text(title)
                     .font(.system(size: 14, weight: .medium))

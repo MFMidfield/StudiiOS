@@ -31,7 +31,7 @@ struct AddSubjectSheet: View {
 
     init(onCreated: @escaping (Subject) -> Void) {
         self.onCreated = onCreated
-        _colorHex = State(initialValue: "4A7DFF")
+        _colorHex = State(initialValue: "E1802F")
     }
 
     private var trimmedName: String {
@@ -115,7 +115,7 @@ struct AddSubjectSheet: View {
             ForEach(iconChoices, id: \.self) { icon in
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.Radius.control)
-                        .fill(iconName == icon ? Color(hex: colorHex).opacity(0.15) : Color(.systemGray6))
+                        .fill(iconName == icon ? Color(hex: colorHex).opacity(0.15) : Theme.Colors.surfaceRaised)
                         .frame(width: 44, height: 44)
                     Image(systemName: icon)
                         .foregroundStyle(iconName == icon ? Color(hex: colorHex) : Theme.Colors.textSecondary)

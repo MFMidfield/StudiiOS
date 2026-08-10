@@ -197,7 +197,7 @@ struct TCASScoreCard: View {
         } else {
             Text("→ ต้องได้เฉลี่ย \(result.requiredAveragePercent.formatted(.number.precision(.fractionLength(1))))% ในวิชาที่เหลือ")
                 .font(.caption.bold())
-                .foregroundStyle(Theme.Colors.primary)
+                .foregroundStyle(Theme.Colors.primaryDeep)
         }
     }
 }

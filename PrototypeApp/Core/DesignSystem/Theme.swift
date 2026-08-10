@@ -7,9 +7,16 @@ import SwiftUI
 
 enum Theme {
     enum Colors {
-        // Accent colors keep a single fixed hue across appearances — only
-        // surfaces/text need to invert for dark mode.
-        static let primary = Color(hex: "4A7DFF")
+        // Warm accent — split into two tokens because the surface tone
+        // (`primary`) doesn't pass AA contrast for text/icons on its own.
+        // Use `primary` only as a fill (highlights, progress, dividers);
+        // use `primaryDeep` for anything text/icon colored.
+        static let primary = Color(light: "E1802F", dark: "F2A65A")
+        static let primaryDeep = Color(light: "A85C1C", dark: "F2A65A")
+        /// Text/icon color when placed on top of a `primary`-filled surface
+        /// (e.g. the "today" circle). Only differs from `textPrimary` in dark mode.
+        static let onPrimary = Color(light: "FFFFFF", dark: "1A1512")
+
         static let danger = Color(hex: "FF6B6B")
         static let warning = Color(hex: "FFB347")
         static let success = Color(hex: "4CAF50")
@@ -18,20 +25,27 @@ enum Theme {
         static let pink = Color(hex: "E91E63")
         static let indigo = Color(hex: "3F51B5")
 
-        static let textPrimary = Color(light: "1A1A2E", dark: "F2F3F7")
-        static let textSecondary = Color(light: "6B7280", dark: "9A9FB0")
-        static let background = Color(light: "F5F6FA", dark: "0E0F14")
-        static let cardBackground = Color(light: "FFFFFF", dark: "1B1D26")
+        static let textPrimary = Color(light: "2A2320", dark: "F4EEE7")
+        static let textSecondary = Color(light: "7A6E62", dark: "A79A8B")
+        static let background = Color(light: "FBF7F2", dark: "14110E")
+        static let cardBackground = Color(light: "FFFFFF", dark: "1F1B17")
         /// A step lighter than `cardBackground` — for a card nested on top of another card.
-        static let surfaceRaised = Color(light: "F5F6FA", dark: "252836")
-        static let breakBackground = Color(light: "FFF8E7", dark: "2A2416")
-        static let separator = Color(light: "E8EAF0", dark: "2C2F3A")
+        static let surfaceRaised = Color(light: "F6F0E8", dark: "2A241E")
+        static let breakBackground = Color(light: "FDF3E0", dark: "2A2416")
+        static let separator = Color(light: "EDE3D6", dark: "3A322A")
         /// Hairline border on cards — carries most of the card's edge definition
         /// in dark mode, where a black shadow on a dark background barely reads.
-        static let cardStroke = Color(light: "E8EAF0", dark: "323544")
+        static let cardStroke = Color(light: "EDE3D6", dark: "3A322A")
 
-        static let subjectPalette: [Color] = [primary, success, warning, danger, purple, pink, indigo, info]
-        static let subjectPaletteHex: [String] = ["4A7DFF", "4CAF50", "FFB347", "FF6B6B", "9C27B0", "E91E63", "3F51B5", "00BCD4"]
+        // Muted warm palette for subjects/events — replaces the old bright/cool
+        // set, which clashed with the cream background.
+        static let subjectPalette: [Color] = [
+            primary, Color(hex: "7D8F69"), Color(hex: "C25B4E"), Color(hex: "6B7FA3"),
+            Color(hex: "8E6B9E"), Color(hex: "B08D57"), Color(hex: "5F8A8B"), Color(hex: "C2703C"),
+        ]
+        static let subjectPaletteHex: [String] = [
+            "E1802F", "7D8F69", "C25B4E", "6B7FA3", "8E6B9E", "B08D57", "5F8A8B", "C2703C",
+        ]
     }
 
     enum Spacing {

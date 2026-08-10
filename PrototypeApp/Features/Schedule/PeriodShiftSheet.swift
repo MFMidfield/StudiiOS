@@ -266,7 +266,7 @@ struct PeriodShiftSheet: View {
         for: Subject.self, ScheduleEntry.self, DayScheduleOverride.self,
         configurations: .init(isStoredInMemoryOnly: true)
     )
-    let math = Subject(name: "คณิตศาสตร์เพิ่มเติม ม.5", colorHex: "4A7DFF", iconName: "function")
+    let math = Subject(name: "คณิตศาสตร์เพิ่มเติม ม.5", colorHex: "E1802F", iconName: "function")
     let lunch = Subject(name: "พักกลางวัน", colorHex: "FFB347", iconName: "fork.knife", isBreak: true, isBuiltIn: true)
     [math, lunch].forEach { container.mainContext.insert($0) }
 

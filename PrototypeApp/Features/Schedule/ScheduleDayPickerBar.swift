@@ -25,7 +25,7 @@ struct ScheduleDayPickerBar: View {
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.top, Theme.Spacing.sm)
         .padding(.bottom, Theme.Spacing.xs)
-        .background(Color.white)
+        .background(Theme.Colors.cardBackground)
         .animation(.snappy, value: selectedDay)
     }
 
@@ -40,7 +40,7 @@ struct ScheduleDayPickerBar: View {
             VStack(spacing: 6) {
                 Text(ScheduleConstants.dayLabels[day] ?? "")
                     .font(.system(size: 14, weight: isSelected ? .bold : .regular))
-                    .foregroundStyle(isSelected ? Theme.Colors.primary : Theme.Colors.textSecondary)
+                    .foregroundStyle(isSelected ? Theme.Colors.primaryDeep : Theme.Colors.textSecondary)
 
                 ZStack {
                     if isSelected {

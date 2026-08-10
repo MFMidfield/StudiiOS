@@ -24,6 +24,7 @@ struct AddTaskSheet: View {
 
     @State private var title: String
     @State private var kind: AssignmentKind
+    @State private var examScope: ExamScope
     @State private var subjectName: String
     @State private var detail: String
     @State private var priorityChoice: PriorityChoice
@@ -39,6 +40,7 @@ struct AddTaskSheet: View {
         self.onSaved = onSaved
         _title = State(initialValue: editing?.title ?? "")
         _kind = State(initialValue: editing?.kind ?? .homework)
+        _examScope = State(initialValue: editing?.examScope ?? .midterm)
         _subjectName = State(initialValue: editing?.subjectName ?? "")
         _detail = State(initialValue: editing?.detail ?? "")
         _priorityChoice = State(initialValue: PriorityChoice.forEditing(editing))
@@ -77,7 +79,8 @@ struct AddTaskSheet: View {
         NavigationStack {
             Form {
                 basicSection
-                if kind == .homework { subjectSection }
+                if kind == .exam { examSection }
+                if kind != .personal { subjectSection }
                 detailSection
                 prioritySection
                 dueDateSection
@@ -125,6 +128,18 @@ struct AddTaskSheet: View {
         }
     }
 
+    private var examSection: some View {
+        Section("ประเภทการสอบ") {
+            Picker("ประเภท", selection: $examScope) {
+                ForEach(ExamScope.allCases, id: \.self) { scope in
+                    Text(scope.label).tag(scope)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
+    }
+
     private var subjectSection: some View {
         Section {
             Picker("วิชา", selection: $subjectName) {
@@ -160,12 +175,14 @@ struct AddTaskSheet: View {
 
     private var dueDateSection: some View {
         Section {
-            Toggle("กำหนดส่ง", isOn: $hasDueDate.animation(.easeInOut(duration: 0.2)))
+            if kind != .exam {
+                Toggle("กำหนดส่ง", isOn: $hasDueDate.animation(.easeInOut(duration: 0.2)))
+            }
             if hasDueDate {
                 DatePicker(
-                    "วันและเวลา",
+                    kind == .exam ? "วันสอบ" : "วันและเวลา",
                     selection: $dueDate,
-                    displayedComponents: [.date, .hourAndMinute]
+                    displayedComponents: kind == .exam ? [.date] : [.date, .hourAndMinute]
                 )
             }
             Toggle("แจ้งเตือน", isOn: $remindersEnabled)
@@ -180,6 +197,9 @@ struct AddTaskSheet: View {
         .onChange(of: hasDueDate) { _, isOn in
             remindersEnabled = isOn
         }
+        .onChange(of: kind) { _, newKind in
+            if newKind == .exam { hasDueDate = true }
+        }
     }
 
     // MARK: - Save
@@ -192,12 +212,13 @@ struct AddTaskSheet: View {
 
         target.title = trimmedTitle
         target.kind = kind
-        target.subjectName = kind == .homework ? subjectName : ""
+        target.examScope = kind == .exam ? examScope : nil
+        target.subjectName = kind != .personal ? subjectName : ""
         target.detail = detail.trimmingCharacters(in: .whitespacesAndNewlines)
         target.isPriorityManual = priorityChoice != .auto
         if let manual = priorityChoice.priority { target.priority = manual }
-        target.hasDueDate = hasDueDate
-        if hasDueDate { target.dueDate = dueDate }
+        target.hasDueDate = kind == .exam ? true : hasDueDate
+        if target.hasDueDate { target.dueDate = dueDate }
         // No due date means there is nothing to schedule reminders against.
         target.remindersEnabled = hasDueDate && remindersEnabled
         target.ensureUID()

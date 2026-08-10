@@ -420,7 +420,7 @@ struct FocusStatBlock: View {
     let label: String
     var body: some View {
         VStack(spacing: Theme.Spacing.xs) {
-            Text(value).font(.title3).fontWeight(.bold).foregroundStyle(Theme.Colors.primary)
+            Text(value).font(.title3).fontWeight(.bold).foregroundStyle(Theme.Colors.primaryDeep)
             Text(label).font(.caption2).foregroundStyle(Theme.Colors.textSecondary)
         }
         .frame(maxWidth: .infinity)

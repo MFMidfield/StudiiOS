@@ -35,7 +35,7 @@ struct GPAXSummaryCard: View {
 
             Text(GPAXCalculator.formatted(gpax))
                 .font(.system(size: 34, weight: .bold))
-                .foregroundStyle(Theme.Colors.primary)
+                .foregroundStyle(Theme.Colors.primaryDeep)
 
             if let floor = result.floor, let ceiling = result.ceiling {
                 GPAXRangeBar(
@@ -76,7 +76,7 @@ struct GPAXSummaryCard: View {
             if GPAXSettings.currentSortKey == nil {
                 Button("ตั้งระดับชั้นปัจจุบัน") { showingGradeLevelSheet = true }
                     .font(.subheadline).fontWeight(.semibold)
-                    .foregroundStyle(Theme.Colors.primary)
+                    .foregroundStyle(Theme.Colors.primaryDeep)
             }
         }
     }

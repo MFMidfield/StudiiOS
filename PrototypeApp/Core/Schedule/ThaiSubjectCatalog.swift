@@ -84,14 +84,14 @@ nonisolated enum ThaiSubjectStrand: String, CaseIterable, Identifiable {
     /// subject must not introduce a colour the manual flow cannot produce.
     var colorHex: String {
         switch self {
-        case .thai, .chinese: return "FF6B6B"
-        case .math: return "4A7DFF"
-        case .science: return "4CAF50"
-        case .social: return "FFB347"
-        case .health, .german: return "00BCD4"
-        case .arts, .japanese: return "E91E63"
-        case .career, .activity: return "9C27B0"
-        case .english, .french: return "3F51B5"
+        case .thai, .chinese: return "6B7FA3"
+        case .math: return "E1802F"
+        case .science: return "7D8F69"
+        case .social: return "C25B4E"
+        case .health, .german: return "C2703C"
+        case .arts, .japanese: return "B08D57"
+        case .career, .activity: return "8E6B9E"
+        case .english, .french: return "5F8A8B"
         }
     }
 
@@ -207,7 +207,7 @@ nonisolated enum ThaiSubjectCatalog {
     ]
 
     private static let fallbackIcon = "book.closed.fill"
-    private static let fallbackColorHex = "4A7DFF"
+    private static let fallbackColorHex = "E1802F"
 
     // MARK: Breaks and activities
 

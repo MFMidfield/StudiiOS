@@ -177,7 +177,7 @@ private struct GroupAddSection: View {
                 } label: {
                     HStack {
                         Image(systemName: selected.contains(exam.code) ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(selected.contains(exam.code) ? Theme.Colors.primary : Theme.Colors.textSecondary)
+                            .foregroundStyle(selected.contains(exam.code) ? Theme.Colors.primaryDeep : Theme.Colors.textSecondary)
                         Text(exam.displayName)
                             .foregroundStyle(Theme.Colors.textPrimary)
                     }

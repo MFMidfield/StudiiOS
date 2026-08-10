@@ -25,7 +25,7 @@ struct ScheduleTodayTasksSection: View {
     private var tasks: [Assignment] {
         allAssignments.inTerm(activeTerm).filter {
             guard !$0.isDone, let due = $0.resolvedDueDate else { return false }
-            guard showsPersonalTasks || $0.kind == .homework else { return false }
+            guard showsPersonalTasks || $0.kind != .personal else { return false }
             return Calendar.current.isDate(due, inSameDayAs: targetDate)
         }
     }
@@ -54,7 +54,7 @@ struct ScheduleTodayTasksSection: View {
                 Text("\(tasks.count) รายการ")
                     .font(.caption2)
                     .fontWeight(.semibold)
-                    .foregroundStyle(Theme.Colors.primary)
+                    .foregroundStyle(Theme.Colors.primaryDeep)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
                     .background(Theme.Colors.primary.opacity(0.12))
@@ -141,7 +141,7 @@ struct ScheduleTodayTasksSection: View {
         for: Subject.self, Assignment.self, Term.self, TermSubject.self,
         configurations: .init(isStoredInMemoryOnly: true)
     )
-    let math = Subject(name: "คณิตศาสตร์เพิ่มเติม ม.5", colorHex: "4A7DFF", iconName: "function")
+    let math = Subject(name: "คณิตศาสตร์เพิ่มเติม ม.5", colorHex: "E1802F", iconName: "function")
     container.mainContext.insert(math)
 
     let today = Date.now
