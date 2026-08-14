@@ -1,8 +1,11 @@
 //
 //  RootTabView.swift
-//  The app's 5-tab shell: Dashboard, ปฏิทิน, Smart Capture,
-//  ตารางเรียน, Settings. Each tab owns its own NavigationStack so
-//  feature modules can push detail screens independently.
+//  The app's 5-tab shell: หน้าแรก, งาน, Smart Capture, ตารางสอน, ตั้งค่า.
+//  Each tab owns its own NavigationStack so feature modules can push detail
+//  screens independently.
+//
+//  ปฏิทิน moved out of the tab bar and into the Dashboard menu — it's a
+//  browse-when-you-need-it screen, while งาน is opened many times a day.
 //
 
 import SwiftUI
@@ -20,7 +23,7 @@ enum DashboardDestination: Hashable {
 
 struct RootTabView: View {
     enum Tab: Hashable {
-        case dashboard, calendar, capture, schedule, settings
+        case dashboard, tasks, capture, schedule, settings
     }
 
     @State private var selectedTab: Tab = .dashboard
@@ -38,16 +41,16 @@ struct RootTabView: View {
             .tabItem { Label("หน้าแรก", systemImage: "house.fill") }
             .tag(Tab.dashboard)
 
-            NavigationStack { CalendarView() }
-                .tabItem { Label("ปฏิทิน", systemImage: "calendar") }
-                .tag(Tab.calendar)
+            NavigationStack { AssignmentListView() }
+                .tabItem { Label("งาน", systemImage: "checklist") }
+                .tag(Tab.tasks)
 
             Color.clear
                 .tabItem { Label("เพิ่ม", systemImage: "plus.circle.fill") }
                 .tag(Tab.capture)
 
             NavigationStack { ScheduleView() }
-                .tabItem { Label("ตารางเรียน", systemImage: "calendar.day.timeline.leading") }
+                .tabItem { Label("ตารางสอน", systemImage: "calendar.day.timeline.leading") }
                 .tag(Tab.schedule)
 
             NavigationStack { SettingsView() }

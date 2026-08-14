@@ -1,12 +1,17 @@
 # PROJECT_MAP — Student OS (StudiiOS)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-14 — รีแบรนด์ทั้งโปรเจกต์จาก PrototypeApp เป็น **Studii OS** (target/project/bundle ID
-> เปลี่ยนเป็น `StudiiOS`/`mfmidfield.StudiiOS`, `CFBundleDisplayName` = "Studii OS") — ก่อนหน้านั้น 2026-08-10 —
+> **อัปเดตล่าสุด:** 2026-08-14 — **PLAN_Redesign.md Wave 1** (branch `redesign`): token terracotta ชุดใหม่ +
+> `Theme.Font` + คอมโพเนนต์ `PillLabel`/`IconTile`/`SectionHeader` + Dashboard ทั้งหน้า + tab bar
+> (ดู §5 Design tokens · Dashboard ใน §2 · §4 Navigation) — วันเดียวกัน: รีแบรนด์ทั้งโปรเจกต์จาก PrototypeApp
+> เป็น **Studii OS** (target/project/bundle ID เปลี่ยนเป็น `StudiiOS`/`mfmidfield.StudiiOS`,
+> `CFBundleDisplayName` = "Studii OS") — ก่อนหน้านั้น 2026-08-10 —
 > Dashboard redesign: dark mode (Theme.Colors adaptive ทั้งหมด) + คาบเรียนถัดไป
 > + ติ๊กงานเสร็จตรงจากการ์ด + animation เข้าหน้า (ดู §5 Design tokens + Dashboard ใน §2) · ก่อนหน้านั้น
 > PLAN_TCASPlanner ครบทั้ง 4 รอบแล้ว — models ใหม่ → TCASScoreEngine/เทสต์ → ลิสต์คณะ/ตั้งน้ำหนัก/คะแนนของฉัน →
 > SOPEditorView/SOPGuideSheet · โมดูล TCAS Planner ถือว่าสมบูรณ์ตามแผน รอ Few verify build จริง
+> **ไฟล์แผนทั้งหมด (`PLAN_*.md` / `PROMPT_*.md`) ย้ายไปอยู่ใน `claude plan/` แล้ว** — ยกเว้น `PLAN_Redesign.md`
+> ที่ยังทำอยู่ (อยู่รากrepo) · สเปคหน้าจอ Wave 2 อยู่ใน `docs/redesign/`
 > **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
 > ถ้าแก้โครงสร้าง (เพิ่ม/ลบไฟล์, เพิ่ม @Model, เปลี่ยน tab) → อัปเดตไฟล์นี้ในคอมมิตเดียวกัน
 
@@ -35,10 +40,13 @@
 StudiiOS/                      ← โฟลเดอร์ซอร์ส (ชั้นในของ repo)
 ├── App/
 │   ├── StudiiOSApp.swift      (72)  @main + Schema + RootContainerView + NotificationManager.shared bootstrap + seed Subject
-│   └── RootTabView.swift          (84)  5-tab shell + DashboardDestination
+│   └── RootTabView.swift          (87)  5-tab shell (หน้าแรก·งาน·+·ตารางสอน·ตั้งค่า) + DashboardDestination
 ├── Core/
 │   ├── DesignSystem/
-│   │   ├── Theme.swift            (68)  design tokens + CardContainer + TierBadge
+│   │   ├── Theme.swift           (180)  design tokens + Theme.Font + CardContainer + TierBadge + PressScaleButtonStyle
+│   │   ├── PillLabel.swift        (78)  ป้ายแคปซูล 5 tone (accent/neutral/danger/warning/custom)
+│   │   ├── IconTile.swift         (56)  SF Symbol บนพื้นสี่เหลี่ยมมน — ปรับ size/tint/background/radius ได้
+│   │   ├── SectionHeader.swift    (76)  หัวข้อ section + trailing ViewBuilder + SectionMoreLabel
 │   │   └── ProUpsellView.swift
 │   ├── Entitlements/FeatureTier.swift  (62)  Free/Pro/Plus + EntitlementStore.shared
 │   ├── Extensions/
@@ -166,21 +174,27 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                                    แทน hardcode "สวัสดีตอนเช้า" เดิม) + entrance fade/offset ตอนเข้าหน้า
     │                                    (2026-08-10 dark mode redesign) แต่ละ section แยกไฟล์กันไฟล์นี้
     │                                    ยาวเกิน type-check timeout — เพิ่ม section ใหม่ = เพิ่มไฟล์ใหม่ ไม่ inline ที่นี่
-    │              + GPAXDashboardCard.swift  สรุป GPAX 1 บรรทัด → `NavigationLink(value: .gradeCenter)` คืน
-    │                                    `EmptyView` ทั้งตอนยังไม่ตั้งเทอมจริงและตอนยังไม่มีเกรดเลย (ซ่อนสะอาด ไม่โชว์การ์ดว่าง)
+    │                                    ลำดับ (14 ส.ค. 2569): Header → NextClass → Stats → Menu → Pending → GPAX
+    │                                    `HeaderSection(date:)` กลืนการ์ดวันที่เดิมเข้ามาเป็นบรรทัดบน — `DateBadge` ถูกลบแล้ว
+    │                                    พื้นหลังใช้ `.background(...ignoresSafeArea())` ไม่ใช่ padding(.top, 60) ชดเชยเอง
+    │              + GPAXDashboardCard.swift  สรุป GPAX 1 บรรทัด + แถบความคืบหน้าเทียบเป้า → `NavigationLink(value: .gradeCenter)`
+    │                                    คืน `EmptyView` ทั้งตอนยังไม่ตั้งเทอมจริงและตอนยังไม่มีเกรดเลย (ซ่อนสะอาด ไม่โชว์การ์ดว่าง)
     │              + DashboardNextClassCard.swift  การ์ด hero "คาบเรียนถัดไป/กำลังเรียน" — ใช้
     │                                    `PeriodShiftCalculator.apply` ตัวเดียวกับ ScheduleView (เคารพการร่นคาบ)
     │                                    `TimelineView(.periodic(from:by:60))` รีเฟรชนาทีละครั้งแทน Timer เอง
     │                                    **ไม่ใช่ NavigationLink** (ตั้งใจ — Dashboard tab ไม่มีทางสลับไป Schedule
     │                                    tab จาก NavigationStack ของตัวเอง ถ้าจะทำต้องเพิ่ม tab-switch plumbing ใน
     │                                    RootTabView ก่อน ยังไม่ทำรอบนี้)
-    │              + DashboardStatsCard.swift      สถิติ "การเรียนวันนี้" (โฟกัส/งานค้าง) ตัวเลข
-    │                                    `.contentTransition(.numericText())` เวลาเปลี่ยน
-    │              + DashboardMenuGrid.swift       เมนูหลัก 2×3 — ปุ่มใช้ `PressScaleButtonStyle` (shrink เวลากด)
-    │                                    ร่วมกับปุ่มอื่นในอนาคตได้
+    │              + DashboardStatsCard.swift      กริด 2×2 การ์ดเล็ก 4 ใบ: โฟกัสวันนี้ · งานค้าง · ส่งพรุ่งนี้ ·
+    │                                    นับถอยหลังสอบ — ตัวเลข `.contentTransition(.numericText())` เวลาเปลี่ยน
+    │                                    ไม่มีงาน `kind == .exam` → ช่องที่ 4 กลายเป็นปุ่มเปิด `AddTaskSheet(presetKind: .exam)`
+    │              + DashboardMenuGrid.swift       เมนูหลัก 3 คอลัมน์ 7 ช่อง (ปฏิทิน·ศูนย์เกรด·TCAS·พอร์ต·ค้นหาอาชีพ·
+    │                                    โหมดโฟกัส·งานทั้งหมด) ไอคอนใช้ `IconTile` ชุดสีเดียวกันหมด (primaryDeep บน
+    │                                    primarySoft) ไม่ใช่สีต่อฟีเจอร์ · ปุ่มใช้ `PressScaleButtonStyle`
     │              + DashboardPendingCard.swift    งานค้าง — ติ๊กเสร็จได้ตรงจากการ์ด (เขียน `Assignment.isDone`
     │                                    รูปแบบเดียวกับ `AssignmentListView.toggleDone`) ประกาศ `EmptyRow` (ใช้ร่วม
-    │                                    ในโมดูล Dashboard เท่านั้น)
+    │                                    ในโมดูล Dashboard เท่านั้น) แถวมีขีดสีวิชา (lookup จากชื่อวิชา — `Assignment`
+    │                                    เก็บวิชาเป็น String ไม่ใช่ relation) + ป้ายวันเป็น `PillLabel`
     ├── FocusMode/   โหมดโฟกัส/Pomodoro — ย้ายออกจาก Portfolio แล้ว
     │                ⚠️ **ไม่มีหน้าจอล็อกในแอปแล้ว** — `FocusLockOverlay.swift` ถูกลบตามคำสั่ง Few
     │                  (2026-08-09) เหลือการบล็อกแอปอื่นผ่าน Screen Time API อย่างเดียว
@@ -399,14 +413,16 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
 
 ## 4. Navigation (RootTabView.swift)
 
-5 tabs: `dashboard` · `calendar` · `capture` · `schedule` · `settings`
+5 tabs: `dashboard` · `tasks` · `capture` · `schedule` · `settings`
+(หน้าแรก · งาน · **+** · ตารางสอน · ตั้งค่า — 14 ส.ค. 2569: แท็บ 2 เปลี่ยนจาก ปฏิทิน เป็น `AssignmentListView`)
 
 - แท็บ "เพิ่ม" (`.capture`) เป็น `Color.clear` + trick: `onChange` ดีดกลับแท็บเดิมแล้วเปิด **`QuickAddSheet`** เป็น sheet
   → ผู้ใช้เลือกก่อนว่าจะเพิ่มอะไร (งาน / ปฏิทิน / โน๊ต / Portfolio) แล้วค่อยเปิดฟอร์ม
   **นี่คือทางเข้าเดียวของ ปฏิทิน/โน๊ต/Portfolio** — ถ้าเปลี่ยนปุ่มนี้ให้เปิดฟอร์มใดฟอร์มหนึ่งตรงๆ อีก 3 โหมดจะกลายเป็นโค้ดตาย
-- Dashboard push ต่อผ่าน `DashboardDestination`: `.assignments` `.gradeCenter` `.tcasPlanner` `.portfolio` `.careerDiscovery` `.focusMode`
+- Dashboard push ต่อผ่าน `DashboardDestination`: `.assignments` `.calendar` `.gradeCenter` `.tcasPlanner` `.portfolio` `.careerDiscovery` `.focusMode`
+  **`CalendarView` เข้าได้ทางเมนูหลักทางเดียวแล้ว** (ไม่มีแท็บของตัวเอง) — push เข้า NavigationStack ของ Dashboard
 - Onboarding gate อยู่ที่ `RootContainerView` (`StudiiOSApp.swift:53-74`) ใช้ `@AppStorage` 5 ตัวเรียงลำดับหน้า
-- แท็บ "ตารางเรียน" (`ScheduleView`) toolbar มี 2 ปุ่ม: เฟือง (ซ้าย) เปิด `ScheduleSettingsSheet`
+- แท็บ "ตารางสอน" (`ScheduleView`) toolbar มี 2 ปุ่ม: เฟือง (ซ้าย) เปิด `ScheduleSettingsSheet`
   (สลับเทอม + ร่นคาบ — เดิมนาฬิกาเปิด `PeriodShiftSheet` ตรงๆ, ตอนนี้ย้ายไปซ้อนข้างในแล้ว)
   · `+` (ขวา) เปิด `AddScheduleEntrySheet` (เพิ่ม/แก้คาบ, หรือแตะแถวคาบเพื่อแก้) → ซ้อน `AddSubjectSheet`
   (เพิ่มวิชาใหม่, เปิดจากปุ่ม "เพิ่มวิชาใหม่" ในฟอร์มคาบ)
@@ -428,24 +444,34 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
 ## 5. Design tokens (Core/DesignSystem/Theme.swift)
 
 ```
-Theme.Colors — โทน warm (เปลี่ยนจากน้ำเงิน/เย็นเดิม 10 ส.ค. 2569, Round 1 ของ PROMPT_Calendar_MonthView.md):
+Theme.Colors — โทน terracotta (เปลี่ยนจากส้ม E1802F เดิม 14 ส.ค. 2569, Wave 1 ของ PLAN_Redesign.md):
 Accent (2 ระดับ ห้ามสลับใช้ผิดที่ — ดูกฎด้านล่าง):
-               primary E1802F/F2A65A (light/dark) — ใช้เป็น "พื้น" เท่านั้น (fill/highlight/opacity fill)
-               primaryDeep A85C1C/F2A65A — ใช้กับ "ข้อความ/ไอคอน" เท่านั้น
+               primary C96F4A/E8A06B (light/dark) — ใช้เป็น "พื้น" เท่านั้น (fill/highlight/opacity fill)
+               primaryDeep A85236/E8A06B — ใช้กับ "ข้อความ/ไอคอน" เท่านั้น
                onPrimary FFFFFF/1A1512 — สีข้อความ/ไอคอนบน primaryDeep (หรือ primary แบบ solid fill ไม่มี opacity)
-Semantic (ไม่เปลี่ยน — คงความหมาย error/success ชัดเจน): danger #FF6B6B · warning #FFB347
+               primarySoft F5E7DD/332720 — พื้นไอคอนเมนู/chip/ป้าย (primaryDeep อ่านออกบนพื้นนี้)
+Hero (การ์ดคาบเรียนบน Dashboard เท่านั้น — ที่เดียวในแอปที่พื้นเป็นสีเข้มทึบ):
+               heroFill C96F4A/8F4A2C · onHero FFFFFF/FFF1E6 · onHeroMuted F7DFD2/F0CBB5
+Semantic: danger C0503F/E8756A (เปลี่ยนจาก FF6B6B — สดเกินไปบนพื้นครีม) · warning #FFB347
                success #4CAF50 · info #00BCD4 · purple #9C27B0 · pink #E91E63 · indigo #3F51B5
 Surfaces/text (adaptive light/dark ผ่าน Color(light:dark:) ใน Color+Hex.swift):
-               textPrimary 2A2320/F4EEE7 · textSecondary 7A6E62/A79A8B · background FBF7F2/14110E
+               textPrimary 2A2320/F4EEE7 · textSecondary 8A7B6D/A79A8B · background FBF7F2/14110E
                cardBackground FFFFFF/1F1B17 · surfaceRaised F6F0E8/2A241E (การ์ดซ้อนบนการ์ด, unselected fill)
                breakBackground FDF3E0/2A2416 · separator EDE3D6/3A322A
                cardStroke EDE3D6/3A322A (เส้นขอบบางบนการ์ด — แบก edge definition แทนเงาในโหมดมืด)
-subjectPalette / subjectPaletteHex — 8 สี warm muted [E1802F,7D8F69,C25B4E,6B7FA3,8E6B9E,B08D57,5F8A8B,C2703C]
+subjectPalette / subjectPaletteHex — 8 สี warm muted [C96F4A,7D8F69,C25B4E,6B7FA3,8E6B9E,B08D57,5F8A8B,C2703C]
                ใช้ร่วมกันทั้งสีวิชา (Schedule) และสีกิจกรรม (Calendar event picker) — ตัวแรกคือ primary เอง
-Theme.Spacing: xs 4 · sm 8 · md 12 · lg 16 · xl 20 · xxl 24
-Theme.Radius:  card 16 · control 12 · hero 22 (ยังไม่มีใครใช้ hero จริง เผื่อการ์ดใหญ่รอบหน้า)
-Components:    CardContainer<Content> (มี stroke(cardStroke) + shadow) · TierBadge(tier:)
-               PressScaleButtonStyle (Dashboard/DashboardMenuGrid.swift) — shrink 0.94 ตอนกด ใช้ร่วมได้
+               ⚠️ วิชาที่สร้างก่อน 14 ส.ค. 2569 เก็บ hex เดิม E1802F ไว้ใน DB — เปลี่ยน palette ไม่ย้อนหลัง
+Theme.Spacing: xs 4 · sm 8 · md 12 · lg 16 · xl 20 · xxl 24 · xxxl 32
+Theme.Radius:  card 18 · control 12 · hero 20 · icon 11 (พื้นไอคอน) · pill 999
+Theme.Font:    IBM Plex Sans Thai (UIAppFonts ใน Info.plist, ไฟล์อยู่ StudiiOS/Resources/Fonts/)
+               **fallback เป็น system font อัตโนมัติถ้าไม่พบไฟล์** — ดู log [Theme] ตอนเปิดแอป
+               title 24 semibold · heading 19 semibold · body 15 · label 13 · caption 11
+               number(size) semibold + monospacedDigit — ใช้คู่กับ .contentTransition(.numericText())
+Components:    CardContainer<Content>(padding:) (stroke(cardStroke) + เงานุ่ม ตัดเงาในโหมดมืด) · TierBadge(tier:)
+               PillLabel(_:systemImage:tone:) · IconTile(systemName:size:tint:background:cornerRadius:)
+               SectionHeader(_:systemImage:trailing:) + SectionMoreLabel · PressScaleButtonStyle
+               ทั้งหมดอยู่ใน Core/DesignSystem/ (PressScaleButtonStyle ย้ายมาจาก DashboardMenuGrid.swift แล้ว)
 ```
 
 **ห้าม hardcode สี/ระยะห่างใน View** — ถ้าโทเคนที่ต้องการยังไม่มี ให้เพิ่มใน Theme ก่อน
