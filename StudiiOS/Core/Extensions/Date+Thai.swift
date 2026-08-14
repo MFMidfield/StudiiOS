@@ -55,6 +55,16 @@ extension DateFormatter {
         return f
     }()
 
+    /// Weekday + day + month — "พฤ 13 ส.ค." — for the day-group headers on the
+    /// task list. `thaiFull` is too long to sit above a list of rows.
+    static let thaiWeekdayDayMonth: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "th_TH")
+        f.dateFormat = "EEE d MMM"
+        f.calendar = Calendar(identifier: .buddhist)
+        return f
+    }()
+
     static let time24h: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
@@ -68,6 +78,7 @@ extension Date {
     var thaiShortNoYearString: String { DateFormatter.thaiShortNoYear.string(from: self) }
     var thaiDayMonthYearString: String { DateFormatter.thaiDayMonthYear.string(from: self) }
     var thaiDayOnlyString: String { DateFormatter.thaiDayOnly.string(from: self) }
+    var thaiWeekdayDayMonthString: String { DateFormatter.thaiWeekdayDayMonth.string(from: self) }
 
     /// Short human label for a deadline: "เลย 2 วัน" · "วันนี้" · "พรุ่งนี้" ·
     /// "ศ." for the rest of this week · "12 ก.ย." beyond that.

@@ -14,6 +14,19 @@ enum ScheduleConstants {
     static let dayLabelsFull: [Int: String] = [1: "วันจันทร์", 2: "วันอังคาร", 3: "วันพุธ", 4: "วันพฤหัสบดี", 5: "วันศุกร์", 6: "วันเสาร์", 7: "วันอาทิตย์"]
     static let defaultSubjectIcon = "book.closed.fill"
 
+    /// Today as 1=Mon…7=Sun (Calendar hands back 1=Sun…7=Sat).
+    static var todayWeekday: Int {
+        let raw = Calendar.current.component(.weekday, from: .now)
+        return raw == 1 ? 7 : raw - 1
+    }
+
+    /// The day a new period form should open on. Weekends aren't in
+    /// `visibleDays`, so on Sat/Sun it falls back to Monday rather than
+    /// handing the picker a value it can't show.
+    static var defaultEntryDay: Int {
+        visibleDays.contains(todayWeekday) ? todayWeekday : 1
+    }
+
     /// Finds a Subject by case-insensitive name match, or creates one (color
     /// rotating through `Theme.Colors.subjectPaletteHex`) and returns it.
     /// Returns nil for a blank name — callers should skip attaching a subject then.

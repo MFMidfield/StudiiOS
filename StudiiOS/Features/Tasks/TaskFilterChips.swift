@@ -1,15 +1,14 @@
 //
 //  TaskFilterChips.swift
-//  Horizontal chip bar + "กรอง" button at the top of the Todo screen.
+//  Horizontal chip bar at the top of the Todo screen. Each chip carries its own
+//  count — the stats cards that used to sit below are gone.
 //
 
 import SwiftUI
 
 struct TaskFilterChips: View {
     @Binding var selection: TaskScope
-    /// Shows a dot on the "กรอง" button when any filter is not at its default.
-    let hasActiveFilters: Bool
-    let onOpenFilters: () -> Void
+    let counts: [TaskScope: Int]
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -17,7 +16,6 @@ struct TaskFilterChips: View {
                 ForEach(TaskScope.chips) { scope in
                     chip(for: scope)
                 }
-                filterButton
             }
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.vertical, Theme.Spacing.xs)
@@ -29,45 +27,40 @@ struct TaskFilterChips: View {
         return Button {
             selection = scope
         } label: {
-            Text(scope.label)
-                .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? Theme.Colors.onPrimary : Theme.Colors.textSecondary)
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.vertical, Theme.Spacing.sm)
-                .background(isSelected ? Theme.Colors.primaryDeep : Theme.Colors.cardBackground)
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule().stroke(Theme.Colors.separator, lineWidth: isSelected ? 0 : 1)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var filterButton: some View {
-        Button(action: onOpenFilters) {
             HStack(spacing: Theme.Spacing.xs) {
-                Image(systemName: "line.3.horizontal.decrease")
-                    .font(.system(size: 12, weight: .semibold))
-                Text("กรอง")
-                    .font(.system(size: 13))
-                if hasActiveFilters {
-                    Circle()
-                        .fill(Theme.Colors.primary)
-                        .frame(width: 6, height: 6)
+                Text(scope.label)
+                    .font(Theme.Font.plex(13, isSelected ? .semibold : .regular))
+                if scope.showsCount {
+                    Text("\(counts[scope] ?? 0)")
+                        .font(Theme.Font.plex(13, .semibold))
+                        .contentTransition(.numericText())
+                        .foregroundStyle(countColor(for: scope, isSelected: isSelected))
                 }
             }
-            .foregroundStyle(Theme.Colors.textPrimary)
+            .foregroundStyle(isSelected ? Theme.Colors.onPrimary : Theme.Colors.textSecondary)
             .padding(.horizontal, Theme.Spacing.md)
             .padding(.vertical, Theme.Spacing.sm)
-            .background(Theme.Colors.cardBackground)
+            .background(isSelected ? Theme.Colors.primaryDeep : Theme.Colors.cardBackground)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(Theme.Colors.separator, lineWidth: 1))
+            .overlay(
+                Capsule().stroke(Theme.Colors.separator, lineWidth: isSelected ? 0 : 1)
+            )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleButtonStyle())
+    }
+
+    /// Overdue is the one count that should catch the eye while unselected —
+    /// once the chip itself is filled, the number rides the chip's own color.
+    private func countColor(for scope: TaskScope, isSelected: Bool) -> Color {
+        if isSelected { return Theme.Colors.onPrimary }
+        return scope == .overdue ? Theme.Colors.danger : Theme.Colors.textPrimary
     }
 }
 
 #Preview {
-    TaskFilterChips(selection: .constant(.all), hasActiveFilters: true, onOpenFilters: {})
-        .background(Theme.Colors.background)
+    TaskFilterChips(
+        selection: .constant(.notDone),
+        counts: [.notDone: 4, .overdue: 1, .done: 8]
+    )
+    .background(Theme.Colors.background)
 }

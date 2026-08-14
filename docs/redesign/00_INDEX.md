@@ -14,8 +14,26 @@
 |---|---|
 | **W0** เตรียม | ✅ เสร็จ — commit rename PrototypeApp→StudiiOS, ตัด branch `redesign` |
 | **W1** Theme + Dashboard + tab bar | ✅ เขียนโค้ดครบ 10 step · **⏳ Few ยังไม่ได้ยืนยันว่า build ผ่าน** |
-| **W2** หน้าที่เหลือ (ไฟล์ 01–07 ในโฟลเดอร์นี้) | ⬜ ยังไม่เริ่ม — รอ Few สั่ง |
+| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A (01_Tasks + 03_QuickAdd) เขียนโค้ดครบแล้ว · ยังไม่ build** · ก้อน B–G ยังไม่เริ่ม |
 | **W3** custom nav · แตก CalendarView · onboarding | ⬜ ยังไม่เริ่ม |
+
+### การตัดสินของ Few — 14 ส.ค. 2569
+
+- **ชื่อแท็บ 4 = "ตารางเรียน"** (ปิดข้อค้างใน `02_Schedule` §9) — แก้ `RootTabView` + `DashboardNextClassCard` แล้ว
+  ยังเหลือคำว่า "ตารางสอน" ในเนื้อความของ `TermGradeEditView` · `AddScheduleEntrySheet` · `ScheduleSettingsSheet` (ไฟล์สุดท้ายจะถูกลบตาม `02_Schedule`) → agent ของโมดูลนั้นๆ เก็บตอนทำ
+- **ก้อน G (`08_Calendar`) ทำ** ไม่ตัดทิ้ง — ยังคงลำดับเดิม: ทำท้ายสุดเป็นก้อนของตัวเอง build ทีละขั้นตาม §8
+
+### ก้อน A ทิ้งอะไรไว้ให้ก้อนอื่น
+
+| ของใหม่ | อยู่ที่ | ใครได้ใช้ต่อ |
+|---|---|---|
+| `ScheduleConstants.todayWeekday` + `defaultEntryDay` | `Features/Schedule/ScheduleConstants.swift` | **`02_Schedule` ไม่ต้องเพิ่ม `todayWeekday` ซ้ำแล้ว** — ก้อน A เพิ่มให้ตอนทำ `03_QuickAdd` §4 |
+| `Date.thaiWeekdayDayMonthString` ("พฤ 13 ส.ค.") | `Core/Extensions/Date+Thai.swift` | `08_Calendar` §3.5 (ของเดิม `thaiWeekdayShort` = "พฤ." ยังอยู่) |
+| `QuickAddTarget` + `QuickAddFlow` | `App/RootTabView.swift` · `Features/QuickAdd/QuickAddSheet.swift` | W3 §4.1 ตอนย้ายหน้าเข้า/ออก tab bar |
+| `TaskFilterMenu.swift` | `Features/Tasks/` | — (ไฟล์ใหม่นอกตารางสเปค ดูหมายเหตุล่าง) |
+
+> หมายเหตุ: `01_Tasks` §7 บอกว่าถ้า `AssignmentListView` เกิน 250 บรรทัดให้แยก `TaskDayGroupSection.swift`
+> แต่ Section กับ `.swipeActions` อยู่ใน `List` เดียวกัน — ย้ายออกไปเสี่ยงปัดซ้ายลบพัง จึงแยก **toolbar menu** ออกเป็น `TaskFilterMenu.swift` แทน (`AssignmentListView` เหลือ 264 บรรทัด)
 
 **ยังไม่ได้ build แม้แต่ครั้งเดียวตลอด W1** — 12 commit ขึ้นต้น `wip:` ถ้า Few ยืนยันว่าเขียวแล้วค่อย squash
 

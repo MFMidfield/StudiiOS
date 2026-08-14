@@ -1,8 +1,8 @@
 //
 //  TaskScope.swift
 //  The single definition of every "which tasks count" rule on the Todo screen.
-//  Both the filter chips and the stats cards read from here — never re-derive
-//  these conditions anywhere else, or the two will drift apart.
+//  The chips and the day grouping both read from here — never re-derive these
+//  conditions anywhere else, or the two will drift apart.
 //
 
 import Foundation
@@ -15,10 +15,10 @@ enum TaskScope: String, CaseIterable, Identifiable {
     var label: String {
         switch self {
         case .all: return "ทั้งหมด"
-        case .notDone: return "ยังไม่เสร็จ"
+        case .notDone: return "ค้าง"
         case .dueSoon: return "ใกล้ถึงกำหนด"
         case .overdue: return "เลยกำหนด"
-        case .done: return "เสร็จแล้ว"
+        case .done: return "เสร็จ"
         }
     }
 
@@ -42,20 +42,53 @@ enum TaskScope: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The 4 chips across the top of the screen.
-    static let chips: [TaskScope] = [.all, .notDone, .dueSoon, .done]
+    /// The 4 chips across the top of the screen. `.dueSoon` stays in the enum
+    /// (other code switches over it) but no longer has a chip of its own.
+    static let chips: [TaskScope] = [.notDone, .overdue, .done, .all]
 
-    /// The 4 stat cards. Tapping one jumps to `chipTarget`.
-    static let stats: [TaskScope] = [.all, .dueSoon, .overdue, .done]
-
-    /// "เลยกำหนด" has no chip of its own — it lands on ยังไม่เสร็จ plus the
-    /// overdue-only filter (see `AssignmentListView.select(stat:)`).
-    var chipTarget: TaskScope {
-        self == .overdue ? .notDone : self
-    }
+    /// "ทั้งหมด" is the only chip without a number — a total next to three
+    /// subsets reads as a fourth subset.
+    var showsCount: Bool { self != .all }
 }
 
-/// Type filter inside TaskFilterSheet.
+/// How the list is cut into day sections. The only place the "which day bucket"
+/// rule is written — views ask for the group, they never compute days themselves.
+enum TaskDayGroup: String, CaseIterable, Identifiable {
+    case overdue, today, tomorrow, thisWeek, later, noDue
+
+    var id: String { rawValue }
+
+    static func group(for assignment: Assignment, now: Date = .now) -> TaskDayGroup {
+        guard let due = assignment.resolvedDueDate else { return .noDue }
+        switch AssignmentPriorityEngine.daysUntil(due, from: now) {
+        case ..<0: return .overdue
+        case 0: return .today
+        case 1: return .tomorrow
+        case 2...7: return .thisWeek
+        default: return .later
+        }
+    }
+
+    /// Header text. วันนี้/พรุ่งนี้ carry the date so the user doesn't have to
+    /// know today's date to read the list.
+    func title(now: Date = .now) -> String {
+        switch self {
+        case .overdue: return "เลยกำหนด"
+        case .today: return "วันนี้ · \(now.thaiWeekdayDayMonthString)"
+        case .tomorrow:
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now) ?? now
+            return "พรุ่งนี้ · \(tomorrow.thaiWeekdayDayMonthString)"
+        case .thisWeek: return "สัปดาห์นี้"
+        case .later: return "ภายหลัง"
+        case .noDue: return "ไม่มีกำหนด"
+        }
+    }
+
+    /// Only the overdue header is tinted — everything else is plain text.
+    var isAlarming: Bool { self == .overdue }
+}
+
+/// Type filter inside the toolbar's filter menu.
 enum TaskKindFilter: String, CaseIterable, Identifiable {
     case all, homework, personal, exam
 
@@ -76,22 +109,6 @@ enum TaskKindFilter: String, CaseIterable, Identifiable {
         case .homework: return assignment.kind == .homework
         case .personal: return assignment.kind == .personal
         case .exam: return assignment.kind == .exam
-        }
-    }
-}
-
-/// Sort options inside TaskFilterSheet. Tasks with no due date always sort
-/// last regardless of which one is picked.
-enum TaskSortOrder: String, CaseIterable, Identifiable {
-    case dueDate, priority, recent
-
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .dueDate: return "กำหนดส่ง"
-        case .priority: return "ความสำคัญ"
-        case .recent: return "เพิ่งเพิ่ม"
         }
     }
 }

@@ -1,10 +1,12 @@
 //
 //  AssignmentListView.swift
 //  หน้า "งาน / การบ้าน" — การบ้านและงานส่วนตัวรวมกันในรายการเดียว
-//  ประกอบจาก TaskFilterChips · TaskStatsRow · TaskRowCard · TaskFilterSheet
+//  ประกอบจาก TaskFilterChips · TaskRowCard · หัวข้อกลุ่มตามวัน (TaskDayGroup)
 //
 //  Uses List (not ScrollView) so swipe-to-delete works; separators and row
 //  backgrounds are hidden so the rows still read as floating cards.
+//
+//  เพิ่มงาน = ปุ่ม + กลาง tab bar (RootTabView) — หน้านี้ไม่มี FAB ของตัวเอง
 //
 
 import SwiftUI
@@ -20,23 +22,27 @@ struct AssignmentListView: View {
     private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
     private var scopedAssignments: [Assignment] { assignments.inTerm(activeTerm) }
 
-    @State private var scope: TaskScope = .all
+    /// เปิดหน้ามาเห็นงานที่ยังไม่เสร็จก่อน — ไม่ใช่กองรวมทุกใบ
+    @State private var scope: TaskScope = .notDone
     @State private var searchText = ""
     @State private var kindFilter: TaskKindFilter = .all
     @State private var subjectFilter = ""
-    @State private var overdueOnly = false
-    @State private var sortOrder: TaskSortOrder = .dueDate
 
-    @State private var showFilterSheet = false
-    @State private var showAddTask = false
     @State private var editingTask: Assignment?
     @State private var isDoneGroupExpanded = false
 
     var body: some View {
         List {
-            controlsSection
-            if !dueSoonHighlights.isEmpty { dueSoonSection }
-            mainSection
+            chipSection
+            ForEach(dayGroups) { entry in
+                Section {
+                    ForEach(entry.tasks) { task in
+                        row(for: task)
+                    }
+                } header: {
+                    groupHeader(entry.group)
+                }
+            }
             if !doneTasks.isEmpty { doneSection }
         }
         .listStyle(.plain)
@@ -45,66 +51,26 @@ struct AssignmentListView: View {
         .navigationTitle("งาน / การบ้าน")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "ค้นหางาน วิชา หรือรายละเอียด")
-        .overlay(alignment: .bottomTrailing) { addButton }
-        .overlay { emptyState }
-        .sheet(isPresented: $showFilterSheet) {
-            TaskFilterSheet(
-                kindFilter: $kindFilter,
-                subjectFilter: $subjectFilter,
-                overdueOnly: $overdueOnly,
-                sortOrder: $sortOrder
-            )
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                TaskFilterMenu(
+                    kindFilter: $kindFilter,
+                    subjectFilter: $subjectFilter,
+                    subjectNames: subjectNames
+                )
+            }
         }
-        .sheet(isPresented: $showAddTask) { AddTaskSheet() }
+        .overlay { emptyState }
         .sheet(item: $editingTask) { task in AddTaskSheet(editing: task) }
     }
 
     // MARK: - Sections
 
-    private var controlsSection: some View {
+    private var chipSection: some View {
         Section {
-            TaskFilterChips(
-                selection: $scope,
-                hasActiveFilters: hasActiveFilters,
-                onOpenFilters: { showFilterSheet = true }
-            )
-            .plainRow()
-
-            TaskStatsRow(counts: counts, onSelect: select(stat:))
+            TaskFilterChips(selection: $scope, counts: counts)
                 .plainRow()
                 .padding(.bottom, Theme.Spacing.sm)
-        }
-    }
-
-    private var dueSoonSection: some View {
-        Section {
-            ForEach(dueSoonHighlights) { task in
-                row(for: task)
-            }
-        } header: {
-            sectionHeader(title: TaskScope.dueSoon.label) {
-                Button("ดูทั้งหมด ›") { scope = .dueSoon }
-                    .font(.caption)
-                    .foregroundStyle(Theme.Colors.primaryDeep)
-            }
-        }
-    }
-
-    private var mainSection: some View {
-        Section {
-            ForEach(visibleTasks) { task in
-                row(for: task)
-            }
-        } header: {
-            sectionHeader(title: scope == .all ? "รายการทั้งหมด" : scope.label) {
-                Button {
-                    showFilterSheet = true
-                } label: {
-                    Text("เรียงตาม: \(sortOrder.label) ↓")
-                        .font(.caption)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                }
-            }
         }
     }
 
@@ -117,8 +83,7 @@ struct AssignmentListView: View {
                 }
             } label: {
                 Text("เสร็จแล้ว (\(doneTasks.count))")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                    .font(Theme.Font.plex(13, .semibold))
                     .foregroundStyle(Theme.Colors.textPrimary)
             }
             .plainRow()
@@ -148,40 +113,17 @@ struct AssignmentListView: View {
         }
     }
 
-    private func sectionHeader<Trailing: View>(
-        title: String,
-        @ViewBuilder trailing: () -> Trailing
-    ) -> some View {
-        HStack {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Theme.Colors.textPrimary)
-            Spacer()
-            trailing()
-        }
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.vertical, Theme.Spacing.sm)
-        .background(Theme.Colors.background)
-        .listRowInsets(EdgeInsets())
-    }
-
-    private var addButton: some View {
-        Button {
-            showAddTask = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(Theme.Colors.primary)
-                .clipShape(Circle())
-                .shadow(color: Theme.Colors.primary.opacity(0.35), radius: 8, x: 0, y: 4)
-        }
-        .buttonStyle(.plain)
-        .padding(.trailing, Theme.Spacing.xl)
-        .padding(.bottom, Theme.Spacing.xl)
-        .accessibilityLabel("เพิ่มงาน")
+    /// Compact header — SectionHeader's 19pt is meant for card sections, and
+    /// five of them stacked in a list would outweigh the rows themselves.
+    private func groupHeader(_ group: TaskDayGroup) -> some View {
+        Text(group.title())
+            .font(Theme.Font.plex(13, .semibold))
+            .foregroundStyle(group.isAlarming ? Theme.Colors.danger : Theme.Colors.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.sm)
+            .background(Theme.Colors.background)
+            .listRowInsets(EdgeInsets())
     }
 
     @ViewBuilder
@@ -190,9 +132,9 @@ struct AssignmentListView: View {
             ContentUnavailableView(
                 "ยังไม่มีงาน",
                 systemImage: "checkmark.square",
-                description: Text("กดปุ่ม + มุมขวาล่างเพื่อเพิ่มงานชิ้นแรก")
+                description: Text("กดปุ่ม + ตรงกลางแถบล่างเพื่อเพิ่มงานชิ้นแรก")
             )
-        } else if visibleTasks.isEmpty && dueSoonHighlights.isEmpty && doneTasks.isEmpty {
+        } else if visibleTasks.isEmpty && doneTasks.isEmpty {
             ContentUnavailableView(
                 "ไม่พบงานที่ตรงเงื่อนไข",
                 systemImage: "line.3.horizontal.decrease",
@@ -207,7 +149,6 @@ struct AssignmentListView: View {
     private func passesSecondaryFilters(_ task: Assignment) -> Bool {
         guard kindFilter.matches(task) else { return false }
         if !subjectFilter.isEmpty && task.subjectName != subjectFilter { return false }
-        if overdueOnly && !task.isOverdue { return false }
         return matchesSearch(task)
     }
 
@@ -225,11 +166,20 @@ struct AssignmentListView: View {
     }
 
     /// The main list — chip applied. Finished tasks live in their own collapsed
-    /// group unless the user explicitly picked the "เสร็จแล้ว" chip.
+    /// group unless the user explicitly picked the "เสร็จ" chip.
     private var visibleTasks: [Assignment] {
         let base = filteredPool.filter { scope.matches($0) }
         let withoutDone = scope == .done ? base : base.filter { !$0.isDone }
         return sorted(withoutDone)
+    }
+
+    /// Day buckets in `TaskDayGroup.allCases` order, empty ones dropped.
+    private var dayGroups: [TaskDaySection] {
+        let tasks = visibleTasks
+        return TaskDayGroup.allCases.compactMap { group in
+            let matching = tasks.filter { TaskDayGroup.group(for: $0) == group }
+            return matching.isEmpty ? nil : TaskDaySection(group: group, tasks: matching)
+        }
     }
 
     private var doneTasks: [Assignment] {
@@ -237,22 +187,16 @@ struct AssignmentListView: View {
         return sorted(filteredPool.filter { $0.isDone })
     }
 
-    /// Shown above the main list when the user hasn't narrowed to a specific chip.
-    private var dueSoonHighlights: [Assignment] {
-        guard scope == .all || scope == .notDone else { return [] }
-        return sorted(filteredPool.filter { TaskScope.dueSoon.matches($0) })
-    }
-
     private var counts: [TaskScope: Int] {
         var result: [TaskScope: Int] = [:]
-        for stat in TaskScope.stats {
-            result[stat] = scopedAssignments.filter { stat.matches($0) }.count
+        for chip in TaskScope.chips where chip.showsCount {
+            result[chip] = scopedAssignments.filter { chip.matches($0) }.count
         }
         return result
     }
 
-    private var hasActiveFilters: Bool {
-        kindFilter != .all || !subjectFilter.isEmpty || overdueOnly || sortOrder != .dueDate
+    private var subjectNames: [String] {
+        Array(Set(scopedAssignments.map(\.subjectName).filter { !$0.isEmpty })).sorted()
     }
 
     private func subject(named name: String) -> Subject? {
@@ -260,44 +204,19 @@ struct AssignmentListView: View {
         return subjects.first { $0.name == name }
     }
 
-    /// Tasks with no due date always sort last, whichever order is picked.
+    /// กำหนดส่งใกล้สุดขึ้นก่อน · ไม่มีกำหนดไปท้ายสุด · เท่ากันแล้วเอาที่เพิ่งเพิ่ม
     private func sorted(_ tasks: [Assignment]) -> [Assignment] {
         tasks.sorted { lhs, rhs in
             switch (lhs.resolvedDueDate, rhs.resolvedDueDate) {
             case (nil, .some): return false
             case (.some, nil): return true
-            default: break
+            case (.some(let l), .some(let r)) where l != r: return l < r
+            default: return lhs.createdAt > rhs.createdAt
             }
-
-            switch sortOrder {
-            case .dueDate:
-                if let l = lhs.resolvedDueDate, let r = rhs.resolvedDueDate, l != r { return l < r }
-            case .priority:
-                let lp = rank(lhs.effectivePriority)
-                let rp = rank(rhs.effectivePriority)
-                if lp != rp { return lp > rp }
-            case .recent:
-                break
-            }
-            return lhs.createdAt > rhs.createdAt
-        }
-    }
-
-    private func rank(_ priority: AssignmentPriority) -> Int {
-        switch priority {
-        case .high: return 2
-        case .medium: return 1
-        case .low: return 0
         }
     }
 
     // MARK: - Actions
-
-    private func select(stat: TaskScope) {
-        scope = stat.chipTarget
-        overdueOnly = (stat == .overdue)
-        if stat == .overdue { isDoneGroupExpanded = false }
-    }
 
     private func toggleDone(_ task: Assignment) {
         task.isDone.toggle()
@@ -314,6 +233,17 @@ struct AssignmentListView: View {
         try? context.save()
         AppLog.action("Assignment", "ลบงาน: \(title)")
     }
+}
+
+// MARK: - Day section
+
+/// One rendered day bucket. A plain tuple can't be used here — `ForEach` needs
+/// an identity and Swift has no key paths into tuples.
+private struct TaskDaySection: Identifiable {
+    let group: TaskDayGroup
+    let tasks: [Assignment]
+
+    var id: String { group.rawValue }
 }
 
 // MARK: - Row styling helper

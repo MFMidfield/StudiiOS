@@ -84,7 +84,7 @@ struct DashboardNextClassCard: View {
             HeroStatusRow(
                 systemName: "calendar.badge.checkmark",
                 title: "วันนี้ยังไม่มีตารางเรียน",
-                subtitle: "ไปที่แท็บ \"ตารางสอน\" เพื่อเพิ่มคาบเรียน"
+                subtitle: "ไปที่แท็บ \"ตารางเรียน\" เพื่อเพิ่มคาบเรียน"
             )
             HeroNextTaskRow(task: nextTask)
         }

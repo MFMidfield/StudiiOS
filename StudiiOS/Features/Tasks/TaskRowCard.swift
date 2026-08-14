@@ -1,6 +1,8 @@
 //
 //  TaskRowCard.swift
-//  One task card, used by both the "ใกล้ถึงกำหนด" section and the full list.
+//  One task row: toggle · subject stripe · title + subtitle · due pill.
+//  The date lives in the pill and in the day-group header — never spelled out
+//  a third time inside the card.
 //
 
 import SwiftUI
@@ -14,23 +16,30 @@ struct TaskRowCard: View {
     let onTap: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.md) {
-            doneButton
-            icon
-            content
+        HStack(spacing: 0) {
+            stripe
+            HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                doneButton
+                content
+            }
+            .padding(Theme.Spacing.md)
         }
-        .padding(Theme.Spacing.md)
         .background(Theme.Colors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.card)
-                .stroke(assignment.isOverdue ? Theme.Colors.danger.opacity(0.4) : .clear, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
-        .opacity(assignment.isDone ? 0.6 : 1)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 3)
+        .opacity(assignment.isDone ? 0.55 : 1)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: assignment.isDone)
     }
 
     // MARK: - Parts
+
+    /// 3pt of the subject's color down the left edge — replaces the old 36×36
+    /// icon tile, so a column of rows reads as one list instead of a grid.
+    private var stripe: some View {
+        Rectangle()
+            .fill(stripeColor)
+            .frame(width: 3)
+    }
 
     private var doneButton: some View {
         Button(action: onToggleDone) {
@@ -42,43 +51,26 @@ struct TaskRowCard: View {
         .accessibilityLabel(assignment.isDone ? "ทำเครื่องหมายว่ายังไม่เสร็จ" : "ทำเครื่องหมายว่าเสร็จแล้ว")
     }
 
-    private var icon: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Theme.Radius.control)
-                .fill(iconColor.opacity(0.12))
-                .frame(width: 36, height: 36)
-            Image(systemName: subject?.iconName ?? assignment.kind.iconName)
-                .font(.system(size: 15))
-                .foregroundStyle(iconColor)
-        }
-    }
-
     private var content: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             HStack(alignment: .top, spacing: Theme.Spacing.sm) {
                 Text(assignment.title)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(Theme.Font.plex(15, .medium))
                     .foregroundStyle(Theme.Colors.textPrimary)
                     .strikethrough(assignment.isDone)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 Spacer(minLength: Theme.Spacing.xs)
-                dueBadge
+                if let due = assignment.resolvedDueDate {
+                    PillLabel(due.thaiDueLabel, tone: pillTone)
+                        .fixedSize()
+                }
             }
 
-            if !assignment.subjectName.isEmpty {
-                Text(assignment.subjectName)
-                    .font(.caption)
+            if !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(Theme.Font.caption)
                     .foregroundStyle(Theme.Colors.textSecondary)
-            }
-
-            if let due = assignment.resolvedDueDate {
-                Label(
-                    "\(due.thaiDayMonthYearString) \(DateFormatter.time24h.string(from: due))",
-                    systemImage: "calendar"
-                )
-                .font(.caption2)
-                .foregroundStyle(assignment.isOverdue ? Theme.Colors.danger : Theme.Colors.textSecondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -86,41 +78,30 @@ struct TaskRowCard: View {
         .onTapGesture(perform: onTap)
     }
 
-    private var dueBadge: some View {
-        Text(dueLabel)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(badgeForeground)
-            .padding(.horizontal, Theme.Spacing.sm)
-            .padding(.vertical, Theme.Spacing.xs)
-            .background(badgeBackground)
-            .clipShape(Capsule())
-            .fixedSize()
-    }
+    // MARK: - Derived
 
-    // MARK: - Derived styling
-
-    private var iconColor: Color {
+    private var stripeColor: Color {
         subject?.color ?? Theme.Colors.primary
     }
 
-    private var dueLabel: String {
-        AssignmentPriorityEngine.dueLabel(for: assignment.resolvedDueDate)
-    }
-
-    private var badgeForeground: Color {
-        guard let due = assignment.resolvedDueDate else { return Theme.Colors.textSecondary }
-        switch AssignmentPriorityEngine.daysUntil(due) {
-        case ..<0: return Theme.Colors.danger
-        case 0: return Theme.Colors.warning
-        case 1: return Theme.Colors.purple
-        default: return Theme.Colors.success
+    /// "<วิชา> · <เวลา>" — either half is dropped when missing so no separator
+    /// is ever left dangling.
+    private var subtitle: String {
+        var parts: [String] = []
+        if !assignment.subjectName.isEmpty { parts.append(assignment.subjectName) }
+        if let due = assignment.resolvedDueDate {
+            parts.append(DateFormatter.time24h.string(from: due))
         }
+        return parts.joined(separator: " · ")
     }
 
-    private var badgeBackground: Color {
-        assignment.resolvedDueDate == nil
-            ? Theme.Colors.separator
-            : badgeForeground.opacity(0.15)
+    private var pillTone: PillLabel.Tone {
+        guard let due = assignment.resolvedDueDate, !assignment.isDone else { return .neutral }
+        switch AssignmentPriorityEngine.daysUntil(due) {
+        case ..<0: return .danger
+        case 0: return .accent
+        default: return .neutral
+        }
     }
 }
 
