@@ -13,8 +13,8 @@
 | Wave | สถานะ |
 |---|---|
 | **W0** เตรียม | ✅ เสร็จ — commit rename PrototypeApp→StudiiOS, ตัด branch `redesign` |
-| **W1** Theme + Dashboard + tab bar | ✅ เขียนโค้ดครบ 10 step · **⏳ Few ยังไม่ได้ยืนยันว่า build ผ่าน** |
-| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A (01_Tasks + 03_QuickAdd) ปิดแล้ว — โค้ดตรงสเปคครบทุกข้อ ตรวจย้อน 14 ส.ค.** · ก้อน B–G ยังไม่เริ่ม |
+| **W1** Theme + Dashboard + tab bar | ✅ **จบแล้ว — Few ยืนยัน ⌘B เขียว 14 ส.ค.** |
+| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A (01_Tasks + 03_QuickAdd) จบแล้ว — build เขียว + Few กดลองบนเครื่องแล้ว "กดค้างกรองใช้ได้ดี" (14 ส.ค.)** · กำลังทำก้อน B |
 | **W3** custom nav · แตก CalendarView · onboarding | ⬜ ยังไม่เริ่ม |
 
 **W2 เหลือ 6 ก้อน** — B `02_Schedule` · C `04_GradeCenter` · D `05_Settings` · E `06_TCAS` · F `07_Portfolio` · G `08_Calendar`
@@ -65,8 +65,10 @@
 | `Date.thaiWeekdayDayMonth` · `ScheduleConstants.defaultEntryDay` | มีจริง (`defaultEntryDay` ยังไม่มีใครเรียก — ยกให้ `02_Schedule`) |
 | grep ค่า hardcode ใน `Features/Tasks/` + `Features/QuickAdd/` | เจอจุดเดียว `TaskRowCard.swift:47 .font(.system(size: 20))` = SF Symbol → **อยู่ในข้อยกเว้นที่ยอมได้** |
 
-**⏳ ยังไม่มีบันทึกว่า ⌘B เขียว** ตลอด W1 + W2 ก้อน A — commit ยังขึ้นต้น `wip:` ถ้า Few ยืนยันว่าเขียวแล้วค่อย squash
-ใครยืนยันแล้วให้มาแก้บรรทัดนี้ทันที ไม่งั้น session หน้าจะไม่มีทางรู้
+**✅ 14 ส.ค. — Few ยืนยันว่า ⌘B เขียว และกดลองบนเครื่องแล้ว** ("ปุ่ม + ขวาบน กดค้างกรองใช้ได้ดี")
+→ **W1 + W2 ก้อน A ถือว่าปิด** · commit `wip:` ของสองก้อนนี้ squash รวมได้เมื่อ Few ต้องการ
+
+สิ่งที่ยังไม่ได้ลองด้วยตาแม้ build เขียว: ปัดซ้ายลบในหน้างาน · บันทึกจาก QuickAdd แล้วปิดครบสองชั้น · dark mode
 
 **ค้างอยู่ที่ Few:** วางไฟล์ `IBMPlexSansThai-{Regular,Medium,SemiBold}.ttf` ใน `StudiiOS/Resources/Fonts/`
 (ยังว่างอยู่ · ไม่วางก็ไม่พัง — `Theme.Font` fallback เป็นฟอนต์ระบบ ดู log `[Theme]` ตอนเปิดแอป)

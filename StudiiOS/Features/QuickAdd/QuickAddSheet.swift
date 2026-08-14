@@ -12,6 +12,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct QuickAddSheet: View {
     @Environment(\.dismiss) private var dismiss
