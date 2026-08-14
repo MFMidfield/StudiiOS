@@ -1,6 +1,6 @@
 # 05 · Settings — หน้าตั้งค่า
 
-> โมดูล `PrototypeApp/Features/Settings/` (3 ไฟล์ · 1,041 บรรทัด)
+> โมดูล `StudiiOS/Features/Settings/` (3 ไฟล์ · 1,041 บรรทัด)
 > `SettingsView.swift` ไฟล์เดียว 588 บรรทัด บรรจุ 4 struct
 > ⚠️ **ทำโมดูลนี้หลัง `04_GradeCenter` เสร็จเท่านั้น** — ไม่งั้นจะมีช่วงที่แอปไม่มีที่ตั้งเป้า GPAX เลย
 
@@ -129,9 +129,9 @@ enum AppTheme: String, CaseIterable { case system, light, dark }
 ```
 
 - Picker `.menu` ในหน้า Settings
-- **จุดที่ใช้จริง:** `RootContainerView` ใน `App/PrototypeAppApp.swift` ใส่ `.preferredColorScheme(...)`
+- **จุดที่ใช้จริง:** `RootContainerView` ใน `App/StudiiOSApp.swift` ใส่ `.preferredColorScheme(...)`
   `system → nil` · `light → .light` · `dark → .dark`
-- ⚠️ `PrototypeAppApp.swift` เป็นไฟล์ที่มี `Schema([...])` อยู่ — **แตะเฉพาะบรรทัด `.preferredColorScheme` เท่านั้น ห้ามแตะ Schema**
+- ⚠️ `StudiiOSApp.swift` เป็นไฟล์ที่มี `Schema([...])` อยู่ — **แตะเฉพาะบรรทัด `.preferredColorScheme` เท่านั้น ห้ามแตะ Schema**
 - ประกาศ `enum AppTheme` ไว้ใน `Core/DesignSystem/` (ไฟล์ใหม่ `AppTheme.swift` ~20 บรรทัด) ไม่ใช่ใน `SettingsView`
 
 ### 4.3 เตือนงานใหม่อัตโนมัติ — ไม่แตะ `NotificationManager`
@@ -150,7 +150,7 @@ _remindersEnabled = State(initialValue:
     ?? UserDefaults.standard.bool(forKey: "assignmentRemindersDefaultOn"))
 ```
 
-- ⚠️ `UserDefaults.bool(forKey:)` คืน `false` ถ้ายังไม่เคยเขียน → ต้อง `UserDefaults.standard.register(defaults: ["assignmentRemindersDefaultOn": true])` ใน `PrototypeAppApp` init **หรือ** ใช้ `object(forKey:) as? Bool ?? true`
+- ⚠️ `UserDefaults.bool(forKey:)` คืน `false` ถ้ายังไม่เคยเขียน → ต้อง `UserDefaults.standard.register(defaults: ["assignmentRemindersDefaultOn": true])` ใน `StudiiOSApp` init **หรือ** ใช้ `object(forKey:) as? Bool ?? true`
 - ใต้ Toggle มีคำอธิบายว่าเปิดแล้วเตือนตอนไหน — **ข้อความต้องตรงกับโค้ดจริงใน `NotificationManager` slot `.d1`/`.am`/`.h1`:**
   > `"เปิดไว้ = งานใหม่ที่มีกำหนดส่งจะเตือน 3 ครั้ง — 1 วันก่อน · 07:00 ของวันกำหนด · 1 ชั่วโมงก่อน (ปรับรายชิ้นได้ในฟอร์มเพิ่มงาน)"`
 - **ห้ามแก้ `Core/Notifications/NotificationManager.swift`** ในสเปคนี้
@@ -227,7 +227,7 @@ static func resetAll() {
 | `Features/Settings/OCRDebugView.swift` | **ไม่แตะ** — เป็น dev tool ล้วน |
 | `Core/Profile/StudentProfileStore.swift` | เพิ่ม 3 key + ล้างใน `reset()` |
 | `Core/DesignSystem/AppTheme.swift` | **ไฟล์ใหม่** ~20 บรรทัด |
-| `App/PrototypeAppApp.swift` | **เฉพาะบรรทัด `.preferredColorScheme`** — ห้ามแตะ `Schema` |
+| `App/StudiiOSApp.swift` | **เฉพาะบรรทัด `.preferredColorScheme`** — ห้ามแตะ `Schema` |
 
 **ไฟล์ที่ agent อื่นเป็นเจ้าของ — ห้ามแตะ:**
 `AddTaskSheet.swift` (agent Tasks — §4.3) · `RootTabView.swift` (agent Tasks) · `Core/Notifications/NotificationManager.swift` (ห้ามทุกคน)
@@ -240,7 +240,7 @@ static func resetAll() {
 |---|---|
 | ลบ section เป้า GPAX ก่อน `GPAXTargetSheet` เสร็จ → ไม่มีที่ตั้งเป้าเลย | **ทำโมดูลนี้หลัง `04_GradeCenter` เท่านั้น** |
 | ลบ ping `@AppStorage` เพราะดูเหมือนไม่ได้ใช้ | มีคอมเมนต์เตือนในไฟล์ — ห้ามลบ |
-| แตะ `Schema([...])` ตอนแก้ `PrototypeAppApp.swift` | แตะได้บรรทัดเดียวคือ `.preferredColorScheme` |
+| แตะ `Schema([...])` ตอนแก้ `StudiiOSApp.swift` | แตะได้บรรทัดเดียวคือ `.preferredColorScheme` |
 | `resetAllData` เขียน UserDefaults ตรงๆ แทนที่จะผ่าน `GPAXSettings` | §4.5 — ถ้าไม่มี `resetAll()` ให้หยุดถาม |
 | ย้าย 3 struct ออกแล้วมี `private` ที่เข้าไม่ถึงกัน | ทั้ง 3 ตัวเป็น `private struct` → ต้องเปลี่ยนเป็น `struct` ธรรมดา (internal) ตอนแยกไฟล์ |
 | `UserDefaults.bool` คืน false เมื่อยังไม่เคยเขียน → สวิตช์เตือนงานดูเหมือนปิดทั้งที่ควรเปิด | §4.3 — ใช้ `register(defaults:)` หรือ `object(forKey:) as? Bool ?? true` |

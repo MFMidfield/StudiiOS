@@ -1,6 +1,6 @@
 # 07 · Portfolio — หน้าผลงาน
 
-> โมดูล `PrototypeApp/Features/Portfolio/` (4 ไฟล์ · 743 บรรทัด)
+> โมดูล `StudiiOS/Features/Portfolio/` (4 ไฟล์ · 743 บรรทัด)
 > + `Core/Portfolio/PortfolioImageStore.swift` · `Core/Models/PortfolioItem.swift`
 
 ---

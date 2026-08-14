@@ -1,6 +1,6 @@
 # 01 · Tasks — หน้า "งาน / การบ้าน"
 
-> โมดูล `PrototypeApp/Features/Tasks/` (7 ไฟล์ · ~1,100 บรรทัด)
+> โมดูล `StudiiOS/Features/Tasks/` (7 ไฟล์ · ~1,100 บรรทัด)
 > ✅ **ตรวจแล้ว: ไม่มีไฟล์นอกโมดูลนี้อ้างถึง `TaskScope` / `TaskStatsRow` / `TaskFilterSheet` เลย**
 > → ลบไฟล์ในโมดูลนี้ได้โดยไม่กระทบหน้าอื่น
 

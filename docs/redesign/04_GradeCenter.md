@@ -1,6 +1,6 @@
 # 04 · GradeCenter — หน้าเกรดและ GPAX
 
-> โมดูล `PrototypeApp/Features/GradeCenter/` (6 ไฟล์ · 924 บรรทัด)
+> โมดูล `StudiiOS/Features/GradeCenter/` (6 ไฟล์ · 924 บรรทัด)
 > ⚠️ **`GPAXCalculator` เป็น logic ล้วน ห้ามแตะแม้แต่บรรทัดเดียว** — ทุกตัวเลขในหน้านี้มาจากมัน โมดูลนี้มีหน้าที่จัดรูปแบบอย่างเดียว
 
 ---

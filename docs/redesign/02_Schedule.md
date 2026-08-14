@@ -1,6 +1,6 @@
 # 02 · Schedule — หน้าตารางเรียน
 
-> โมดูล `PrototypeApp/Features/Schedule/` (16 ไฟล์ · 2,461 บรรทัด)
+> โมดูล `StudiiOS/Features/Schedule/` (16 ไฟล์ · 2,461 บรรทัด)
 > ✅ ตรวจแล้ว: `ScheduleTodayTasksSection` ถูกใช้ที่เดียวคือ `ScheduleView.swift:71` → ลบได้ปลอดภัย
 
 ---

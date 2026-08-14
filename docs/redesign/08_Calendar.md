@@ -1,6 +1,6 @@
 # 08 · Calendar — หน้าปฏิทิน (เขียนใหม่ทั้งหน้า)
 
-> โมดูล `PrototypeApp/Features/Calendar/` (5 ไฟล์ · 1,513 บรรทัด · `CalendarView.swift` เดียว 963)
+> โมดูล `StudiiOS/Features/Calendar/` (5 ไฟล์ · 1,513 บรรทัด · `CalendarView.swift` เดียว 963)
 > ⚠️ **นี่ไม่ใช่งานทาสี** — เป็นการเขียนหน้าใหม่ประมาณครึ่งไฟล์ + แตกเป็น 6 ไฟล์
 > ⚠️ **งานใหญ่ที่สุดในทั้งแผน** ทำท้ายสุด และแยกเป็นก้อนของตัวเอง ไม่รวมกับ wave อื่น
 
@@ -160,7 +160,7 @@ enum MonthLayoutEngine {
 
 ⚠️ **`overflowByColumn` ต้องนับต่อคอลัมน์ ไม่ใช่ต่อสัปดาห์** — ไม่งั้นวันที่ว่างจะขึ้น `+3` ทั้งที่ไม่มีอะไรซ่อนอยู่
 
-**เทสต์ที่ต้องมี** (`PrototypeAppTests` ยังเป็น template เปล่า — นี่คือโอกาสใส่ของจริง):
+**เทสต์ที่ต้องมี** (`StudiiOSTests` ยังเป็น template เปล่า — นี่คือโอกาสใส่ของจริง):
 - อีเวนต์ 1 วันเดียว → lane 0 span 1
 - อีเวนต์ 3 วันไม่ทับใคร → lane 0 span 3
 - อีเวนต์ยาวข้ามสัปดาห์ → สัปดาห์ที่สองต้อง `isContinuation == true` และ `startColumn == 0`
@@ -234,7 +234,7 @@ event.endDate   = newStart.addingTimeInterval(span)
 | `CalendarDragController.swift` | ghost state · hit-test · move · toast | ~260 |
 | `CalendarSearchView.swift` | ยก `searchResultsList` · `searchResultRow` · `jumpToSearchResult` มา | ~90 |
 | `Core/Calendar/MonthLayoutEngine.swift` | **ไฟล์ใหม่ · ฟังก์ชันบริสุทธิ์** §4 | ~140 |
-| `PrototypeAppTests/MonthLayoutEngineTests.swift` | **ไฟล์ใหม่** เทสต์ §4 | ~90 |
+| `StudiiOSTests/MonthLayoutEngineTests.swift` | **ไฟล์ใหม่** เทสต์ §4 | ~90 |
 
 **ไม่แตะ:** `CalendarItem.swift` · `CalendarModels.swift` · `EventFormSheet.swift` (ทาสีอย่างเดียว) · `GhostEventLayer.swift`
 

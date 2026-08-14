@@ -87,7 +87,7 @@
 | `04_GradeCenter` ย้ายการตั้งเป้ามาที่ `GPAXTargetSheet` | `SettingsView` ต้องลบ section เป้า GPAX — **ทำหลัง GradeCenter เสร็จเท่านั้น** ไม่งั้นจะไม่มีที่ตั้งเป้าเลย | agent ของ `05_Settings` |
 | `04_GradeCenter` ลิสต์อ้างปุ่ม "ขึ้นชั้นแล้ว" | ปุ่มนั้นใน Settings ห้ามลบหรือเปลี่ยนชื่อ | agent ของ `05_Settings` |
 | `05_Settings` §4.3 สวิตช์ค่าเริ่มต้นการเตือนงาน | ต้องแก้ `AddTaskSheet.init` 1 บรรทัด — **agent Tasks เป็นคนแก้** ไม่ใช่ agent Settings | agent ของ `01_Tasks` |
-| `05_Settings` §4.2 ธีมสว่าง/มืด | แตะ `App/StudiiOSApp.swift` (ชื่อใหม่ของ `PrototypeAppApp.swift`) ได้**เฉพาะบรรทัด `.preferredColorScheme`** — ห้ามแตะ `Schema([...])` | agent ของ `05_Settings` |
+| `05_Settings` §4.2 ธีมสว่าง/มืด | แตะ `App/StudiiOSApp.swift` (เดิมชื่อ `PrototypeAppApp.swift`) ได้**เฉพาะบรรทัด `.preferredColorScheme`** — ห้ามแตะ `Schema([...])` | agent ของ `05_Settings` |
 
 | `07_Portfolio` เปลี่ยนหัวข้อเป็น "ผลงาน" | เมนูหลักใน Dashboard (`PLAN_Redesign.md` §2.4) เขียน "พอร์ต" → ต้องเปลี่ยนให้ตรง | agent ของ W1 |
 | `06_TCAS` + `07_Portfolio` ใช้ปุ่มมีพื้น `+ คณะ` / `+ ผลงาน` | สองหน้านี้เข้าจากเมนูหลักเหมือนกัน ปุ่มต้องหน้าตาเดียวกันเป๊ะ | agent ของ 06 กับ 07 |
@@ -100,7 +100,7 @@
 
 ### ✅ ผ่าน
 
-- **ไม่มีไฟล์ Swift ไหนถูกอ้างเป็น "เจ้าของ" สองโมดูล** — 7 ไฟล์ที่ถูกเอ่ยถึงข้ามโมดูล (`RootTabView` · `AddTaskSheet` · `AddScheduleEntrySheet` · `EventFormSheet` · `PortfolioItemSheet` · `PrototypeAppApp` · `SettingsView`) ทุกตัวมีโมดูลเดียวที่แก้ ที่เหลือระบุชัดว่า "ห้ามแตะ / แค่เรียกใช้"
+- **ไม่มีไฟล์ Swift ไหนถูกอ้างเป็น "เจ้าของ" สองโมดูล** — 7 ไฟล์ที่ถูกเอ่ยถึงข้ามโมดูล (`RootTabView` · `AddTaskSheet` · `AddScheduleEntrySheet` · `EventFormSheet` · `PortfolioItemSheet` · `StudiiOSApp` · `SettingsView`) ทุกตัวมีโมดูลเดียวที่แก้ ที่เหลือระบุชัดว่า "ห้ามแตะ / แค่เรียกใช้"
 - **ไม่มี design token ที่คิดขึ้นเองนอก `Theme`** — token ทุกตัวที่สเปคอ้าง (`primary` · `primarySoft` · `danger` · `Radius.card`) มีอยู่แล้วหรือประกาศไว้ใน `PLAN_Redesign.md` §1.1
 - `subjectPalette` index ที่อ้าง ([1] เขียวมะกอก · [3] น้ำเงินหม่น · [4] ม่วงหม่น · [5] ทอง) ตรงกับ `Theme.swift` จริง
 - API ที่สเปคอ้างมีจริงครบ: `GPAXCalculator.upperBandSortKeys/formatted/State` · `TCASScoreEngine` ทั้ง 9 เมธอด · `TCASExamCatalog.all` · `PortfolioImageStore.delete(_:)` · `EventFormSheet(initialDate:)` · `PortfolioItemSheet(mode:)`
