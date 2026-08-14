@@ -14,7 +14,7 @@
 |---|---|
 | **W0** เตรียม | ✅ เสร็จ — commit rename PrototypeApp→StudiiOS, ตัด branch `redesign` |
 | **W1** Theme + Dashboard + tab bar | ✅ **จบแล้ว — Few ยืนยัน ⌘B เขียว 14 ส.ค.** |
-| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A (01_Tasks + 03_QuickAdd) จบแล้ว — build เขียว + Few กดลองบนเครื่องแล้ว "กดค้างกรองใช้ได้ดี" (14 ส.ค.)** · กำลังทำก้อน B |
+| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A จบ (build เขียว + Few กดลองแล้ว 14 ส.ค.)** · **ก้อน B (`02_Schedule`) เขียนโค้ดครบ ⏳ ยังไม่ build** · C–G ยังไม่เริ่ม |
 | **W3** custom nav · แตก CalendarView · onboarding | ⬜ ยังไม่เริ่ม |
 
 **W2 เหลือ 6 ก้อน** — B `02_Schedule` · C `04_GradeCenter` · D `05_Settings` · E `06_TCAS` · F `07_Portfolio` · G `08_Calendar`
@@ -35,6 +35,14 @@
 | `03_QuickAdd` §3 — เลิก sheet ซ้อน sheet | **คง sheet ซ้อน sheet ไว้** · บันทึก → ปิดทั้งสองชั้น · ยกเลิก → กลับมาที่เมนู | `QuickAddSheet` ใช้ `.sheet(item:onDismiss:)` + ธง `didSave` |
 | `01_Tasks` §4.4 — ไอคอนกรองบน toolbar ขวาบน · เพิ่มงานด้วยปุ่ม `+` กลาง tab bar | **ขวาบนเป็นปุ่ม `+`** — แตะ = `AddTaskSheet` · กดค้าง = เมนูกรอง ประเภท/วิชา/ล้างตัวกรอง | `TaskFilterMenu.swift` → `TaskAddMenu.swift` (`Menu(primaryAction:)`) |
 | `03_QuickAdd` §4 — เมนู 4 ทาง กริด 2×2 (มี "คาบเรียน") | **3 ทาง กริด 1×3** — งาน · กิจกรรมปฏิทิน · ผลงาน (ตัด "โน๊ต" ตามเดิม · ไม่เพิ่ม "คาบเรียน") | `QuickAddSheet.options` เหลือ 3 |
+
+### ก้อน B ทิ้งอะไรไว้ให้ก้อนอื่น
+
+| ของ | อยู่ที่ | ใครได้ใช้ต่อ |
+|---|---|---|
+| แบบแผน toolbar ของทั้งแอป: **＋ ขวาบน = เพิ่มของในหน้านี้ · ⚙︎/เมนู ซ้ายบน = งานนานๆ ครั้ง** | `ScheduleView` · `AssignmentListView` | ทุกหน้าที่มีปุ่มเพิ่ม (`06_TCAS` "+ คณะ" · `07_Portfolio` "+ ผลงาน") ควรตามแบบนี้ |
+| `TimelineView` ชั้นเดียวส่ง `now` ลงลูก แทนที่จะให้ลูกถือนาฬิกาเอง | `ScheduleTimetableSection` | `08_Calendar` ถ้าต้องมีเส้นบอกเวลาปัจจุบัน |
+| `CardContainer(padding: 0)` + แถวจัด padding เอง = แถว full-bleed ในการ์ดมุมมนได้ | `ScheduleTimetableSection` + `ScheduleBreakRow` | ทุกก้อนที่มีลิสต์ในการ์ด |
 
 ### ก้อน A ทิ้งอะไรไว้ให้ก้อนอื่น
 
@@ -130,7 +138,9 @@
 
 | ต้นเหตุ | ผลกระทบ | ใครแก้ |
 |---|---|---|
-| `02_Schedule` ลบ `ScheduleTodayTasksSection` | Toggle "แสดงงานส่วนตัวในตารางเรียน" ที่ `SettingsView.swift:167` กลายเป็นสวิตช์ตาย | agent ของ `05_Settings` |
+| `02_Schedule` ลบ `ScheduleTodayTasksSection` | 🔴 **เกิดขึ้นจริงแล้วตั้งแต่ก้อน B (14 ส.ค.)** — Toggle "แสดงงานส่วนตัวในตารางเรียน" ที่ `SettingsView.swift:167` + `@AppStorage` ที่บรรทัด 29 **เป็นสวิตช์ตายอยู่ตอนนี้** ไม่ควบคุมอะไรเลย ต้องลบทั้งคู่ | agent ของ `05_Settings` (ก้อน D) |
+| `02_Schedule` เพิ่มทางเข้าที่สองของ `TermManagementView` | `SettingsView` ยังเปิดหน้านี้อีกทาง — **ห้ามลบทางนั้น** สองทางอยู่ร่วมกันได้ | agent ของ `05_Settings` |
+| `02_Schedule` เลิกใช้คำว่า "ตารางสอน" | เหลือ 4 จุดใน `TermGradeEditView.swift` (บรรทัด 192 · 201 · 202 · 239) | agent ของ `04_GradeCenter` (ก้อน C) |
 | ~~`01_Tasks` §5 ปุ่ม `+` ตามแท็บ~~ | ✅ **ยกเลิกแล้ว (Few 14 ส.ค.)** — `RootTabView` เสร็จหมดแล้ว ปุ่ม `+` เปิดเมนูเดียวกันทุกแท็บ · โมดูลอื่นยังห้ามแตะไฟล์นี้จนถึง W3 | — |
 | ~~`01_Tasks` เพิ่ม `presetKind:` ใน `AddTaskSheet`~~ | ✅ **W1 ทำแล้ว** — `init(editing:presetKind:onSaved:)` default `.homework` | — |
 | ~~`03_QuickAdd` §5 sheet ชั้นเดียว~~ | ✅ **ยกเลิกแล้ว (Few 14 ส.ค.)** — คง sheet ซ้อน sheet ไว้ | — |

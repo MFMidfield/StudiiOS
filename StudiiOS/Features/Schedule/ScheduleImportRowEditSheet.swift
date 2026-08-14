@@ -174,7 +174,7 @@ struct ScheduleImportRowEditSheet: View {
 
     private func hint(_ text: String, color: Color) -> some View {
         Text(text)
-            .font(.caption)
+            .font(Theme.Font.caption)
             .foregroundStyle(color)
     }
 

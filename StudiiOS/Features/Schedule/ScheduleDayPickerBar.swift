@@ -1,66 +1,62 @@
 //
 //  ScheduleDayPickerBar.swift
-//  Monday–Friday day selector strip for the Schedule tab, with a sliding
-//  underline on the selected day and a dot marking today's real weekday.
+//  Monday–Friday day selector strip for the Schedule tab. The selected day is a
+//  filled capsule that slides between days; today is marked by colouring its
+//  label rather than by a separate dot — one signal per day, not two.
 //
 
 import SwiftUI
 
 struct ScheduleDayPickerBar: View {
     @Binding var selectedDay: Int
-    @Namespace private var underlineNamespace
-
-    private var todayWeekday: Int {
-        // Calendar.weekday: 1=Sunday...7=Saturday → remap to 1=Monday...7=Sunday
-        let raw = Calendar.current.component(.weekday, from: .now)
-        return raw == 1 ? 7 : raw - 1
-    }
+    @Namespace private var capsuleNamespace
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: Theme.Spacing.xs) {
             ForEach(ScheduleConstants.visibleDays, id: \.self) { day in
                 dayButton(day)
             }
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .padding(.top, Theme.Spacing.sm)
-        .padding(.bottom, Theme.Spacing.xs)
-        .background(Theme.Colors.cardBackground)
+        .padding(.vertical, Theme.Spacing.sm)
+        // The strip is not a card — giving it its own surface made it read as
+        // a second header stacked under the navigation bar.
+        .background(Theme.Colors.background)
         .animation(.snappy, value: selectedDay)
     }
 
     private func dayButton(_ day: Int) -> some View {
         let isSelected = day == selectedDay
-        let isToday = day == todayWeekday
+        let isToday = day == ScheduleConstants.todayWeekday
 
         return Button {
             selectedDay = day
             AppLog.action("Schedule", "เลือกวัน: \(ScheduleConstants.dayLabels[day] ?? "")")
         } label: {
-            VStack(spacing: 6) {
-                Text(ScheduleConstants.dayLabels[day] ?? "")
-                    .font(.system(size: 14, weight: isSelected ? .bold : .regular))
-                    .foregroundStyle(isSelected ? Theme.Colors.primaryDeep : Theme.Colors.textSecondary)
-
-                ZStack {
+            Text(ScheduleConstants.dayLabels[day] ?? "")
+                .font(Theme.Font.plex(14, isSelected ? .semibold : .regular))
+                .foregroundStyle(foreground(isSelected: isSelected, isToday: isToday))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background {
                     if isSelected {
-                        RoundedRectangle(cornerRadius: 2)
+                        Capsule()
                             .fill(Theme.Colors.primary)
-                            .frame(height: 3)
-                            .matchedGeometryEffect(id: "underline", in: underlineNamespace)
-                    } else {
-                        Color.clear.frame(height: 3)
+                            .matchedGeometryEffect(id: "selectedDay", in: capsuleNamespace)
                     }
                 }
-
-                Circle()
-                    .fill(isToday ? Theme.Colors.primary : Color.clear)
-                    .frame(width: 4, height: 4)
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    /// Today keeps an accent tint while unselected so the student can find it
+    /// after browsing another day.
+    private func foreground(isSelected: Bool, isToday: Bool) -> Color {
+        if isSelected { return Theme.Colors.onPrimary }
+        return isToday ? Theme.Colors.primaryDeep : Theme.Colors.textSecondary
     }
 }
 

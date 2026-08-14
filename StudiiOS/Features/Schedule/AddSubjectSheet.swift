@@ -53,7 +53,7 @@ struct AddSubjectSheet: View {
                     TextField("ชื่อวิชา", text: $name)
                     if isDuplicateName {
                         Text("มีวิชานี้อยู่แล้ว")
-                            .font(.caption)
+                            .font(Theme.Font.caption)
                             .foregroundStyle(Theme.Colors.danger)
                     }
 
@@ -74,7 +74,7 @@ struct AddSubjectSheet: View {
                 Section {
                     Toggle("เป็นช่วงพัก", isOn: $isBreak)
                     Text("จะแสดงเป็นแถบพิเศษ ไม่มีเลขคาบ")
-                        .font(.caption2)
+                        .font(Theme.Font.caption)
                         .foregroundStyle(.secondary)
                 }
             }

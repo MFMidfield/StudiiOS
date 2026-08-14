@@ -166,7 +166,7 @@ struct AddScheduleEntrySheet: View {
             Button {
                 isShowingScanWarning = true
             } label: {
-                Label("ถ่ายตารางสอน", systemImage: "camera.viewfinder")
+                Label("ถ่ายตารางเรียน", systemImage: "camera.viewfinder")
             }
             .disabled(isAnalyzingPhoto)
 
@@ -178,7 +178,7 @@ struct AddScheduleEntrySheet: View {
             }
             if let scanError {
                 Text(scanError)
-                    .font(.caption)
+                    .font(Theme.Font.caption)
                     .foregroundStyle(Theme.Colors.warning)
             }
         } footer: {
@@ -210,7 +210,7 @@ struct AddScheduleEntrySheet: View {
             DatePicker("เวลาสิ้นสุด", selection: $endTime, displayedComponents: .hourAndMinute)
             if let overlap = overlappingEntry {
                 Text("เวลาซ้อนทับกับคาบ \(overlap.periodNumber) (\(overlap.startMinute.asClockString)-\(overlap.endMinute.asClockString))")
-                    .font(.caption)
+                    .font(Theme.Font.caption)
                     .foregroundStyle(Theme.Colors.warning)
             }
         }

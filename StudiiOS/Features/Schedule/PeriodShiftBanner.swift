@@ -18,22 +18,28 @@ struct PeriodShiftBanner: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
+            // Only the icon carries the warning colour. Amber text on an amber
+            // wash was the lowest-contrast text in the app.
             Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                .foregroundStyle(Theme.Colors.warning)
+
             Text("วันนี้ร่นคาบ · เริ่มคาบ \(override.startPeriodNumber) \(override.startMinute.asClockString) · คาบละ \(override.periodLengthMinutes) นาที")
-                .font(.caption)
-                .fontWeight(.medium)
-            Spacer()
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.Colors.textPrimary)
+
+            Spacer(minLength: Theme.Spacing.xs)
+
+            // Kept accent-coloured: it is the one tappable thing in the banner.
             Button("คืนค่าเดิม") {
                 showConfirm = true
             }
-            .font(.caption)
-            .fontWeight(.semibold)
+            .font(Theme.Font.plex(11, .semibold))
+            .foregroundStyle(Theme.Colors.primaryDeep)
         }
-        .foregroundStyle(Theme.Colors.warning)
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.sm)
         .background(Theme.Colors.warning.opacity(0.15))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
         .confirmationDialog(
             "คืนค่าตารางเดิม?",
             isPresented: $showConfirm,

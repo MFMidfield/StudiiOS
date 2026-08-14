@@ -1,7 +1,11 @@
 //
 //  ScheduleBreakRow.swift
 //  A lunch-break (or other isBreak subject) row inside ScheduleTimetableSection —
-//  rendered as a distinct cream banner with no period number, room, teacher, or chevron.
+//  a full-bleed cream band with no period number, room, teacher, or chevron.
+//
+//  The band itself already says "this is not a class", so the row carries no
+//  icon and no bold text: a break that shouts louder than the periods around it
+//  is reading the timetable backwards.
 //
 
 import SwiftUI
@@ -16,30 +20,25 @@ struct ScheduleBreakRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: Theme.Spacing.md) {
-                ZStack {
-                    Circle()
-                        .fill(Theme.Colors.cardBackground)
-                        .overlay(Circle().strokeBorder(Theme.Colors.warning, lineWidth: 1.5))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: entry.subject?.iconName ?? "fork.knife")
-                        .foregroundStyle(Theme.Colors.warning)
-                }
-
+            HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+                // Same column width as SchedulePeriodRow so the times line up
+                // straight down the card.
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(subjectName)
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Theme.Colors.textPrimary)
-                    Text("\(period.startMinute.asClockString) – \(period.endMinute.asClockString)")
-                        .font(.caption)
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                    Text(period.startMinute.asClockString)
+                    Text(period.endMinute.asClockString)
                 }
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .frame(width: 34, alignment: .leading)
 
-                Spacer()
+                Text(subjectName)
+                    .font(Theme.Font.plex(13, .medium))
+                    .foregroundStyle(Theme.Colors.textSecondary)
+
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, Theme.Spacing.md)
-            .padding(.vertical, Theme.Spacing.sm)
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.md)
             .frame(maxWidth: .infinity)
             .background(Theme.Colors.breakBackground)
             .contentShape(Rectangle())

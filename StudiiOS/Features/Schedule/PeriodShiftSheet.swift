@@ -149,7 +149,7 @@ struct PeriodShiftSheet: View {
                 }
             }
             Text("คาบก่อนหน้าคาบที่เลือกจะไม่แสดงในวันนี้")
-                .font(.caption)
+                .font(Theme.Font.caption)
                 .foregroundStyle(Theme.Colors.textSecondary)
 
             DatePicker("คาบแรกเริ่ม", selection: $startTime, displayedComponents: .hourAndMinute)
@@ -166,7 +166,7 @@ struct PeriodShiftSheet: View {
             }
             if !isLengthValid {
                 Text("คาบละต้องอยู่ระหว่าง 1-240 นาที")
-                    .font(.caption)
+                    .font(Theme.Font.caption)
                     .foregroundStyle(Theme.Colors.danger)
             }
         }

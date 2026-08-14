@@ -113,10 +113,10 @@ struct ScheduleImportReviewSheet: View {
             HStack(spacing: Theme.Spacing.md) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text("อ่านได้ \(periods.count) คาบ · ต้องตรวจ \(flaggedCount) คาบ")
-                        .font(.subheadline)
+                        .font(Theme.Font.body)
                         .fontWeight(.semibold)
                     Text("แตะแถวเพื่อแก้ · ปัดซ้ายเพื่อลบ")
-                        .font(.caption)
+                        .font(Theme.Font.caption)
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
                 Spacer(minLength: Theme.Spacing.sm)
@@ -137,7 +137,7 @@ struct ScheduleImportReviewSheet: View {
 
     private var filterToggle: some View {
         Toggle("เฉพาะที่ต้องตรวจ (\(flaggedCount))", isOn: $showsOnlyFlagged)
-            .font(.subheadline)
+            .font(Theme.Font.body)
             .padding(.horizontal, Theme.Spacing.lg)
     }
 
@@ -167,7 +167,7 @@ struct ScheduleImportReviewSheet: View {
             Button("เพิ่มคาบใน\(ScheduleConstants.dayLabelsFull[day] ?? "")") {
                 addBlankPeriod(day: day)
             }
-            .font(.caption)
+            .font(Theme.Font.caption)
         }
     }
 
@@ -175,7 +175,7 @@ struct ScheduleImportReviewSheet: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             HStack(spacing: Theme.Spacing.sm) {
                 Text(period.subjectName)
-                    .font(.headline)
+                    .font(Theme.Font.plex(15, .semibold))
                     .foregroundStyle(Theme.Colors.textPrimary)
                 if !period.subjectCode.isEmpty { codeChip(period.subjectCode) }
                 Spacer(minLength: Theme.Spacing.xs)
@@ -188,13 +188,13 @@ struct ScheduleImportReviewSheet: View {
                 "คาบ \(period.periodNumber) · "
                     + "\(period.startMinute.asClockString)-\(period.endMinute.asClockString)"
             )
-            .font(.caption)
+            .font(Theme.Font.caption)
             .foregroundStyle(Theme.Colors.textSecondary)
 
             let detail = detailLine(period)
             if !detail.isEmpty {
                 Text(detail)
-                    .font(.caption)
+                    .font(Theme.Font.caption)
                     .foregroundStyle(Theme.Colors.textSecondary)
             }
         }
@@ -203,7 +203,7 @@ struct ScheduleImportReviewSheet: View {
 
     private func codeChip(_ code: String) -> some View {
         Text(code)
-            .font(.caption2)
+            .font(Theme.Font.caption)
             .padding(.horizontal, Theme.Spacing.sm)
             .padding(.vertical, 2)
             .background(Theme.Colors.primary.opacity(0.12), in: Capsule())
