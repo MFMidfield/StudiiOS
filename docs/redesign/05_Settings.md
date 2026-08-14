@@ -1,8 +1,9 @@
 # 05 · Settings — หน้าตั้งค่า
 
-> โมดูล `StudiiOS/Features/Settings/` (3 ไฟล์ · 1,041 บรรทัด)
-> `SettingsView.swift` ไฟล์เดียว 588 บรรทัด บรรจุ 4 struct
-> ⚠️ **ทำโมดูลนี้หลัง `04_GradeCenter` เสร็จเท่านั้น** — ไม่งั้นจะมีช่วงที่แอปไม่มีที่ตั้งเป้า GPAX เลย
+> โมดูล `StudiiOS/Features/Settings/` — ✅ **ทำเสร็จแล้ว (W2 ก้อน D, 15 ส.ค. build เขียว)**
+> เดิม 3 ไฟล์ 1,041 บรรทัด · `SettingsView.swift` ไฟล์เดียว 588 บรรทัด บรรจุ 4 struct
+> ตอนนี้ 6 ไฟล์ · `SettingsView.swift` เหลือ 465 บรรทัด
+> ~~ทำหลัง `04_GradeCenter` เท่านั้น~~ เงื่อนไขนี้ปลดแล้ว (ก้อน C เสร็จก่อน)
 
 ---
 
@@ -115,9 +116,27 @@ List
   ลบข้อมูลทั้งหมดถาวร               ← destructive ล่างสุด
 ```
 
+### 4.0 🔒 กล่อง dev ล็อก 2 ชั้น — Few ตัดสิน 15 ส.ค.
+
+สเปคเดิมสั่งแค่ `#if DEBUG` แต่ **เดโม่รันจาก Xcode ซึ่งคือ Debug build** → กรรมการจะเห็นกล่องนั้นทั้งกล่อง
+รวมปุ่มลบข้อมูลด้วย จึงเพิ่มชั้นที่สอง:
+
+```swift
+@State private var versionTapCount = 0
+@State private var isShowingDeveloperTools = false   // ← @State ไม่ใช่ @AppStorage โดยตั้งใจ
+```
+
+- แตะแถว **"เวอร์ชัน 1.0.0"** ครบ **7 ครั้ง** → กล่องโผล่
+- **ปิดแอปเปิดใหม่ = ซ่อนอีกครั้ง** (Few เลือกข้อนี้เอง) — เดโม่จะไม่มีทางเริ่มด้วยปุ่มลบข้อมูลอยู่บนจอ
+- นับถึง 7 แล้วหยุดนับ แตะต่อไม่มีผล
+
+⚠️ `.fullScreenCover` ที่เปิด `SetupFlowTestContainer` ต้องแปะบน **Section ในกล่อง dev** ไม่ใช่บน `body`
+เพราะ struct นั้นอยู่ใน `#if DEBUG` ทั้งไฟล์ — แปะบน body แล้ว Release build จะคอมไพล์ไม่ผ่าน
+
 ### 4.1 การ์ดโปรไฟล์
 
-- ทั้งใบเป็น `NavigationLink` ไป `EditProfileView` (เดิมเป็นปุ่ม "แก้ไข" เล็กๆ ทางขวา)
+- ~~ทั้งใบเป็น `NavigationLink`~~ → **ทั้งใบกดได้ แต่ยังเปิดเป็น sheet** (Few ตัดสิน 15 ส.ค.)
+  เหตุผล: `EditProfileView` มี `NavigationStack` + ปุ่มยกเลิก/บันทึกของตัวเอง ถ้า push เข้าไป stack จะซ้อนกัน toolbar เพี้ยน
 - รูปวงกลม 46 · ถ้าไม่มีรูปใช้อักษรย่อจากชื่อเล่นบนพื้น `primarySoft` (เดิมเป็นไอคอน `person.fill` สีเทา)
 - บรรทัดรอง: `"<ชื่อเล่น> · <ระดับชั้นจริง>"` — ถ้าไม่มีชื่อเล่นใช้ชื่อจริง
 
@@ -154,7 +173,9 @@ _remindersEnabled = State(initialValue:
 - ใต้ Toggle มีคำอธิบายว่าเปิดแล้วเตือนตอนไหน — **ข้อความต้องตรงกับโค้ดจริงใน `NotificationManager` slot `.d1`/`.am`/`.h1`:**
   > `"เปิดไว้ = งานใหม่ที่มีกำหนดส่งจะเตือน 3 ครั้ง — 1 วันก่อน · 07:00 ของวันกำหนด · 1 ชั่วโมงก่อน (ปรับรายชิ้นได้ในฟอร์มเพิ่มงาน)"`
 - **ห้ามแก้ `Core/Notifications/NotificationManager.swift`** ในสเปคนี้
-- ⚠️ `AddTaskSheet.swift` **เป็นไฟล์ของ agent โมดูล Tasks** — ให้ agent Tasks แก้บรรทัดนั้น ไม่ใช่ agent Settings
+- ✅ **แก้แล้ว** — Few อนุมัติให้ก้อน D แก้ข้ามโมดูลได้ (15 ส.ค.) · key ประกาศที่ `SettingsView.reminderDefaultKey`
+  แล้ว `AddTaskSheet.init` อ่านไปใช้ — ถ้าไม่แก้บรรทัดนี้ สวิตช์จะกลายเป็นสวิตช์ตายตัวที่สอง
+  แบบเดียวกับ "แสดงงานส่วนตัวในตารางเรียน" ที่เพิ่งลบทิ้งไปในก้อน B
 
 ### 4.4 โปรไฟล์เพิ่ม 3 ฟิลด์
 
@@ -215,22 +236,29 @@ static func resetAll() {
 
 ---
 
-## 5. ไฟล์ที่แตะ
+## 5. ไฟล์ที่แตะ — ✅ ทำครบแล้ว
 
-| ไฟล์ | ทำอะไร |
-|---|---|
-| `Features/Settings/SettingsView.swift` | จัดกลุ่มใหม่ทั้งหน้า · ย้าย dev tools · ตัด 3 อย่าง · เพิ่ม 4 อย่าง · แยก 3 struct ออก |
-| `Features/Settings/EditProfileView.swift` | **ไฟล์ใหม่** (ย้ายมา) + 3 ฟิลด์ |
-| `Features/Settings/PendingNotificationsView.swift` | **ไฟล์ใหม่** (ย้ายมา) |
-| `Features/Settings/SetupFlowTestContainer.swift` | **ไฟล์ใหม่** (ย้ายมา, `#if DEBUG`) |
-| `Features/Settings/TermManagementView.swift` | **ทาสีอย่างเดียว** |
-| `Features/Settings/OCRDebugView.swift` | **ไม่แตะ** — เป็น dev tool ล้วน |
-| `Core/Profile/StudentProfileStore.swift` | เพิ่ม 3 key + ล้างใน `reset()` |
-| `Core/DesignSystem/AppTheme.swift` | **ไฟล์ใหม่** ~20 บรรทัด |
-| `App/StudiiOSApp.swift` | **เฉพาะบรรทัด `.preferredColorScheme`** — ห้ามแตะ `Schema` |
+ทำ 2 รอบตามที่ Few เลือก · รอบ 1 = แยกไฟล์+จัดกลุ่ม+กล่อง dev · รอบ 2 = ธีม+โปรไฟล์+สวิตช์เตือน+resetAll
 
-**ไฟล์ที่ agent อื่นเป็นเจ้าของ — ห้ามแตะ:**
-`AddTaskSheet.swift` (agent Tasks — §4.3) · `RootTabView.swift` (agent Tasks) · `Core/Notifications/NotificationManager.swift` (ห้ามทุกคน)
+| ไฟล์ | ทำอะไร | สถานะ |
+|---|---|---|
+| `Features/Settings/SettingsView.swift` (465) | จัดกลุ่มใหม่ 5 section · dev tools เข้ากล่อง 7 แตะ · ตัด 4 อย่าง · เพิ่ม 3 อย่าง · แยก 3 struct ออก | ✅ |
+| `Features/Settings/EditProfileView.swift` (147) | **ไฟล์ใหม่** (ย้ายมา) + section "โรงเรียน" 3 ฟิลด์ | ✅ |
+| `Features/Settings/PendingNotificationsView.swift` (49) | **ไฟล์ใหม่** (ย้ายมา) + ทาสี | ✅ |
+| `Features/Settings/SetupFlowTestContainer.swift` (56) | **ไฟล์ใหม่** (ย้ายมา, `#if DEBUG` ทั้งไฟล์) | ✅ |
+| `Features/Settings/TermManagementView.swift` (117) | ทาสี | ✅ |
+| `Features/Settings/OCRDebugView.swift` | ไม่แตะ | ✅ |
+| `Core/Profile/StudentProfileStore.swift` | +3 key · อ่านใน `init` · ล้างใน `reset()` | ✅ |
+| `Core/DesignSystem/AppTheme.swift` (36) | **ไฟล์ใหม่** | ✅ |
+| `Core/Grades/GPAXSettings.swift` | **+`resetAll()`** (เพิ่มเมธอดใหม่ ไม่แก้ของเดิม) | ✅ |
+| `App/StudiiOSApp.swift` | เติม `.preferredColorScheme` บรรทัดเดียว — **ไม่ได้แตะ `Schema`** | ✅ |
+| `Features/Tasks/AddTaskSheet.swift` | 1 บรรทัดใน `init` (Few อนุมัติข้ามโมดูล) | ✅ |
+
+**ห้ามแตะ:** `Core/Notifications/NotificationManager.swift` (ห้ามทุกคน) · `RootTabView.swift` (ล็อกถึง W3)
+
+> ⚠️ **ไฟล์ใหม่ใน `Core/DesignSystem/` อาจทำให้ Xcode มองไม่เห็นถ้าเปิดโปรเจกต์ค้างไว้**
+> อาการ: `Cannot find 'AppTheme' in scope` ทั้งที่ไฟล์อยู่บนดิสก์จริง · `.pbxproj` ไม่ผิด (exception มีแค่ `Info.plist`)
+> แก้ด้วย `⇧⌘K` แล้ว build ใหม่ หรือปิด–เปิดโปรเจกต์
 
 ---
 
@@ -252,7 +280,8 @@ static func resetAll() {
 เข้าแท็บตั้งค่า:
 
 1. **ไม่มีปุ่มลบข้อมูลใน 3 บรรทัดแรกแล้ว** — อยู่ล่างสุดในกล่อง "สำหรับนักพัฒนา" ชื่อ "ลบข้อมูลทั้งหมดถาวร"
-2. Toggle Pro · เปิดหน้า Setup · ทดสอบแจ้งเตือน ทั้งสามอยู่ในกล่อง dev เดียวกัน
+   และ**กล่องนั้นต้องไม่โผล่เลย**จนกว่าจะแตะแถวเวอร์ชัน 7 ครั้ง · ปิดแอปเปิดใหม่ต้องซ่อนอีกครั้ง
+2. Toggle Pro · เปิดหน้า Setup · ทดสอบแจ้งเตือน · ทดสอบ OCR ทั้งสี่อยู่ในกล่อง dev เดียวกัน
 3. ไม่มี Toggle "แสดงงานส่วนตัวในตารางเรียน" และไม่มี section "หลักการออกแบบ" แล้ว
 4. ไม่มีช่องตั้งเป้า GPAX ในหน้านี้ — ตั้งได้ที่หน้าเกรดที่เดียว
 5. **เปลี่ยนธีมเป็น "มืด" → ทั้งแอปเป็นมืดทันทีแม้ระบบตั้งเป็นสว่าง** · ปิดแอปเปิดใหม่ค่ายังอยู่

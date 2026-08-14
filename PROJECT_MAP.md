@@ -1,7 +1,14 @@
 # PROJECT_MAP — Student OS (StudiiOS)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-14 — **PLAN_Redesign.md Wave 1** (branch `redesign`): token terracotta ชุดใหม่ +
+> **อัปเดตล่าสุด:** 2026-08-15 — **PLAN_Redesign.md Wave 2 ก้อน A–D** (branch `redesign`) build เขียวแล้ว:
+> หน้างาน · QuickAdd · ตารางเรียน · เกรด/GPAX · ตั้งค่า ยกเครื่องครบ (สเปครายหน้าอยู่ `docs/redesign/01–05`)
+> **เหลือก้อน E `06_TCAS` · F `07_Portfolio` · G `08_Calendar`** — สถานะล่าสุดอยู่ที่ `docs/redesign/00_INDEX.md` เสมอ
+>
+> ของใหม่ที่กระทบทั้งแอป: `AppTheme` (ธีมสว่าง/มืด) · `GPAXSettings.resetAll()` · สวิตช์ค่าเริ่มต้นการเตือนงาน ·
+> ลบ 4 ไฟล์ (`TaskStatsRow` · `TaskFilterSheet` · `ScheduleTodayTasksSection` · `ScheduleSettingsSheet`)
+>
+> ก่อนหน้านั้น 2026-08-14 — **Wave 1**: token terracotta ชุดใหม่ +
 > `Theme.Font` + คอมโพเนนต์ `PillLabel`/`IconTile`/`SectionHeader` + Dashboard ทั้งหน้า + tab bar
 > (ดู §5 Design tokens · Dashboard ใน §2 · §4 Navigation) — วันเดียวกัน: รีแบรนด์ทั้งโปรเจกต์จาก PrototypeApp
 > เป็น **Studii OS** (target/project/bundle ID เปลี่ยนเป็น `StudiiOS`/`mfmidfield.StudiiOS`,
@@ -47,11 +54,15 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
 │   │   ├── PillLabel.swift        (83)  ป้ายแคปซูล 5 tone (accent/neutral/danger/warning/custom)
 │   │   ├── IconTile.swift         (55)  SF Symbol บนพื้นสี่เหลี่ยมมน — ปรับ size/tint/background/radius ได้
 │   │   ├── SectionHeader.swift    (75)  หัวข้อ section + trailing ViewBuilder + SectionMoreLabel
+│   │   ├── AppTheme.swift         (36)  **ใหม่ W2-D** ธีม system/light/dark — จุดเดียวที่รู้จัก key ธีม
+│   │   │                                (`AppTheme.storageKey`) อ่าน 2 ที่: Picker ใน SettingsView +
+│   │   │                                `.preferredColorScheme` ใน RootContainerView · `.system` → nil
 │   │   └── ProUpsellView.swift
 │   ├── Entitlements/FeatureTier.swift  (62)  Free/Pro/Plus + EntitlementStore.shared
 │   ├── Extensions/
 │   │   ├── Color+Hex.swift
 │   │   └── Date+Thai.swift              วันที่ไทย/พ.ศ. + thaiShortNoYear/thaiDayMonthYear/thaiWeekdayShort
+│   │                                    + `thaiWeekdayDayMonthString` ("พฤ. 13 ส.ค." — W2-A) ใช้เป็นหัวข้อกลุ่มวันในหน้างาน
 │   │                                    + `Date.thaiDueLabel` — ป้ายกำหนดส่งแบบสัมพัทธ์ ("เลย 2 วัน"/"วันนี้"/
 │   │                                    "พรุ่งนี้"/"ศ."/"12 ก.ย.") ใช้ร่วมกันทั้ง Dashboard และหน้างาน
 │   ├── Grades/                          Level 1 GPAX (PLAN_GPA.md) — ตัวเลขคำนวณจากเทอมที่กรอกเองเท่านั้น
@@ -223,34 +234,45 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                    **ห้ามลบ** ไม่งั้นแอปอื่นถูกบล็อกค้างถาวร
     │   └── FocusModeView.swift      (~430) UI ล้วน ไม่เก็บเวลาเอง · body แบ่ง 2 ชั้น (mainContent
     │                                      + presentation) จงใจ กัน type-check timeout
-    ├── GradeCenter/GradeCenterView.swift  (~60) GPAX summary + per-term list เท่านั้น — `GradeBreakdownCard`/
-    │                                    `TargetScoreCalculatorCard`/`ThaiGrading` (Level 3 เดิม) ถูกลบแล้ว (2026-08-10,
-    │                                    PLAN_2026-08-10_Fixes Task 4) `GradeComponent` model **ยังอยู่** (เก็บไว้เพื่อ
-    │                                    ความเข้ากันได้ของ store เท่านั้น ไม่มี UI แล้ว) Level 1 GPAX อ่านเทอมจริง
-    │                                    ผ่าน `GPAXSettings.currentSortKey` เท่านั้น (D7 — ดู comment ที่จุดเรียกในไฟล์)
-    │              + GPAXSummaryCard.swift    (~210) การ์ดสรุป: ตัวเลข GPAX + range bar (พื้น/เพดาน/เป้า) + ข้อความ state
-    │                                    `.tight` ที่ gpax >= 3.995 ขึ้นข้อความ/สีเขียวแทนส้ม (เพิ่งแก้)
-    │                                    ยังมี `TargetQuickSetter` (private) ฝังอยู่ — ตั้งเป้าแบบเร็วๆ ชั่วคราว ตัวเต็มควรย้ายไป
-    │                                    Settings ตอนขัดดีไซน์รอบหน้า (ตอนนี้มี 2 ที่ตั้งเป้าได้: การ์ดนี้ + Settings)
-    │              + TermGradeListSection.swift (~135) 6 แถวคงที่ ม.4–ม.6 เสมอ · **แตะได้เฉพาะเทอมที่จบไปแล้ว**
-    │                                    (`sortKey < currentSortKey`) เป็น `NavigationLink` **push** ไป `TermGradeEditView`
-    │                                    (ไม่ใช่ sheet แล้ว) · เทอมที่กำลังเรียนอยู่และเทอมอนาคตกดไม่ได้
-    │                                    ⚠️ เทอมปัจจุบันกดไม่ได้**โดยตั้งใจ**: `GPAXCalculator` นับเฉพาะ `sortKey < currentSortKey`
-    │                                    เป็นเทอมที่จบแล้ว เกรดที่กรอกให้เทอมปัจจุบันจึงถูกเมินทั้งหมด (ข้อมูลหายเงียบๆ)
-    │                                    จะกรอกได้ต่อเมื่อกด "ขึ้นชั้นแล้ว" ใน Settings เพื่อเลื่อนเทอมจริงก่อน
-    │              + TermGradeEditView.swift  (~330) แทนที่ `TermGradeEditSheet` เดิม — pushed page มี Toggle "กรอกละเอียด"
-    │                                    บนสุด · โหมดปกติ: กรอก gpa/totalCredits ตรงๆ (prefill 2.00 ถ้าเทอมยังไม่มีข้อมูล)
-    │                                    · โหมดละเอียด (`Term.usesDetailedGrades`): List ของ `TermGradeSubject` ต่อวิชา
-    │                                    (ชื่อ/หน่วยกิต Stepper 0.5–4.0/เกรด Stepper 8-step ไทย) seed จาก ScheduleEntry
-    │                                    ของเทอมนั้นครั้งแรกที่เปิดโหมดนี้ (ข้าม isBreak) ปุ่ม "ดึงวิชาจากตารางสอนอีกครั้ง"
-    │                                    เพิ่มเฉพาะชื่อที่ยังไม่มี ไม่เคยลบ · ทุกการแก้ไข autosave แล้วคำนวณ
-    │                                    `term.gpa`/`totalCredits` ใหม่ทันที (ผลรวมถ่วงน้ำหนักหน่วยกิต) — ทุกจุดสร้าง
-    │                                    `Term` ผ่าน `TermStore.findOrCreate` เท่านั้น
-    │              + GradeLevelSheet.swift     (99)  Screen 1 (§6.1) ตั้ง `GPAXSettings.currentGradeLevel/currentTermNumber`
-    │                                    เปิดจาก 2 ที่: การ์ดว่างของ GPAXSummaryCard ครั้งแรก · Settings "แก้ระดับชั้น"
-    │              + CumulativeGPAXSheet.swift (87)  Screen 4 (§6.4) "จำเกรดไม่ได้" — ตัวเลือก 1 เขียน
-    │                                    `GPAXSettings.setCumulative` + entryMode `.cumulative` (D3) · ตัวเลือก 3 สร้าง
-    │                                    `CalendarEvent` เตือนขอ ปพ.1 จริง (ผ่าน initializer เดิม ไม่ได้แก้ CalendarView.swift)
+    ├── GradeCenter/  หน้าเกรดและ GPAX — **ยกเครื่องรอบ W2 ก้อน C** (`docs/redesign/04_GradeCenter.md`)
+    │   │            🟡 build เขียวแล้วแต่ **Few บอกว่าหน้าตายังไม่ผ่าน รอเก็บตกละเอียด** — อย่ารื้อเองก่อนถาม
+    │   ├── GradeCenterView.swift        (79)  หัวข้อหน้าใช้ `GPAXSettings.currentSortKey` (เทอมจริง)
+    │   │                                     **เลิกใช้ `TermStore.activeTermKey` ในไฟล์นี้แล้ว** (เดิมหัวข้อบอกเทอมที่
+    │   │                                     เปิดดูตาราง ไม่ตรงกับตัวเลขทั้งหน้า) · ไม่มี GPAX = ซ่อน TermGradeListSection
+    │   │                                     ทั้งอัน ไม่โชว์ 6 แถวว่าง · `@AppStorage` ping 7 ตัว **ห้ามลบ**
+    │   ├── GPAXSummaryCard.swift       (259)  เลข GPAX เป็น `textPrimary` (ไม่ใช่สีลิงก์) · เป้า+ดินสอมุมขวาบน
+    │   │                                     กดได้ตลอดเวลา → `GPAXTargetSheet` · ป้ายเลขที่ปลาย bar สองข้าง
+    │   │                                     **ไม่มีคำว่า "พื้น/เพดาน" แล้ว** แทนด้วย 2 ประโยค ("ถ้าเลิกตั้งใจเลยจะจบที่ X")
+    │   │                                     · กล่องสถานะสีตาม state (`outOfReach` แดง · `achieved/finished` เขียว
+    │   │                                     · ที่เหลือ primarySoft) ข้อความมาจาก `copy(for:gpax:)` เดิมทั้งหมด
+    │   │                                     · `TargetQuickSetter` **ถูกลบแล้ว**
+    │   ├── GPAXRangeBar.swift           (45)  **ใหม่ W2-C** แถบ floor–ceiling + ขีดเป้า (แยกจากการ์ดกัน type-check)
+    │   ├── GPAXTargetSheet.swift       (120)  **ใหม่ W2-C — ที่ตั้งเป้า GPAX ที่เดียวของทั้งแอป**
+    │   │                                     ปุ่มลัด 5 ค่า + ช่อง "ตั้งเป้านี้เพราะ" + ปุ่มลบเป้า
+    │   │                                     เขียนผ่าน `GPAXSettings.setTarget` เท่านั้น (Settings ไม่มีช่องเป้าแล้ว)
+    │   ├── TermGradeChart.swift        (224)  **ใหม่ W2-C** กราฟแท่ง 6 เทอม สเกล gpa/4.0
+    │   │                                     ทึบ = กรอกแล้ว (แตะ→push TermGradeEditView) · จาง+ป้าย "เพิ่ม" = จบแล้วยังไม่กรอก
+    │   │                                     (แตะได้เหมือนกัน) · เส้นประ = เทอมกำลังเรียน (กดไม่ได้) · จาง = อนาคต
+    │   │                                     + เส้นเป้าพาดขวาง + แกน x + `accessibilityLabel` ทุกแท่ง
+    │   │                                     ⚠️ gap ระหว่างแท่งล็อกที่ 6 — กว้างกว่านี้แท่งจะต่ำกว่า 44pt ของ HIG
+    │   ├── TermGradeListSection.swift  (190)  แถบวัดในแถว + **chevron เฉพาะแถวที่กดได้** (สัญญาณเดียวว่ากดได้)
+    │   │                                     · แถวเทอมปัจจุบัน = `PillLabel "เรียนอยู่"` สีกลาง + พื้นอ่อน (เดิมเป็นสีส้ม
+    │   │                                     ซึ่งคือสีลิงก์ ทำให้ดูเหมือนกดได้) · แถวอนาคต `.opacity(0.55)`
+    │   │                                     · ท้ายลิสต์มีบรรทัดอธิบายว่าทำไมเทอมปัจจุบันกรอกไม่ได้
+    │   │                                     ⚠️ เทอมปัจจุบันกดไม่ได้**โดยตั้งใจ**: `GPAXCalculator` นับเฉพาะ
+    │   │                                     `sortKey < currentSortKey` เกรดที่กรอกให้เทอมปัจจุบันจะถูกเมินทั้งหมด
+    │   │                                     จะกรอกได้ต่อเมื่อกด **"ขึ้นชั้นแล้ว"** ใน Settings (ลิสต์อ้างชื่อปุ่มนี้ตรงๆ
+    │   │                                     — **ห้ามเปลี่ยนชื่อปุ่มนั้น**)
+    │   ├── TermGradeEditView.swift     (327)  pushed page มี Toggle "กรอกละเอียด" บนสุด · โหมดปกติกรอก
+    │   │                                     gpa/totalCredits ตรงๆ (prefill 2.00) · โหมดละเอียด (`Term.usesDetailedGrades`)
+    │   │                                     List ของ `TermGradeSubject` ต่อวิชา seed จาก ScheduleEntry ของเทอมนั้น
+    │   │                                     ครั้งแรกที่เปิด (ข้าม isBreak) · ปุ่ม "ดึงวิชาจากตารางเรียนอีกครั้ง" เพิ่ม
+    │   │                                     เฉพาะชื่อที่ยังไม่มี ไม่เคยลบ · autosave แล้วคำนวณ `term.gpa`/`totalCredits`
+    │   │                                     ใหม่ทันที (ถ่วงน้ำหนักหน่วยกิต) — สร้าง `Term` ผ่าน `TermStore.findOrCreate` เท่านั้น
+    │   ├── GradeLevelSheet.swift        (99)  ตั้ง `GPAXSettings.currentGradeLevel/currentTermNumber`
+    │   │                                     เปิดจาก 2 ที่: การ์ดว่างของ GPAXSummaryCard · Settings "แก้ระดับชั้น"
+    │   └── CumulativeGPAXSheet.swift    (87)  "จำเกรดไม่ได้" — ตัวเลือก 1 เขียน `GPAXSettings.setCumulative`
+    │                                         + entryMode `.cumulative` · ตัวเลือก 3 สร้าง `CalendarEvent` เตือนขอ ปพ.1
     ├── Onboarding/  (6 ไฟล์: Welcome→Profile→Schedule→GradeReport→Summary + ProfileImagePicker)
     ├── Portfolio/   PortfolioView.swift (grid 2 คอลัมน์ + chip กรองหมวดหมู่, `.navigationDestination(for: PortfolioItem.self)`) · PortfolioCard.swift (การ์ดกริด ไม่ใช้ CardContainer เพราะรูปต้อง bleed ถึงขอบบน)
     │                + PortfolioItemSheet.swift (สร้าง/แก้ไข ใช้ `Mode` เดียวกัน — รูปที่เลือกอยู่ staged ใน memory จนกด "บันทึก" ถึงเขียนไฟล์+insert
@@ -258,62 +280,130 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                  · เลือกจากคลังรูป (`.photosPicker` แบบ programmatic) · เลือกจากไฟล์ (`.fileImporter` [.image, .pdf], PDF หน้าแรกเรนเดอร์ด้วย PDFKit)
     │                  สแกน/กล้อง เช็ค `.isSupported`/`.isSourceTypeAvailable(.camera)` ก่อนเปิดเสมอ — ไม่มี guard = crash บน simulator)
     │                + PortfolioDetailView.swift (gallery `TabView(.page)` โหลดรูปเต็ม + แก้ไข/ลบ — ลบจะลบทั้งแถว SwiftData และไฟล์บนดิสก์)
-    ├── Schedule/  ScheduleView.swift (root) + ScheduleConstants.swift
-    │                (visibleDays/dayLabels · `findOrCreateSubject` ใช้โดย onboarding เท่านั้น
-    │                 · `resolveSubject(named:code:in:)` ใช้โดยฟอร์มคาบ — รหัสก่อน→ชื่อ, สี/ไอคอนจาก ThaiSubjectCatalog)
-    │              + ScheduleDayPickerBar · ScheduleTimetableSection (ใช้ [ResolvedPeriod]) · SchedulePeriodRow · ScheduleBreakRow
-    │              + SubjectPickerFields (กลุ่มสาระ→รายวิชา+ชื่อ+รหัส — **แถวล้วน ไม่มี Section**
-    │                ใช้ร่วมกันโดย AddScheduleEntrySheet และ ScheduleImportRowEditSheet ห้ามแยกกลับ)
-    │              + PeriodNumberField (ตัวเลือก "คาบที่" 0–10 + กำหนดเอง — ใช้ร่วมทั้ง 2 หน้าเหมือนกัน)
-    │              + AddScheduleEntrySheet (add/edit ใช้ร่วม · section เรียง วิชา→เวลา→รายละเอียด ตรงกับหน้า import)
-    │              + AddSubjectSheet
-    │              + ScheduleImportReviewSheet · ScheduleImportRowEditSheet
-    │                (หน้าตรวจผลอ่านตารางจากรูป — ไม่เขียน SwiftData เอง ส่ง [ImportedPeriod]
-    │                 กลับทาง onSave ให้ AddScheduleEntrySheet เรียก ScheduleImportCommitter)
-    │              + ScheduleTodayTasksSection (งาน/การบ้านวันนี้ ผูก Assignment.subjectName แบบ lookup ชื่อ)
-    │              + PeriodShiftBanner (แถบบอกว่าวันนี้ถูกร่นอยู่) · PeriodShiftSheet (ฟอร์มร่นคาบจริง —
-    │                ใช้ PeriodShiftCalculator ที่เดียว ไม่มีสูตรซ้ำใน View · เปิดจาก ScheduleSettingsSheet เท่านั้น
-    │                ไม่ได้เปิดตรงจาก ScheduleView แล้ว)
-    │              + ScheduleSettingsSheet (เปิดจากปุ่มเฟือง toolbar — แทนปุ่มนาฬิกาเดิม: สลับเทอมด้วย
-    │                segmented ม.ต้น/ม.ปลาย + menu 6 ช่อง, เลือกเทอม→ TermStore.findOrCreate+setActive+
-    │                syncTermSubjects **ทันที ไม่ dismiss sheet**, มีปุ่ม "ร่นคาบวันนี้" เปิด PeriodShiftSheet
-    │                ซ้อนข้างใน + ลิงก์ "จัดการเทอมทั้งหมด" push TermManagementView)
-    ├── QuickAdd/QuickAddSheet.swift       (~340) half-sheet เมนู "เพิ่มอะไรดี?" (กริดไอคอน) ที่เด้งตอนกดปุ่ม `+` กลาง tab
-    │                                              งาน → AddTaskSheet · ปฏิทิน/โน๊ต/Portfolio → CaptureDetailSheet (private ในไฟล์เดียวกัน)
-    │                                              **เพิ่มโหมดใหม่ = เพิ่ม 1 บรรทัดใน `options`** (แทน SmartCaptureView เดิมที่ถูกลบ)
-    ├── Settings/
-    │   ├── SettingsView.swift             (588) section "สำหรับนักพัฒนา" อยู่ใน `developerSection`
-    │   │                                         (computed property เพราะ `#if DEBUG` ใน ViewBuilder ทำ type-check เพี้ยน)
-    │   │                                         section "ระดับชั้นและเป้า GPAX": ระดับชั้นจริง+ปุ่ม "ขึ้นชั้นแล้ว"
-    │   │                                         (เขียนผ่าน `GPAXSettings.setCurrentTerm` เท่านั้น) · เป้า GPAX/entryMode
-    │   │                                         bind ตรงกับ `@AppStorage(GPAXSettings.Key.*)` (ไม่ผ่าน setter) · เปิด
-    │   │                                         `GradeLevelSheet`/`CumulativeGPAXSheet` ซ้ำจาก GradeCenter ไม่สร้างใหม่
-    │   │                                         **ไม่ได้แก้ resetAllData() ให้ล้าง GPAX UserDefaults** — ตั้งใจ ตรงกับ
-    │   │                                         convention เดิมที่ preference อื่น (Pomodoro, scheduleShowsPersonalTasks)
-    │   │                                         ก็รอดจากการรีเซ็ตเหมือนกัน (คนละกรณีกับกฎ "@Model ใหม่ต้องลง resetAllData")
-    │   ├── TermManagementView.swift        List เทอมที่**มีอยู่จริงในฐานข้อมูล**เท่านั้น (เทอมสร้างแบบ lazy) เรียงตาม
+    ├── Schedule/  ตารางเรียน — **ยกเครื่องรอบ W2 ก้อน B** (`docs/redesign/02_Schedule.md`)
+    │   ├── ScheduleView.swift          (232)  root · toolbar **⚙︎ ซ้าย + ＋ ขวา**
+    │   │                                     ⚙︎ = Menu: ร่นคาบวันนี้ (เปิด PeriodShiftSheet ตรง) · เปลี่ยนเทอม
+    │   │                                     (Picker ซ้อนใน Menu = เมนูย่อยติ๊กถูก) · จัดการเทอมทั้งหมด
+    │   │                                     ⚠️ "จัดการเทอมทั้งหมด" ใช้ Button + `.navigationDestination(isPresented:)`
+    │   │                                     **ไม่ใช่ NavigationLink** — ลิงก์ใน Menu ของ toolbar push ไม่ติดบ้าง
+    │   │                                     ＋ = AddScheduleEntrySheet (ปุ่ม `+` กลาง tab bar เปิดเมนู QuickAdd
+    │   │                                     ซึ่ง**ไม่มี "คาบเรียน"** — ตัดปุ่มนี้ทิ้งเมื่อไรจะเพิ่มคาบไม่ได้เลย)
+    │   │                                     `termSelection` binding + `entryCount` ยกมาทั้งก้อนจาก ScheduleSettingsSheet
+    │   │                                     ที่ถูกลบ — เรียก `TermStore` ซึ่งเป็น logic ห้ามแตะ
+    │   ├── ScheduleConstants.swift      (84)  visibleDays/dayLabels + `todayWeekday` (1=จ…7=อา) + `defaultEntryDay`
+    │   │                                     (เสาร์/อาทิตย์ → ตกไปจันทร์) — **จุดเดียวที่แปลงวัน** ScheduleView กับ
+    │   │                                     DayPickerBar เรียกตัวนี้แล้ว ไม่มีสูตรซ้ำ
+    │   │                                     + `findOrCreateSubject` (onboarding) · `resolveSubject(named:code:in:)`
+    │   │                                     (ฟอร์มคาบ — รหัสก่อน→ชื่อ, สี/ไอคอนจาก ThaiSubjectCatalog)
+    │   ├── ScheduleDayPickerBar.swift   (66)  **แคปซูลทึบ** เลื่อนด้วย matchedGeometryEffect (เดิมเป็นขีดใต้)
+    │   │                                     วันนี้บอกด้วยสีตัวอักษร `primaryDeep` ไม่มีจุดแยกแล้ว · พื้นแถบเป็น `background`
+    │   ├── ScheduleTimetableSection.swift (89) `CardContainer(padding: 0)` + แถวจัด padding เอง → แถวพักเต็มขอบได้
+    │   │                                     **ไม่มี headerRow แล้ว** · ถือ `TimelineView(.periodic by: 60)` **ชั้นเดียว**
+    │   │                                     แล้วส่ง `now` ลงแถว (ไม่ใช่นาฬิกาแถวละตัว)
+    │   ├── SchedulePeriodRow.swift     (173)  4 บล็อก: เวลา(34) · IconTile สีวิชา · ชื่อ+"คาบ N · ครู · รหัส" · PillLabel ห้อง
+    │   │                                     สีวิชาโผล่**ที่เดียว**คือไอคอน (เดิม 4 ที่) · ชื่อวิชายาวได้ 2 บรรทัด
+    │   │                                     · ไม่มี chevron · สถานะ **"กำลังเรียน"** = พื้น primarySoft + จุด +
+    │   │                                     "เหลือ N นาที" + progress bar — โผล่เมื่อ `isToday` เท่านั้น
+    │   ├── ScheduleBreakRow.swift       (66)  แถบครีมเต็มขอบ · เวลาอยู่คอลัมน์เดียวกับแถวคาบ · ไม่มีวงกลม/ไอคอน
+    │   ├── PeriodShiftBanner.swift      (77)  ตัวอักษร `textPrimary` ไอคอนเท่านั้นที่ `warning` (เดิมอำพันบนอำพัน)
+    │   ├── PeriodShiftSheet.swift      (281)  ฟอร์มร่นคาบจริง — ใช้ PeriodShiftCalculator ที่เดียว
+    │   │                                     **เปิดตรงจากเมนู ⚙︎ ของ ScheduleView แล้ว** (ScheduleSettingsSheet ถูกลบ)
+    │   ├── SubjectPickerFields.swift   (116)  กลุ่มสาระ→รายวิชา+ชื่อ+รหัส — **แถวล้วน ไม่มี Section**
+    │   │                                     ใช้ร่วมโดย AddScheduleEntrySheet + ScheduleImportRowEditSheet ห้ามแยกกลับ
+    │   ├── PeriodNumberField.swift      (76)  "คาบที่" 0–10 + กำหนดเอง — ใช้ร่วม 2 หน้า
+    │   ├── AddScheduleEntrySheet.swift (381)  add/edit ใช้ร่วม · section เรียง วิชา→เวลา→รายละเอียด ตรงกับหน้า import
+    │   ├── AddSubjectSheet.swift       (148)
+    │   └── ScheduleImportReviewSheet.swift (309) · ScheduleImportRowEditSheet.swift (200)
+    │                                     หน้าตรวจผลอ่านตารางจากรูป — ไม่เขียน SwiftData เอง ส่ง [ImportedPeriod]
+    │                                     กลับทาง onSave ให้ AddScheduleEntrySheet เรียก ScheduleImportCommitter
+    │   ❌ ลบแล้ว W2-B: `ScheduleTodayTasksSection.swift` (การ์ดงานวันนี้ — ซ้ำกับแท็บงานที่จัดกลุ่มตามวันแล้ว
+    │                   และ taskRow เป็น Button ที่ action มีแค่ AppLog = ปุ่มหลอก)
+    │                  `ScheduleSettingsSheet.swift` (ของข้างในเหลือ 3 อย่าง ยกขึ้น Menu ⚙︎ หมดแล้ว)
+    ├── QuickAdd/QuickAddSheet.swift       (124) **ยกเครื่อง W2-A** (`docs/redesign/03_QuickAdd.md`)
+    │                                     half-sheet เมนู "เพิ่มอะไรดี?" ที่เด้งตอนกดปุ่ม `+` กลาง tab bar
+    │                                     **3 ทาง กริดแถวเดียว**: งาน (AddTaskSheet) · กิจกรรมปฏิทิน (EventFormSheet)
+    │                                     · ผลงาน (PortfolioItemSheet) — ไม่มี "โน๊ต" (สร้างแล้วไม่มีที่ให้ดู)
+    │                                     และไม่มี "คาบเรียน" (เป็นงานตั้งค่าทั้งเทอม ไม่ใช่ของที่จดตอนนี้)
+    │                                     ❌ `CaptureDetailSheet` + `CaptureMode`/`RepeatOption`/`AlertOption` **ลบหมดแล้ว**
+    │                                        (ฟอร์มซ้ำที่ทิ้ง repeat/tags/รูปหาย — บั๊กข้อมูลหาย 3 จุด)
+    │                                     ⚠️ **sheet ซ้อน sheet โดยตั้งใจ** (Few ตัดสิน 14 ส.ค.):
+    │                                        บันทึก → ฟอร์มเรียก `onSaved` ตั้งธง `didSave` แล้วปิดตัวเอง →
+    │                                        `onDismiss` เห็นธง → ปิดเมนูตาม = ออกจบทั้งสองชั้น
+    │                                        ยกเลิก → ปิดแค่ฟอร์ม **กลับมาที่เมนู** เลือกทางอื่นต่อได้
+    │                                        ห้ามสั่ง dismiss() สองชั้นใน update เดียวกัน — sheet จะค้าง
+    │                                     ⚠️ `onSaved:` ใน `EventFormSheet`/`PortfolioItemSheet`/`AddTaskSheet`
+    │                                        (optional default nil) **ห้ามลบ** ไม่งั้นบันทึกแล้วเมนูค้าง
+    ├── Settings/  **ยกเครื่อง W2-D** (`docs/redesign/05_Settings.md`) — 588 → 465 บรรทัด + แยก 3 ไฟล์
+    │   ├── SettingsView.swift             (465) 5 section: โปรไฟล์ · การเรียน · การแจ้งเตือน · การแสดงผล · เกี่ยวกับแอป
+    │   │                                         · การ์ดโปรไฟล์**กดได้ทั้งใบ** (เปิด EditProfileView เป็น sheet —
+    │   │                                           ไม่ push เพราะ EditProfileView มี NavigationStack ของตัวเอง)
+    │   │                                           avatar เป็นอักษรย่อบนพื้น primarySoft ไม่ใช่ silhouette เทา
+    │   │                                         · การเรียน: ระดับชั้นจริง + **"ขึ้นชั้นแล้ว"** (เขียนผ่าน
+    │   │                                           `GPAXSettings.setCurrentTerm` เท่านั้น · **ห้ามเปลี่ยนชื่อปุ่ม** —
+    │   │                                           TermGradeListSection อ้างชื่อนี้ตรงๆ) + วิธีกรอก + จัดการเทอม + โหมดโฟกัส
+    │   │                                         · การแจ้งเตือน: **Toggle "เตือนงานใหม่อัตโนมัติ"** เก็บที่
+    │   │                                           `SettingsView.reminderDefaultKey` → **AddTaskSheet.init อ่านไปใช้จริง**
+    │   │                                           (ไม่ใช่สวิตช์หลอก) · คำอธิบายตรงกับ `AssignmentSlot` 3 จุดจริง
+    │   │                                         · การแสดงผล: Picker ธีม → `AppTheme`
+    │   │                                         · เกี่ยวกับแอป: ดูหน้าแนะนำ · เวอร์ชัน · แผน (TierBadge)
+    │   │                                         🔒 **เครื่องมือ dev ทั้ง 5 อยู่ในกล่องเดียว ล็อก 2 ชั้น**:
+    │   │                                           `#if DEBUG` + **แตะแถวเวอร์ชัน 7 ครั้ง** · ใช้ `@State` ไม่ใช่
+    │   │                                           `@AppStorage` → ปิดแอปเปิดใหม่ = ซ่อนอีกครั้ง (กันกรรมการเห็นตอนเดโม่
+    │   │                                           เพราะรันจาก Xcode = Debug build)
+    │   │                                           ในกล่อง: เปิด Pro · เปิดหน้า Setup · ทดสอบแจ้งเตือน · ทดสอบ OCR ·
+    │   │                                           **"ลบข้อมูลทั้งหมดถาวร"** (เดิมชื่อ "ตั้งค่าใหม่อีกครั้ง (Setup ใหม่)"
+    │   │                                           และอยู่อันดับ 3 จากบนสุด — ไม่มีคำว่าลบเลย)
+    │   │                                         ⚠️ `.fullScreenCover` ที่เปิด SetupFlowTestContainer แปะอยู่บน Section
+    │   │                                           ในกล่อง dev **ไม่ใช่บน body** เพราะ struct นั้นอยู่ใน `#if DEBUG`
+    │   │                                         ✅ `resetAllData()` เรียก `GPAXSettings.resetAll()` แล้ว —
+    │   │                                           ไม่ล้างธีม/ค่าเริ่มต้นการเตือน/PomodoroSettings (preference ของเครื่อง)
+    │   │                                         ❌ ไม่มี: section เป้า GPAX (ย้ายไป GPAXTargetSheet) · Toggle
+    │   │                                           "แสดงงานส่วนตัวในตารางเรียน" (สวิตช์ตายหลังลบ ScheduleTodayTasksSection)
+    │   │                                           · section "หลักการออกแบบ" · LabeledContent("โหมด")
+    │   ├── EditProfileView.swift          (147) **แยกไฟล์ W2-D** รูป + ชื่อ-นามสกุล + ชื่อเล่น
+    │   │                                         + section "โรงเรียน" 3 ฟิลด์ใหม่ (โรงเรียน · ห้อง · แผนการเรียน)
+    │   │                                         แผนการเรียนเป็น TextField ไม่ใช่ Picker — แผนไทยหลากหลายเกินจะ hardcode
+    │   ├── PendingNotificationsView.swift  (49) **แยกไฟล์ W2-D**
+    │   ├── SetupFlowTestContainer.swift    (56) **แยกไฟล์ W2-D** — `#if DEBUG` ครอบทั้งไฟล์
+    │   ├── TermManagementView.swift       (117) List เทอมที่**มีอยู่จริงในฐานข้อมูล**เท่านั้น (สร้างแบบ lazy) เรียงตาม
     │   │                                   `sortKey` · แตะแถว = TermStore.setActive + dismiss · ปัดซ้าย = alert ยืนยัน
     │   │                                   บอกจำนวนคาบ/งาน/คะแนนที่จะหาย แล้ว TermStore.delete + TermStore.bootstrap
-    │   │                                   (การันตีมีเทอม active เสมอแม้ลบเทอมสุดท้าย) · เปิดจาก Settings และจาก
-    │   │                                   ScheduleSettingsSheet ("จัดการเทอมทั้งหมด")
-    │   └── OCRDebugView.swift             ทั้งไฟล์ครอบ `#if DEBUG` — เลือกรูป → ดูทุกกล่องที่ Vision อ่านได้ + confidence
-    │                                      ไม่ขึ้นใน Release · ไม่มี overlay (รอรอบ 2 ตาม PLAN_OCRDebug.md)
-    │                                      โหมด "ตารางเรียน" ต่อท้ายแต่ละแถวด้วยผลของ `classifySubjectCode`
-    │                                      (`✅ ซ่อมแล้ว` / `⚠️ กำกวม` / `✓ ถูกอยู่แล้ว`) + บรรทัดสรุปนับรวม
-    │                                      + **รายการตารางที่ parse ได้จริง** (วัน · คาบ · เวลา · วิชา · ครู · ห้อง · ⚠️)
-    │                                      และข้อความ problem จาก `ScheduleOCRResult` เวลาหากริด/เวลาไม่เจอ
-    │                                      → นี่คือเครื่องมือวัดผลของ PLAN_OCRAccuracy และ PLAN_OCRFix
-    ├── Tasks/   หน้า "งาน / การบ้าน" ทั้งโมดูล
-    │   ├── AssignmentListView.swift   (~330) root ของหน้า — ประกอบ chips + สถิติ + section + FAB + ค้นหา
-    │   │                                     ใช้ `List(.plain)` + `plainRow()` (ซ่อนเส้น/พื้นแถว) เพื่อให้ได้การ์ดลอย **และ** ปัดซ้ายลบได้
-    │   ├── TaskScope.swift            (~95)  **นิยามเงื่อนไข chip/สถิติที่เดียวของทั้งหน้า** + TaskKindFilter + TaskSortOrder
-    │   │                                     ห้ามเขียนสูตร "ใกล้ถึงกำหนด"/"เลยกำหนด" ซ้ำที่อื่น
-    │   ├── TaskFilterChips.swift      (~70)  chip 4 อัน + ปุ่ม "กรอง" (มีจุดบอกว่ามีตัวกรองทำงานอยู่)
-    │   ├── TaskStatsRow.swift         (~70)  การ์ดสถิติ 4 ใบ กดแล้วสลับ chip
-    │   ├── TaskRowCard.swift          (~145) การ์ดงาน 1 แถว — วงกลม toggle · ไอคอนวิชา · ป้ายวัน · ขอบแดงถ้าเลยกำหนด
-    │   ├── TaskFilterSheet.swift      (~90)  ประเภท · วิชา · เฉพาะเลยกำหนด · เรียงตาม
-    │   └── AddTaskSheet.swift         (~215) ฟอร์มเพิ่ม/แก้งาน `AddTaskSheet(editing:onSaved:)`
-    │                                         ทางเข้า: QuickAddSheet · การ์ด "งานค้าง" ใน Dashboard · FAB ในหน้านี้
+    │   │                                   (การันตีมีเทอม active เสมอแม้ลบเทอมสุดท้าย)
+    │   │                                   **เปิดได้ 2 ทาง: Settings "จัดการเทอม" และเมนู ⚙︎ ของ ScheduleView**
+    │   └── OCRDebugView.swift             (336) ทั้งไฟล์ครอบ `#if DEBUG` — เลือกรูป → ดูทุกกล่องที่ Vision อ่านได้
+    │                                      + confidence · โหมด "ตารางเรียน" ต่อท้ายแต่ละแถวด้วยผลของ
+    │                                      `classifySubjectCode` + รายการตารางที่ parse ได้จริง
+    │                                      → เครื่องมือวัดผลของ PLAN_OCRAccuracy และ PLAN_OCRFix
+    ├── Tasks/   หน้า "งาน / การบ้าน" — **ยกเครื่อง W2 ก้อน A** (`docs/redesign/01_Tasks.md`)
+    │   ├── AssignmentListView.swift   (267) root — `List(.plain)` + `plainRow()` (ซ่อนเส้น/พื้นแถว) เพื่อให้ได้
+    │   │                                     การ์ดลอย **และ** ปัดซ้ายลบได้ — **ห้ามเปลี่ยนเป็น ScrollView**
+    │   │                                     โครง: chip → Section ตาม `TaskDayGroup` ที่ไม่ว่าง → กลุ่ม "เสร็จแล้ว" พับได้
+    │   │                                     · default scope = `.notDone` (เดิม `.all`)
+    │   │                                     ❌ ไม่มี FAB · ไม่มี dueSoonSection (งานเคยโผล่ซ้ำ 2 ที่ในจอเดียว)
+    │   │                                     · ไม่มี sortOrder/overdueOnly (overdueOnly เคยเป็นตัวกรองล่องหนที่ทำงานลับๆ)
+    │   ├── TaskScope.swift            (114) **นิยามเงื่อนไขทั้งหมดของหน้านี้ที่เดียว** — ห้ามเขียนสูตรซ้ำใน View
+    │   │                                     · `chips = [.notDone, .overdue, .done, .all]` (`.dueSoon` ยังอยู่ในเนื้อ enum
+    │   │                                       แต่ไม่มี chip แล้ว — ลบ case ออกต้องไล่แก้ทุก switch ไม่คุ้ม)
+    │   │                                     · `TaskDayGroup` 6 กลุ่ม (overdue/today/tomorrow/thisWeek/later/noDue)
+    │   │                                       คิดวันผ่าน `AssignmentPriorityEngine.daysUntil` เท่านั้น
+    │   │                                     · `TaskKindFilter`
+    │   ├── TaskFilterChips.swift       (66) chip 4 อัน **มีตัวเลขในตัว** (เลข `.overdue` เป็นสี danger ตอนไม่ถูกเลือก)
+    │   │                                     `.contentTransition(.numericText())` · ไม่มีปุ่ม "กรอง" แล้ว
+    │   ├── TaskAddMenu.swift           (74) **ไฟล์ใหม่ W2-A** — toolbar ขวาบนอันเดียวของหน้า
+    │   │                                     `Menu(content:label:primaryAction:)` — **แตะ = เพิ่มงาน · กดค้าง = เมนูกรอง**
+    │   │                                     (ประเภท/วิชา/ล้างตัวกรอง) · มีจุดเล็กบนปุ่ม `+` เมื่อมีตัวกรองทำงานอยู่
+    │   │                                     (แยกออกมาแทนที่จะแยก TaskDayGroupSection เพราะ Section กับ .swipeActions
+    │   │                                      อยู่ใน List เดียวกัน ย้ายออกเสี่ยงปัดซ้ายลบพัง)
+    │   ├── TaskRowCard.swift          (130) เหลือ 4 อย่าง: วงกลม toggle · ขีดสีวิชา 3pt · ชื่อ+"วิชา · เวลา" · PillLabel วัน
+    │   │                                     ❌ ไม่มีไอคอน 36×36 · ไม่มีบรรทัดวันที่เต็ม · ไม่มีขอบแดงตอนเลยกำหนด
+    │   └── AddTaskSheet.swift         (290) `AddTaskSheet(editing:presetKind:onSaved:)` — ทุก parameter มี default
+    │                                         ทางเข้า: QuickAddSheet · การ์ด "งานค้าง"/นับถอยหลังสอบ ใน Dashboard
+    │                                         · ปุ่ม `+` ขวาบนของหน้านี้
+    │                                         ⚠️ **งานใหม่อ่านค่าเริ่มต้นการเตือนจาก `SettingsView.reminderDefaultKey`**
+    │                                           (`object(forKey:) as? Bool ?? true` — ไม่ใช่ `bool(forKey:)` ที่คืน false
+    │                                           ตอนยังไม่เคยเขียน) · งานเดิมใช้ `editing?.remindersEnabled` ของตัวเอง
+    │   ❌ ลบแล้ว W2-A: `TaskStatsRow.swift` (การ์ดสถิติ 4 ใบ ทับกับ chip 3 ใน 4)
+    │                  `TaskFilterSheet.swift` (เหลือของแค่ 2 อย่าง ไม่คุ้มเป็น sheet ทั้งใบ)
     └── TCASPlanner/  ระบบคิดคะแนนย้อนกลับ + SOP ต่อคณะ แทน readiness checklist เดิม (PLAN_TCASPlanner.md
         │            ครบทั้ง 4 รอบแล้ว) · ทุกจุดคะแนน/เกณฑ์การรับจริงเปิด mytcas.com แทนเก็บเอง (§0.3 กฎเหล็ก)
         │            · Free ทั้งหมด ไม่ gate
@@ -416,30 +506,38 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
 ## 4. Navigation (RootTabView.swift)
 
 5 tabs: `dashboard` · `tasks` · `capture` · `schedule` · `settings`
-(หน้าแรก · งาน · **+** · ตารางสอน · ตั้งค่า — 14 ส.ค. 2569: แท็บ 2 เปลี่ยนจาก ปฏิทิน เป็น `AssignmentListView`)
+(หน้าแรก · งาน · **+** · **ตารางเรียน** · ตั้งค่า)
+> ชื่อแท็บ 4 ปิดข้อค้างแล้ว (Few 14 ส.ค.): ใช้ **"ตารางเรียน"** — *ตารางสอน* คือของครู *ตารางเรียน* คือของนักเรียน
+> คำว่า "ตารางสอน" ถูกไล่ลบออกจากทั้งแอปแล้ว
 
 - แท็บ "เพิ่ม" (`.capture`) เป็น `Color.clear` + trick: `onChange` ดีดกลับแท็บเดิมแล้วเปิด **`QuickAddSheet`** เป็น sheet
-  → ผู้ใช้เลือกก่อนว่าจะเพิ่มอะไร (งาน / ปฏิทิน / โน๊ต / Portfolio) แล้วค่อยเปิดฟอร์ม
-  **นี่คือทางเข้าเดียวของ ปฏิทิน/โน๊ต/Portfolio** — ถ้าเปลี่ยนปุ่มนี้ให้เปิดฟอร์มใดฟอร์มหนึ่งตรงๆ อีก 3 โหมดจะกลายเป็นโค้ดตาย
+  **เปิดเมนูเดียวกันทุกแท็บ** (Few ตัดสิน 14 ส.ค. — ล้มแผนเดิมที่จะให้ `+` เปลี่ยนตามแท็บ)
+  เหตุผล: ปุ่มเดียวควรทำอย่างเดียวเสมอ · หน้าที่มีทางเพิ่มของตัวเองเก็บทางลัดไว้ที่ **ปุ่ม `+` ขวาบน** แทน
+  → เมนูมี 3 ทาง: งาน · กิจกรรมปฏิทิน · ผลงาน — **นี่คือทางเข้าเดียวของกิจกรรมปฏิทินและผลงาน**
 - Dashboard push ต่อผ่าน `DashboardDestination`: `.assignments` `.calendar` `.gradeCenter` `.tcasPlanner` `.portfolio` `.careerDiscovery` `.focusMode`
   **`CalendarView` เข้าได้ทางเมนูหลักทางเดียวแล้ว** (ไม่มีแท็บของตัวเอง) — push เข้า NavigationStack ของ Dashboard
-- Onboarding gate อยู่ที่ `RootContainerView` (`StudiiOSApp.swift:53-74`) ใช้ `@AppStorage` 5 ตัวเรียงลำดับหน้า
-- แท็บ "ตารางสอน" (`ScheduleView`) toolbar มี 2 ปุ่ม: เฟือง (ซ้าย) เปิด `ScheduleSettingsSheet`
-  (สลับเทอม + ร่นคาบ — เดิมนาฬิกาเปิด `PeriodShiftSheet` ตรงๆ, ตอนนี้ย้ายไปซ้อนข้างในแล้ว)
-  · `+` (ขวา) เปิด `AddScheduleEntrySheet` (เพิ่ม/แก้คาบ, หรือแตะแถวคาบเพื่อแก้) → ซ้อน `AddSubjectSheet`
-  (เพิ่มวิชาใหม่, เปิดจากปุ่ม "เพิ่มวิชาใหม่" ในฟอร์มคาบ)
+- Onboarding gate อยู่ที่ `RootContainerView` (`StudiiOSApp.swift`) ใช้ `@AppStorage` 5 ตัวเรียงลำดับหน้า
+  + `.preferredColorScheme(appTheme.colorScheme)` — **จุดเดียวที่ธีมถูกใช้จริง**
+
+**แบบแผน toolbar ของทั้งแอป (ตั้งขึ้นใน W2):**
+| ตำแหน่ง | หน้าที่ | ตัวอย่าง |
+|---|---|---|
+| ขวาบน `＋` | เพิ่มของในหน้านี้ | หน้างาน (`TaskAddMenu` แตะเพิ่ม/กดค้างกรอง) · ตารางเรียน (`AddScheduleEntrySheet`) |
+| ซ้ายบน `⚙︎`/เมนู | งานนานๆ ครั้งของหน้านี้ | ตารางเรียน (ร่นคาบ · เปลี่ยนเทอม · จัดการเทอม) |
+| `＋` กลาง tab bar | เพิ่มของข้ามหน้า | `QuickAddSheet` 3 ทาง เหมือนกันทุกแท็บ |
+
 - **ระบบเทอม (`TermStore`)**: ทุก View ที่แสดง/บันทึก `ScheduleEntry`/`Assignment`/`GradeComponent`
   ต้องมี trio `@AppStorage(TermStore.activeTermKey)` + `@Query private var terms: [Term]` +
-  `activeTerm` computed แล้วกรองข้อมูลผ่าน `.inTerm(activeTerm)` — สลับเทอมทำได้จาก `ScheduleSettingsSheet`
-  หรือ Settings → "เทอมปัจจุบัน" → `TermManagementView` (สลับ/ลบเทอมที่มีอยู่จริง)
+  `activeTerm` computed แล้วกรองข้อมูลผ่าน `.inTerm(activeTerm)`
+  สลับเทอมทำได้ 2 ทาง: เมนู **⚙︎ ของ `ScheduleView`** หรือ Settings → "จัดการเทอม" → `TermManagementView`
+  ⚠️ **`GradeCenterView` จงใจไม่มี trio นี้** — หน้าเกรดใช้ `GPAXSettings.currentSortKey` (เทอมจริงของนักเรียน)
+     ไม่ใช่ `activeTermKey` (เทอมที่กำลังเปิดดู) ห้ามใช้แทนกัน (D7)
   `TermStore.bootstrap(in:)` รันครั้งเดียวใน `RootContainerView.task` ก่อน `.onChange(of: scenePhase)`
 - **ทางเข้าอ่านตารางจากรูปอยู่ใน `AddScheduleEntrySheet` เฉพาะโหมดเพิ่ม** (`editing == nil`) — โหมดแก้ไขไม่มีปุ่มนี้
-  ปุ่ม "ถ่ายตารางสอน" → alert เตือนว่าอ่านผิดได้ → confirmationDialog ถ่าย/คลังภาพ → `ProfileImagePicker`
+  ปุ่ม "ถ่ายตารางเรียน" → alert เตือนว่าอ่านผิดได้ → confirmationDialog ถ่าย/คลังภาพ → `ProfileImagePicker`
   → `ScheduleOCRParser` → `ScheduleImportBuilder` → `ScheduleImportReviewSheet` → `ScheduleImportCommitter`
   presentation **ทั้ง 4 ชั้นแขวนจาก NavigationStack ของ `AddScheduleEntrySheet` ตัวเดียว** ห้ามยกไปไว้ใน child view
   `AddScheduleEntrySheet(editing:defaultDay:onImported:)` — `onImported` ส่งวันแรกที่นำเข้ากลับให้ `ScheduleView` เด้ง `selectedDay`
-- `ScheduleTodayTasksSection` แสดง **เฉพาะการบ้าน** เป็นค่าเริ่มต้น — สลับด้วย `@AppStorage("scheduleShowsPersonalTasks")` (Toggle อยู่ใน Settings section "ตารางเรียน")
-- `ScheduleTodayTasksSection`'s "ดูทั้งหมด" push ตรงไป `AssignmentListView()` ด้วย plain `NavigationLink` (ไม่ใช้ `DashboardDestination` enum เพราะ Schedule tab มี `NavigationStack` แยกจาก Dashboard — ปลายทางเดียวไม่คุ้มความซับซ้อนของ enum-based navigation)
 
 ---
 
@@ -525,9 +623,8 @@ Gated: `PortfolioView`
   ไม่มีคะแนนเลย) ของ PLAN_TCASPlanner.md ส่วนที่เหลือของแอปยังไม่มีเทสต์
 - **`CareerInterestResult` เพิ่ม field ใหม่ (RIASEC v2)** — ถ้าเครื่อง/simulator มีแถวเก่าอยู่แล้วต้อง **ลบแอปก่อนติดตั้งรุ่นนี้**
   (lightweight migration เพิ่ม property ปกติมักผ่าน แต่ไม่การันตี 100% — ดู PLAN_RIASEC.md §4)
-- `QuickAddSheet.swift`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ (`Repeat` `Location` `Tags` `Alert` `Note` `Detail`) — ผิดกฎ "UI ทั้งหมดเป็นภาษาไทย" ของสกิล ยกมาทั้งดุ้นจาก `SmartCaptureView` เดิม ยังไม่ได้แก้
-- `Features/FocusMode/` เป็นโฟลเดอร์ว่าง (ของเหลือ) — `FocusModeView.swift` ยังอยู่ใน `Features/Portfolio/`
-- `ScheduleTodayTasksSection`: แตะแถวงาน ตอนนี้แค่ log อย่างเดียว ยังไม่เปิดฟอร์มแก้ไข (หน้า Todo เปิดได้แล้ว — เหลือแค่การ์ดในตารางเรียน)
+- ~~`QuickAddSheet`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ~~ **แก้แล้ว W2-A** — `CaptureDetailSheet` ถูกลบทั้ง struct
+- ~~`ScheduleTodayTasksSection` แตะแถวงานแล้วแค่ log (ปุ่มหลอก)~~ **แก้แล้ว W2-B** — ลบทั้งไฟล์
 - **`Features/Onboarding/ScheduleSetupView.swift` ยังมีทางถ่ายรูปของตัวเองอยู่คนละเส้นกับของใหม่** — ไม่ผ่าน
   `ScheduleImportBuilder` / `ScheduleImportReviewSheet` เลย จึงยังไม่แสดงธง ⚠️ ให้ผู้ใช้แก้ และยังไม่ได้ใช้
   `ScheduleOCRResult.problem` (`ocrFoundNothing` เป็น Bool ล้วน) · `PLAN_ScheduleOCRImport.md` §0.4 สั่งไม่ให้แตะไว้ก่อน
@@ -535,9 +632,20 @@ Gated: `PortfolioView`
 - **`resolveSubject` มีตรรกะซ้ำ 2 ที่**: `ScheduleConstants.resolveSubject` (ฟอร์มคาบ) กับ `ScheduleImportCommitter.resolveSubject` (นำเข้า, มี `inout` cache ของตัวเอง) — กติกาเดียวกัน (รหัสก่อน→ชื่อ) แต่คนละ signature จงใจไม่รวมในรอบนี้
 - `refreshAssignmentReminders` ตัดที่ 16 งานแรก (× 3 จุด = 48 pending) กันชน 64 ของ iOS — งานที่กำหนดส่งไกลกว่านั้นจะยังไม่ถูกตั้งจนกว่าจะขยับเข้ามาในหน้าต่าง 14 วัน
 - **GPAX `.outOfReach` ยังไม่มีปุ่ม forward action** (§6.5/§11 ของ PLAN_GPA.md ต้องการอย่างน้อย 2 ปุ่ม เช่น ลิงก์ TCASPlannerView/PortfolioView/ปรับเป้า) — ตอนนี้การ์ดโชว์แค่ข้อความ copy เฉยๆ
-- **ช่องตั้งเป้า GPAX ตั้งได้ 2 ที่**: `GPAXSummaryCard`'s `TargetQuickSetter` (ชั่วคราว ใส่ไว้ให้ verify build order step 4 ได้ก่อน Settings เสร็จ) กับ Settings ตัวเต็ม (มี `targetSource`) — ทำงานถูกต้องทั้งคู่เพราะ bind key เดียวกัน แต่ UI ซ้ำซ้อน ควรลบตัวแรกทิ้งตอนขัดดีไซน์รอบหน้า
+- ~~ช่องตั้งเป้า GPAX ตั้งได้ 2 ที่~~ **แก้แล้ว W2-C/D** — เหลือ `GPAXTargetSheet` ที่เดียว (`TargetQuickSetter` และ section ใน Settings ถูกลบทั้งคู่)
 
 **`PLAN_GPA.md` ครบทั้ง 7 step แล้ว** (logic+เทสต์ → model → read-only display → input → Dashboard → Settings → เอกสารนี้) — ฟีเจอร์ GPAX Level 1 ถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป (Level 2/3 อยู่ใน §12 ของแผน ยังไม่เริ่ม)
+
+### หนี้ที่เกิดใหม่จาก Wave 2 (ยังไม่ได้แก้)
+
+- 🟡 **หน้าเกรด (ก้อน C) หน้าตายังไม่ผ่าน** — Few บอก 14 ส.ค. ว่า "ยังไม่ดีเท่าไหร่ เดี๋ยวมาเก็บตกละเอียดทีหลัง"
+  build เขียวและใช้งานได้ แต่ยังไม่ระบุจุด **ต้องถามก่อนแก้ ห้ามเดาแล้วรื้อเอง**
+- **มุมแท่งกราฟใน `TermGradeChart` ใช้ `Theme.Radius.icon` (11)** ทั้งที่อยากได้ ~6 — ไม่มี token ที่เล็กกว่านี้
+  ถ้าดูแล้วมนเกินไปต้องเพิ่ม `Radius.bar` ใน `Theme.swift` ก่อน
+- **`SettingsView.swift` 465 บรรทัด** เกินแนว ~250 ที่แผนตั้งไว้ (แยก 3 ไฟล์ไปแล้วยังเกิน เพราะรอบ 2 เพิ่ม 2 section)
+  `body` ถูกซอยเป็น 6 computed property แล้ว ความเสี่ยง type-check ต่ำ — ยังไม่แยกเพิ่ม รอ Few ตัดสิน
+- **ยังไม่มีไฟล์ฟอนต์ IBM Plex Sans Thai ใน `StudiiOS/Resources/Fonts/`** — `Theme.Font` fallback เป็นฟอนต์ระบบ
+  ดู log `[Theme]` ตอนเปิดแอปว่าโหลดเจอหรือยัง
 
 **`PLAN_ScheduleView.md` ครบทั้ง 3 รอบแล้ว** (Models/Schema → UI ตาราง+ฟอร์ม → งานวันนี้+ร่นคาบ) — ฟีเจอร์ตารางเรียนถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป
 

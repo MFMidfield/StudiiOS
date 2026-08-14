@@ -14,18 +14,17 @@
 |---|---|
 | **W0** เตรียม | ✅ เสร็จ — commit rename PrototypeApp→StudiiOS, ตัด branch `redesign` |
 | **W1** Theme + Dashboard + tab bar | ✅ **จบแล้ว — Few ยืนยัน ⌘B เขียว 14 ส.ค.** |
-| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A + B จบ · ก้อน C build เขียวแต่ 🟡 หน้าตายังไม่ผ่าน (ดูตารางหนี้ข้างล่าง)** · กำลังทำก้อน D · E–G ยังไม่เริ่ม |
+| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A · B · C · D จบแล้ว build เขียวทั้งหมด** (C 🟡 หน้าตายังไม่ผ่าน ดูตารางหนี้) · **E–G ยังไม่เริ่ม** |
 
-**W2 เหลือ 4 ก้อน** — D `05_Settings` (ปลดล็อกแล้ว: C เสร็จ) · E `06_TCAS` · F `07_Portfolio` · G `08_Calendar` (ท้ายสุด เดี่ยว)
 | **W3** custom nav · แตก CalendarView · onboarding | ⬜ ยังไม่เริ่ม |
 
-**W2 เหลือ 6 ก้อน** — B `02_Schedule` · C `04_GradeCenter` · D `05_Settings` · E `06_TCAS` · F `07_Portfolio` · G `08_Calendar`
-ลำดับบังคับ: **C ก่อน D เสมอ** · **G ท้ายสุดเป็นก้อนเดี่ยว** · B/E/F สลับกันได้
+**W2 เหลือ 3 ก้อน** — E `06_TCAS` · F `07_Portfolio` · G `08_Calendar`
+ลำดับบังคับเหลือข้อเดียว: **G ท้ายสุดเป็นก้อนเดี่ยว** (งานใหญ่สุดในแผน) · E กับ F สลับกันได้
 
 ### การตัดสินของ Few — 14 ส.ค. 2569
 
-- **ชื่อแท็บ 4 = "ตารางเรียน"** (ปิดข้อค้างใน `02_Schedule` §9) — แก้ `RootTabView` + `DashboardNextClassCard` แล้ว
-  ยังเหลือคำว่า "ตารางสอน" ในเนื้อความของ `TermGradeEditView` · `AddScheduleEntrySheet` · `ScheduleSettingsSheet` (ไฟล์สุดท้ายจะถูกลบตาม `02_Schedule`) → agent ของโมดูลนั้นๆ เก็บตอนทำ
+- **ชื่อแท็บ 4 = "ตารางเรียน"** (ปิดข้อค้างใน `02_Schedule` §9)
+  ✅ **คำว่า "ตารางสอน" ถูกไล่ลบออกจากทั้งแอปแล้ว** (ก้อน B เก็บ `AddScheduleEntrySheet` · ก้อน C เก็บ `TermGradeEditView` · `ScheduleSettingsSheet` ถูกลบทั้งไฟล์)
 - **ก้อน G (`08_Calendar`) ทำ** ไม่ตัดทิ้ง — ยังคงลำดับเดิม: ทำท้ายสุดเป็นก้อนของตัวเอง build ทีละขั้นตาม §8
 
 **🔴 ล้มการตัดสินเดิม 4 ข้อ — ✅ เขียนกลับเข้าสเปค `01_Tasks.md` / `03_QuickAdd.md` เรียบร้อยแล้ว (14 ส.ค.)**
@@ -43,8 +42,20 @@
 | ก้อน | Few ว่าไง | ต้องทำอะไร |
 |---|---|---|
 | **C · หน้าเกรด** | **"ยังไม่ดีเท่าไหร่ เดี๋ยวมาเก็บตกละเอียดทีหลัง"** — build เขียว ใช้งานได้ แต่หน้าตายังไม่ผ่าน | ยังไม่ระบุจุด · ต้องถาม Few ว่าไม่ชอบตรงไหนก่อนแก้ **ห้ามเดาแล้วรื้อเอง** · จุดที่น่าสงสัยที่สุดคือกราฟแท่ง (มุมแท่งใช้ `Radius.icon` 11 อาจมนเกิน · เส้นเป้า · ความหนาแน่นของการ์ด) |
+| **D · หน้าตั้งค่า** | `SettingsView` 465 บรรทัด เกินแนว ~250 ที่แผนตั้งไว้ | `body` ซอยเป็น 6 computed property แล้ว ความเสี่ยง type-check ต่ำ — **รอ Few ตัดสินว่าจะแยกอีกไหม** |
+| **ทั้งแผน** | ยังไม่มีไฟล์ฟอนต์ใน `StudiiOS/Resources/Fonts/` | Few วาง `IBMPlexSansThai-{Regular,Medium,SemiBold}.ttf` · ไม่วางก็ไม่พัง (fallback ฟอนต์ระบบ) ดู log `[Theme]` |
 
-### ก้อน C ทิ้งอะไรไว้ให้ก้อนอื่น — 🔴 ก้อน D อ่านตรงนี้ก่อน
+### ก้อน D ทิ้งอะไรไว้ให้ก้อนอื่น
+
+| ของ | อยู่ที่ | ใครได้ใช้ต่อ |
+|---|---|---|
+| **`AppTheme`** (system/light/dark) | `Core/DesignSystem/AppTheme.swift` | ธีมทำงานทั้งแอปแล้ว — ก้อน E/F/G **ต้องเช็คหน้าตัวเองในโหมดมืดด้วย** สลับได้ที่ ตั้งค่า → การแสดงผล |
+| **`GPAXSettings.resetAll()`** | `Core/Grades/GPAXSettings.swift` | ใครเพิ่ม `Key` ใหม่ใน `GPAXSettings` **ต้องมาเพิ่มในลิสต์ของ `resetAll()` ด้วย** ไม่งั้นลบข้อมูลแล้วค่าค้าง |
+| **`SettingsView.reminderDefaultKey`** | `Features/Settings/SettingsView.swift` | `AddTaskSheet` อ่านไปใช้แล้ว — ห้ามลบ key นี้ ไม่งั้นสวิตช์ในตั้งค่ากลายเป็นของหลอก |
+| โปรไฟล์ 3 ฟิลด์ (`school`/`room`/`program`) | `Core/Profile/StudentProfileStore.swift` | เป็น display-only ไม่มี logic ไหนอ่าน · ใครอยากโชว์บนหน้าอื่นเรียกได้เลย |
+| **แบบแผน 7 แตะปลดล็อกกล่อง dev** | `SettingsView` | ถ้าก้อนอื่นมีเครื่องมือ dev ให้ยัดเข้ากล่องเดิม อย่าสร้างทางเข้าใหม่ |
+
+### ก้อน C ทิ้งอะไรไว้ให้ก้อนอื่น
 
 | ของ | อยู่ที่ | ใครต้องทำอะไร |
 |---|---|---|
@@ -154,22 +165,22 @@
 
 | ต้นเหตุ | ผลกระทบ | ใครแก้ |
 |---|---|---|
-| `02_Schedule` ลบ `ScheduleTodayTasksSection` | 🔴 **เกิดขึ้นจริงแล้วตั้งแต่ก้อน B (14 ส.ค.)** — Toggle "แสดงงานส่วนตัวในตารางเรียน" ที่ `SettingsView.swift:167` + `@AppStorage` ที่บรรทัด 29 **เป็นสวิตช์ตายอยู่ตอนนี้** ไม่ควบคุมอะไรเลย ต้องลบทั้งคู่ | agent ของ `05_Settings` (ก้อน D) |
-| `02_Schedule` เพิ่มทางเข้าที่สองของ `TermManagementView` | `SettingsView` ยังเปิดหน้านี้อีกทาง — **ห้ามลบทางนั้น** สองทางอยู่ร่วมกันได้ | agent ของ `05_Settings` |
+| ~~`02_Schedule` ลบ `ScheduleTodayTasksSection`~~ | ✅ **ทำแล้ว ก้อน D** — Toggle + `@AppStorage("scheduleShowsPersonalTasks")` ถูกลบทั้งคู่ grep แล้วไม่เหลือในแอป | — |
+| `02_Schedule` เพิ่มทางเข้าที่สองของ `TermManagementView` | ✅ อยู่ร่วมกันแล้ว 2 ทาง: เมนู ⚙︎ ของ `ScheduleView` + Settings → "จัดการเทอม" | — |
 | `02_Schedule` เลิกใช้คำว่า "ตารางสอน" | เหลือ 4 จุดใน `TermGradeEditView.swift` (บรรทัด 192 · 201 · 202 · 239) | agent ของ `04_GradeCenter` (ก้อน C) |
 | ~~`01_Tasks` §5 ปุ่ม `+` ตามแท็บ~~ | ✅ **ยกเลิกแล้ว (Few 14 ส.ค.)** — `RootTabView` เสร็จหมดแล้ว ปุ่ม `+` เปิดเมนูเดียวกันทุกแท็บ · โมดูลอื่นยังห้ามแตะไฟล์นี้จนถึง W3 | — |
 | ~~`01_Tasks` เพิ่ม `presetKind:` ใน `AddTaskSheet`~~ | ✅ **W1 ทำแล้ว** — `init(editing:presetKind:onSaved:)` default `.homework` | — |
 | ~~`03_QuickAdd` §5 sheet ชั้นเดียว~~ | ✅ **ยกเลิกแล้ว (Few 14 ส.ค.)** — คง sheet ซ้อน sheet ไว้ | — |
 | `03_QuickAdd` เรียก `EventFormSheet` · `PortfolioItemSheet` | ห้ามแก้ signature ของสองตัวนี้ · **`onSaved:` ที่ก้อน A เติมไว้ห้ามลบ** ไม่งั้นบันทึกแล้วเมนูค้าง · `AddScheduleEntrySheet` ไม่ถูกเรียกจาก QuickAdd แล้ว | ทุก agent |
-| `04_GradeCenter` ย้ายการตั้งเป้ามาที่ `GPAXTargetSheet` | `SettingsView` ต้องลบ section เป้า GPAX — **ทำหลัง GradeCenter เสร็จเท่านั้น** ไม่งั้นจะไม่มีที่ตั้งเป้าเลย | agent ของ `05_Settings` |
-| `04_GradeCenter` ลิสต์อ้างปุ่ม "ขึ้นชั้นแล้ว" | ปุ่มนั้นใน Settings ห้ามลบหรือเปลี่ยนชื่อ | agent ของ `05_Settings` |
-| `05_Settings` §4.3 สวิตช์ค่าเริ่มต้นการเตือนงาน | ต้องแก้ `AddTaskSheet.init` 1 บรรทัด — **agent Tasks เป็นคนแก้** ไม่ใช่ agent Settings | agent ของ `01_Tasks` |
-| `05_Settings` §4.2 ธีมสว่าง/มืด | แตะ `App/StudiiOSApp.swift` (เดิมชื่อ `PrototypeAppApp.swift`) ได้**เฉพาะบรรทัด `.preferredColorScheme`** — ห้ามแตะ `Schema([...])` | agent ของ `05_Settings` |
+| ~~`04_GradeCenter` ย้ายการตั้งเป้ามาที่ `GPAXTargetSheet`~~ | ✅ **ทำแล้ว ก้อน D** — Settings ไม่มี section เป้า GPAX แล้ว | — |
+| `04_GradeCenter` ลิสต์อ้างปุ่ม "ขึ้นชั้นแล้ว" | ✅ ปุ่มยังอยู่ใน Settings → "การเรียน" **ห้ามลบหรือเปลี่ยนชื่อตลอดไป** | ทุก agent |
+| ~~`05_Settings` §4.3 สวิตช์ค่าเริ่มต้นการเตือนงาน~~ | ✅ **ทำแล้ว ก้อน D** (Few อนุมัติให้แก้ข้ามโมดูล) — `AddTaskSheet.init` อ่าน `SettingsView.reminderDefaultKey` แล้ว | — |
+| ~~`05_Settings` §4.2 ธีมสว่าง/มืด~~ | ✅ **ทำแล้ว ก้อน D** — เติม `.preferredColorScheme` บรรทัดเดียวใน `RootContainerView` ไม่ได้แตะ `Schema([...])` | — |
 
-| `07_Portfolio` เปลี่ยนหัวข้อเป็น "ผลงาน" | เมนูหลักใน Dashboard (`PLAN_Redesign.md` §2.4) เขียน "พอร์ต" → ต้องเปลี่ยนให้ตรง | agent ของ W1 |
+| `07_Portfolio` เปลี่ยนหัวข้อเป็น "ผลงาน" | เมนูหลักใน Dashboard เขียน "พอร์ต" → ต้องเปลี่ยนให้ตรง · **QuickAdd ใช้คำว่า "ผลงาน" ไปแล้ว** | agent ของ `07_Portfolio` (ก้อน F) |
 | `06_TCAS` + `07_Portfolio` ใช้ปุ่มมีพื้น `+ คณะ` / `+ ผลงาน` | สองหน้านี้เข้าจากเมนูหลักเหมือนกัน ปุ่มต้องหน้าตาเดียวกันเป๊ะ | agent ของ 06 กับ 07 |
 
-**ลำดับที่บังคับ:** `04_GradeCenter` ต้องเสร็จก่อน `05_Settings` เสมอ · `01_Tasks` §5 กับ `03_QuickAdd` §5 ต้องทำในก้อนเดียวกัน · `08_Calendar` ทำท้ายสุดเป็นก้อนของตัวเอง
+**ลำดับที่บังคับ (เหลือข้อเดียว):** `08_Calendar` ทำท้ายสุดเป็นก้อนของตัวเอง — ข้ออื่นปลดหมดแล้ว
 
 ## บันทึกการตรวจสอบทั้งชุด — 13 ส.ค. 2569
 
