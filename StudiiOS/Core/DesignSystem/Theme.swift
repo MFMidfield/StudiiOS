@@ -131,10 +131,18 @@ enum Theme {
 
 /// Reusable card container matching the Dashboard's visual style.
 struct CardContainer<Content: View>: View {
-    var padding: CGFloat = Theme.Spacing.lg
-    @ViewBuilder var content: Content
+    private let padding: CGFloat
+    private let content: Content
 
     @Environment(\.colorScheme) private var colorScheme
+
+    // Spelled out rather than left to the memberwise initializer: 28 call sites
+    // across the app construct this, and a synthesized init is easy to break by
+    // adding a stored property in the wrong place.
+    init(padding: CGFloat = Theme.Spacing.lg, @ViewBuilder content: () -> Content) {
+        self.padding = padding
+        self.content = content()
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {

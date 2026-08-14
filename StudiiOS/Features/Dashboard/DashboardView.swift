@@ -140,10 +140,11 @@ struct AvatarView: View {
                     .resizable()
                     .scaledToFill()
             } else {
-                Image(systemName: "person.crop.circle.fill")
+                Image(systemName: "person.crop.circle")
                     .resizable()
                     .scaledToFit()
                     .foregroundStyle(Theme.Colors.primaryDeep)
+                    .padding(size * 0.16)
             }
         }
         .frame(width: size, height: size)
