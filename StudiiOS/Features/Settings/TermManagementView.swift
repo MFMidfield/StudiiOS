@@ -77,7 +77,7 @@ struct TermManagementView: View {
                     Text(term.displayName)
                         .foregroundStyle(Theme.Colors.textPrimary)
                     Text("\(c.entries) คาบ · \(c.assignments) งาน")
-                        .font(.caption)
+                        .font(Theme.Font.caption)
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
                 Spacer()

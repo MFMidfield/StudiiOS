@@ -1,7 +1,13 @@
 //
 //  SettingsView.swift
-//  App settings: tier status (Free/Pro/Plus), theme, and app info. No
-//  login/account screens — V1 is offline-first with no cloud sync.
+//  ตั้งค่า — โปรไฟล์ · การเรียน · การแจ้งเตือน · เกี่ยวกับแอป
+//  No login/account screens — V1 is offline-first with no cloud sync.
+//
+//  Every developer tool (including the permanent-delete button, which used to
+//  sit third from the top under a name that never said "delete") is behind
+//  seven taps on the version row. #if DEBUG alone was not enough: a demo runs
+//  from Xcode, which IS a debug build, so the box would have been on screen
+//  the whole time.
 //
 
 import SwiftUI
@@ -26,14 +32,20 @@ struct SettingsView: View {
     @AppStorage("hasCompletedScheduleSetup") private var hasCompletedScheduleSetup = false
     @AppStorage("hasCompletedGradeSetup") private var hasCompletedGradeSetup = false
     @AppStorage("hasCompletedSetupSummary") private var hasCompletedSetupSummary = false
-    @AppStorage("scheduleShowsPersonalTasks") private var scheduleShowsPersonalTasks = false
 
-    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    // "scheduleShowsPersonalTasks" is gone: ScheduleTodayTasksSection was its
+    // only reader and that card was deleted, leaving a switch wired to nothing.
+
     @Query private var terms: [Term]
-    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
 
-    // MARK: - Level 1 GPAX (D7: currentGradeLevel/currentTermNumber below are
-    // the student's REAL term — unrelated to activeTermID above)
+    /// Seven taps on the version row reveal the developer box. Deliberately
+    /// @State, not @AppStorage — it resets on every launch, so a demo can never
+    /// start with the delete button already on screen.
+    @State private var versionTapCount = 0
+    @State private var isShowingDeveloperTools = false
+
+    // MARK: - Level 1 GPAX (D7: currentGradeLevel/currentTermNumber are the
+    // student's REAL term — unrelated to TermStore.activeTermKey)
 
     @State private var isPresentingGradeLevelSheet = false
     @State private var isPresentingCumulativeSheet = false
@@ -43,10 +55,8 @@ struct SettingsView: View {
     @AppStorage(GPAXSettings.Key.currentGradeLevel) private var gpaxGradeLevelPing = 0
     @AppStorage(GPAXSettings.Key.currentTermNumber) private var gpaxTermNumberPing = 0
 
-    // These four are the actual bound values — SwiftUI's AppStorage supports
-    // RawRepresentable enums with a String RawValue directly (GPAXSettings.EntryMode).
-    @AppStorage(GPAXSettings.Key.target) private var gpaxTarget: Double = 0
-    @AppStorage(GPAXSettings.Key.targetSource) private var gpaxTargetSource: String = ""
+    // target / targetSource moved out entirely — GPAXTargetSheet on the grades
+    // screen is now the only place a target is set.
     @AppStorage(GPAXSettings.Key.entryMode) private var gpaxEntryMode: GPAXSettings.EntryMode = .perTerm
     @AppStorage(GPAXSettings.Key.priorGPAX) private var gpaxPriorGPAX: Double = 0
     @AppStorage(GPAXSettings.Key.priorTermCount) private var gpaxPriorTermCount: Int = 0
@@ -75,157 +85,14 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            Section {
-                HStack(spacing: 16) {
-                    profileAvatarView
-                        .frame(width: 64, height: 64)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        let fullName = [profile.firstName, profile.lastName]
-                            .filter { !$0.isEmpty }
-                            .joined(separator: " ")
-                        Text(fullName.isEmpty ? "ยังไม่ได้ตั้งชื่อ" : fullName)
-                            .font(.headline)
-                        if !profile.nickname.isEmpty {
-                            Text("ชื่อเล่น: \(profile.nickname)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Spacer()
-
-                    Button("แก้ไข") {
-                        isPresentingEditProfile = true
-                    }
-                    .font(.subheadline)
-                }
-                .padding(.vertical, 4)
-            }
-
-            Section {
-                Button("ดูหน้าแนะนำแอปอีกครั้ง") {
-                    isPresentingWelcome = true
-                }
-                Button("เปิดหน้า Setup (ทดสอบ)") {
-                    startSetupTest()
-                }
-                Button("ตั้งค่าใหม่อีกครั้ง (Setup ใหม่)", role: .destructive) {
-                    isConfirmingReset = true
-                }
-            }
-
-            Section("สถานะสมาชิก") {
-                HStack {
-                    Text("Student OS Pro")
-                    Spacer()
-                    Toggle("", isOn: $entitlements.hasPro).labelsHidden()
-                }
-                Text("V1 ยังไม่มีระบบซื้อในแอป — สวิตช์นี้ใช้สำหรับทดสอบฟีเจอร์ระหว่างพัฒนาเท่านั้น")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("การแจ้งเตือน") {
-                LabeledContent("สถานะสิทธิ์", value: authorizationStatusLabel)
-
-                if notifications.authorizationStatus == .notDetermined {
-                    Button("ขอสิทธิ์แจ้งเตือน") {
-                        Task { await notifications.requestAuthorization() }
-                    }
-                }
-
-                if notifications.authorizationStatus == .denied {
-                    Button("เปิดตั้งค่าแจ้งเตือนของเครื่อง") {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
-                    }
-                }
-
-                Button("ทดสอบแจ้งเตือน (5 วินาที)") {
-                    Task {
-                        await notifications.sendTestNotification()
-                        showTestNotificationHint = true
-                    }
-                }
-                Text("กดแล้วสลับออกจากแอปหรือรออยู่หน้านี้ก็ได้ จะเด้งใน 5 วินาที")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-
-                NavigationLink("การแจ้งเตือนที่ตั้งไว้") {
-                    PendingNotificationsView()
-                }
-            }
-
-            Section("ตารางเรียน") {
-                NavigationLink {
-                    TermManagementView()
-                } label: {
-                    LabeledContent("เทอมปัจจุบัน", value: activeTerm?.displayName ?? "—")
-                }
-                Toggle("แสดงงานส่วนตัวในตารางเรียน", isOn: $scheduleShowsPersonalTasks)
-                Text("ปิดไว้ = การ์ด \"งาน / การบ้านวันนี้\" แสดงเฉพาะการบ้าน ไม่รวมงานทั่วไป")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("ระดับชั้นและเป้า GPAX") {
-                LabeledContent("ระดับชั้นปัจจุบัน", value: currentTermLabel)
-
-                Button(GPAXSettings.currentSortKey == nil ? "ตั้งระดับชั้น" : "แก้ระดับชั้น") {
-                    isPresentingGradeLevelSheet = true
-                }
-
-                if canAdvanceTerm {
-                    Button("ขึ้นชั้นแล้ว") { advanceToNextTerm() }
-                }
-
-                HStack {
-                    Text("เป้า GPAX")
-                    Spacer()
-                    TextField("เช่น 3.50", value: $gpaxTarget, format: .number.precision(.fractionLength(2)))
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 70)
-                }
-
-                if gpaxTarget > 0 {
-                    TextField("เป้ามาจากโปรแกรม/คณะไหน (ไม่บังคับ)", text: $gpaxTargetSource)
-                        .font(.caption)
-                }
-
-                Picker("วิธีกรอกเทอมที่ผ่านมา", selection: $gpaxEntryMode) {
-                    Text("กรอกทีละเทอม").tag(GPAXSettings.EntryMode.perTerm)
-                    Text("กรอก GPAX สะสม").tag(GPAXSettings.EntryMode.cumulative)
-                }
-
-                if gpaxEntryMode == .cumulative {
-                    LabeledContent(
-                        "GPAX สะสมที่กรอกไว้",
-                        value: gpaxPriorGPAX > 0 ? String(format: "%.2f · %d เทอม", gpaxPriorGPAX, gpaxPriorTermCount) : "ยังไม่ได้กรอก"
-                    )
-                    Button("กรอก GPAX สะสม") { isPresentingCumulativeSheet = true }
-                }
-            }
-
-            Section("เกี่ยวกับ") {
-                LabeledContent("เวอร์ชัน", value: "1.0.0 (Prototype)")
-                LabeledContent("โหมด", value: "Offline-first")
-            }
-
-            Section("หลักการออกแบบ") {
-                Label("Offline-first", systemImage: "wifi.slash")
-                Label("Privacy-first", systemImage: "lock.shield")
-                Label("Thai-first", systemImage: "character.book.closed")
-            }
-
+            profileSection
+            studySection
+            notificationSection
+            aboutSection
             developerSection
         }
         .navigationTitle("ตั้งค่า")
-        .task {
-            await notifications.refreshStatus()
-        }
+        .task { await notifications.refreshStatus() }
         .alert("ส่งแจ้งเตือนทดสอบแล้ว", isPresented: $showTestNotificationHint) {
             Button("ตกลง", role: .cancel) { }
         } message: {
@@ -233,9 +100,6 @@ struct SettingsView: View {
         }
         .fullScreenCover(isPresented: $isPresentingWelcome) {
             WelcomeView()
-        }
-        .fullScreenCover(isPresented: $isPresentingSetupTest, onDismiss: restoreSetupFlags) {
-            SetupFlowTestContainer()
         }
         .sheet(isPresented: $isPresentingEditProfile) {
             EditProfileView()
@@ -247,7 +111,7 @@ struct SettingsView: View {
             CumulativeGPAXSheet()
         }
         .confirmationDialog(
-            "ล้างข้อมูลทั้งหมด",
+            "ลบข้อมูลทั้งหมดถาวร",
             isPresented: $isConfirmingReset,
             titleVisibility: .visible
         ) {
@@ -260,19 +124,169 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Sections
+
+    /// The whole card is the button. The old design put a small "แก้ไข" link on
+    /// the right, so the obvious target — the card — did nothing.
+    private var profileSection: some View {
+        Section {
+            Button {
+                isPresentingEditProfile = true
+            } label: {
+                HStack(spacing: Theme.Spacing.md) {
+                    profileAvatarView
+                        .frame(width: 46, height: 46)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(displayName)
+                            .font(Theme.Font.plex(15, .semibold))
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                        Text(profileSubtitle)
+                            .font(Theme.Font.caption)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+
+                    Spacer(minLength: Theme.Spacing.sm)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                .padding(.vertical, Theme.Spacing.xs)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var studySection: some View {
+        Section("การเรียน") {
+            LabeledContent("ระดับชั้นปัจจุบัน", value: currentTermLabel)
+
+            Button(GPAXSettings.currentSortKey == nil ? "ตั้งระดับชั้น" : "แก้ระดับชั้น") {
+                isPresentingGradeLevelSheet = true
+            }
+
+            // Referenced by name in the grades list ("กด \"ขึ้นชั้นแล้ว\" ในตั้งค่า")
+            // — do not rename without changing that copy too.
+            if canAdvanceTerm {
+                Button("ขึ้นชั้นแล้ว") { advanceToNextTerm() }
+            }
+
+            Picker("วิธีกรอกเทอมที่ผ่านมา", selection: $gpaxEntryMode) {
+                Text("กรอกทีละเทอม").tag(GPAXSettings.EntryMode.perTerm)
+                Text("กรอก GPAX สะสม").tag(GPAXSettings.EntryMode.cumulative)
+            }
+
+            if gpaxEntryMode == .cumulative {
+                LabeledContent(
+                    "GPAX สะสมที่กรอกไว้",
+                    value: gpaxPriorGPAX > 0 ? String(format: "%.2f · %d เทอม", gpaxPriorGPAX, gpaxPriorTermCount) : "ยังไม่ได้กรอก"
+                )
+                Button("กรอก GPAX สะสม") { isPresentingCumulativeSheet = true }
+            }
+
+            NavigationLink {
+                TermManagementView()
+            } label: {
+                LabeledContent("จัดการเทอม", value: "\(terms.count) เทอม")
+            }
+
+            NavigationLink("โหมดโฟกัส") { FocusModeView() }
+        }
+    }
+
+    private var notificationSection: some View {
+        Section("การแจ้งเตือน") {
+            LabeledContent("สถานะสิทธิ์", value: authorizationStatusLabel)
+
+            if notifications.authorizationStatus == .notDetermined {
+                Button("ขอสิทธิ์แจ้งเตือน") {
+                    Task { await notifications.requestAuthorization() }
+                }
+            }
+
+            if notifications.authorizationStatus == .denied {
+                Button("เปิดตั้งค่าแจ้งเตือนของเครื่อง") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            }
+
+            NavigationLink("การแจ้งเตือนที่ตั้งไว้") {
+                PendingNotificationsView()
+            }
+        }
+    }
+
+    private var aboutSection: some View {
+        Section("เกี่ยวกับแอป") {
+            Button("ดูหน้าแนะนำแอปอีกครั้ง") { isPresentingWelcome = true }
+
+            LabeledContent("เวอร์ชัน", value: "1.0.0 (Prototype)")
+                .contentShape(Rectangle())
+                .onTapGesture(perform: registerVersionTap)
+
+            LabeledContent("แผน") {
+                if entitlements.hasPro || entitlements.hasPlus {
+                    TierBadge(tier: entitlements.hasPlus ? .plus : .pro)
+                } else {
+                    Text("ฟรี").foregroundStyle(Theme.Colors.textSecondary)
+                }
+            }
+        }
+    }
+
+    /// Counts up to seven, then stops counting — tapping further does nothing.
+    private func registerVersionTap() {
+        guard !isShowingDeveloperTools else { return }
+        versionTapCount += 1
+        if versionTapCount >= 7 {
+            isShowingDeveloperTools = true
+            AppLog.action("Settings", "ปลดล็อกเครื่องมือนักพัฒนา")
+        }
+    }
+
+    // MARK: - Developer tools
+    //
+    // Two locks, not one: `#if DEBUG` keeps this out of a release build, and
+    // the seven-tap gate keeps it off screen during a demo — which runs from
+    // Xcode and is therefore a debug build.
+    //
     /// Kept out of `body` on purpose: `#if DEBUG` written inline inside a
     /// ViewBuilder confuses the type checker, so the conditional lives here
     /// and `body` just references the property.
     @ViewBuilder
     private var developerSection: some View {
         #if DEBUG
-        Section("สำหรับนักพัฒนา") {
-            NavigationLink("ทดสอบ OCR") {
-                OCRDebugView()
+        if isShowingDeveloperTools {
+            Section("สำหรับนักพัฒนา") {
+                Toggle("เปิด Pro", isOn: $entitlements.hasPro)
+
+                Button("เปิดหน้า Setup อีกครั้ง") { startSetupTest() }
+
+                Button("ทดสอบแจ้งเตือน (5 วินาที)") {
+                    Task {
+                        await notifications.sendTestNotification()
+                        showTestNotificationHint = true
+                    }
+                }
+
+                NavigationLink("ทดสอบ OCR") { OCRDebugView() }
+
+                Button("ลบข้อมูลทั้งหมดถาวร", role: .destructive) {
+                    isConfirmingReset = true
+                }
+            } footer: {
+                Text("กล่องนี้ไม่ขึ้นในเวอร์ชันจริง และซ่อนใหม่ทุกครั้งที่เปิดแอป")
+                    .font(Theme.Font.caption)
             }
-            Text("ดูว่า Vision อ่านรูปออกมาเป็นข้อความอะไรบ้าง — ไม่ขึ้นในเวอร์ชันจริง")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            // Attached here, not to `body`: SetupFlowTestContainer only exists
+            // in a DEBUG build, so the reference has to live inside the #if too.
+            .fullScreenCover(isPresented: $isPresentingSetupTest, onDismiss: restoreSetupFlags) {
+                SetupFlowTestContainer()
+            }
         }
         #endif
     }
@@ -286,6 +300,22 @@ struct SettingsView: View {
         }
     }
 
+    private var displayName: String {
+        let fullName = [profile.firstName, profile.lastName]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        return fullName.isEmpty ? "ยังไม่ได้ตั้งชื่อ" : fullName
+    }
+
+    /// "ธน · ม.5 เทอม 1" — falls back to whichever half exists.
+    private var profileSubtitle: String {
+        let name = profile.nickname.isEmpty ? profile.firstName : profile.nickname
+        let term = GPAXSettings.currentSortKey == nil ? "" : currentTermLabel
+        return [name, term].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    /// Initials on a soft accent circle beat a grey stock silhouette — the card
+    /// looks set up even before a photo is added.
     @ViewBuilder
     private var profileAvatarView: some View {
         if let img = profile.cachedProfileImage {
@@ -295,13 +325,19 @@ struct SettingsView: View {
                 .clipShape(Circle())
         } else {
             Circle()
-                .fill(Theme.Colors.surfaceRaised)
+                .fill(Theme.Colors.primarySoft)
                 .overlay {
-                    Image(systemName: "person.fill")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
+                    Text(initials)
+                        .font(Theme.Font.plex(17, .semibold))
+                        .foregroundStyle(Theme.Colors.primaryDeep)
                 }
         }
+    }
+
+    /// First letter of the nickname, else of the first name, else a person glyph.
+    private var initials: String {
+        let source = profile.nickname.isEmpty ? profile.firstName : profile.nickname
+        return source.isEmpty ? "?" : String(source.prefix(1))
     }
 
     /// Debug-only: wipes every SwiftData record plus the local profile, then
@@ -377,212 +413,6 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Edit Profile Sheet
-
-private struct EditProfileView: View {
-    @State private var profile = StudentProfileStore.shared
-    @State private var firstName: String = ""
-    @State private var lastName: String = ""
-    @State private var nickname: String = ""
-    @State private var profileImage: UIImage?
-    @State private var imageRemoved = false
-    @State private var showImageSourcePicker = false
-    @State private var imageSource: ProfileImagePicker.Source = .photoLibrary
-    @State private var isPresentingImagePicker = false
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    HStack {
-                        Spacer()
-                        Button {
-                            showImageSourcePicker = true
-                        } label: {
-                            ZStack(alignment: .bottomTrailing) {
-                                avatarView
-                                    .frame(width: 90, height: 90)
-
-                                Image(systemName: "camera.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.white)
-                                    .padding(6)
-                                    .background(Color.accentColor, in: Circle())
-                                    .offset(x: 4, y: 4)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        Spacer()
-                    }
-                    .padding(.vertical, 8)
-                    .listRowBackground(Color.clear)
-                }
-
-                Section("ชื่อ-นามสกุล") {
-                    TextField("ชื่อ", text: $firstName)
-                    TextField("นามสกุล", text: $lastName)
-                }
-
-                Section("ชื่อเล่น") {
-                    TextField("ชื่อเล่น", text: $nickname)
-                }
-            }
-            .navigationTitle("แก้ไขโปรไฟล์")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("ยกเลิก") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("บันทึก") { save() }
-                        .fontWeight(.semibold)
-                }
-            }
-            .onAppear {
-                firstName = profile.firstName
-                lastName = profile.lastName
-                nickname = profile.nickname
-                profileImage = profile.cachedProfileImage
-            }
-            .confirmationDialog("เลือกรูปภาพจาก", isPresented: $showImageSourcePicker) {
-                Button("กล้องถ่ายรูป") {
-                    imageSource = .camera
-                    isPresentingImagePicker = true
-                }
-                Button("คลังภาพ") {
-                    imageSource = .photoLibrary
-                    isPresentingImagePicker = true
-                }
-                if profileImage != nil {
-                    Button("ลบรูปภาพ", role: .destructive) {
-                        profileImage = nil
-                        imageRemoved = true
-                    }
-                }
-                Button("ยกเลิก", role: .cancel) {}
-            }
-            .sheet(isPresented: $isPresentingImagePicker) {
-                ProfileImagePicker(source: imageSource) { picked in
-                    profileImage = picked
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var avatarView: some View {
-        if let img = profileImage {
-            Image(uiImage: img)
-                .resizable()
-                .scaledToFill()
-                .clipShape(Circle())
-        } else {
-            Circle()
-                .fill(Theme.Colors.surfaceRaised)
-                .overlay {
-                    Image(systemName: "person.fill")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
-                }
-        }
-    }
-
-    private func save() {
-        profile.firstName = firstName.trimmingCharacters(in: .whitespaces)
-        profile.lastName  = lastName.trimmingCharacters(in: .whitespaces)
-        profile.nickname  = nickname.trimmingCharacters(in: .whitespaces)
-        if let img = profileImage {
-            profile.saveProfileImage(img)
-        } else if imageRemoved {
-            profile.removeProfileImage()
-        }
-        dismiss()
-    }
-}
-
-// MARK: - Setup Test Container
-
-/// Debug-only: replays the Setup wizard for testing. Mirrors the phase
-/// switching in `RootContainerView`, plus a floating close button so
-/// testers can bail out of any phase without finishing it.
-private struct SetupFlowTestContainer: View {
-    @AppStorage("hasCompletedProfileSetup") private var hasCompletedProfileSetup = false
-    @AppStorage("hasCompletedScheduleSetup") private var hasCompletedScheduleSetup = false
-    @AppStorage("hasCompletedGradeSetup") private var hasCompletedGradeSetup = false
-    @AppStorage("hasCompletedSetupSummary") private var hasCompletedSetupSummary = false
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            if !hasCompletedProfileSetup {
-                ProfileSetupView()
-            } else if !hasCompletedScheduleSetup {
-                NavigationStack { ScheduleSetupView() }
-            } else if !hasCompletedGradeSetup {
-                NavigationStack { GradeReportSetupView() }
-            } else if !hasCompletedSetupSummary {
-                SetupSummaryView()
-            } else {
-                VStack(spacing: 16) {
-                    Text("จบขั้นตอน Setup แล้ว (โหมดทดสอบ)")
-                    Button("ปิด") { dismiss() }
-                }
-            }
-
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-                    .padding(8)
-                    .background(.ultraThinMaterial, in: Circle())
-            }
-            .padding()
-        }
-    }
-}
-
 #Preview {
     NavigationStack { SettingsView() }
-}
-
-// MARK: - Pending Notifications
-
-private struct PendingNotificationsView: View {
-    @State private var requests: [UNNotificationRequest] = []
-
-    var body: some View {
-        List {
-            if requests.isEmpty {
-                Text("ยังไม่มีการแจ้งเตือนที่ตั้งไว้")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(requests, id: \.identifier) { request in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(request.content.title)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        if let trigger = request.trigger as? UNCalendarNotificationTrigger,
-                           let date = trigger.nextTriggerDate() {
-                            Text(date.thaiFullString)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-
-                Button("ล้างการแจ้งเตือนทั้งหมด", role: .destructive) {
-                    NotificationManager.shared.cancelAll()
-                    requests = []
-                }
-            }
-        }
-        .navigationTitle("การแจ้งเตือนที่ตั้งไว้")
-        .navigationBarTitleDisplayMode(.inline)
-        .task {
-            requests = await NotificationManager.shared.pendingRequests()
-        }
-    }
 }
