@@ -1,13 +1,13 @@
 //
-//  PrototypeAppUITestsLaunchTests.swift
-//  PrototypeAppUITests
+//  StudiiOSUITestsLaunchTests.swift
+//  StudiiOSUITests
 //
 //  Created by midfield on 27/7/2569 BE.
 //
 
 import XCTest
 
-final class PrototypeAppUITestsLaunchTests: XCTestCase {
+final class StudiiOSUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

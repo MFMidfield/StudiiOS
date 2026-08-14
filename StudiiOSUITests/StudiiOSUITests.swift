@@ -1,13 +1,13 @@
 //
-//  PrototypeAppUITests.swift
-//  PrototypeAppUITests
+//  StudiiOSUITests.swift
+//  StudiiOSUITests
 //
 //  Created by midfield on 27/7/2569 BE.
 //
 
 import XCTest
 
-final class PrototypeAppUITests: XCTestCase {
+final class StudiiOSUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

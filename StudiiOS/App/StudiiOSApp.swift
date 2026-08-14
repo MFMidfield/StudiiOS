@@ -1,5 +1,5 @@
 //
-//  PrototypeAppApp.swift
+//  StudiiOSApp.swift
 //  Student OS — offline-first student life app.
 //
 //  App entry point: builds the shared SwiftData container covering every
@@ -10,7 +10,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct PrototypeAppApp: App {
+struct StudiiOSApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Assignment.self,
@@ -48,7 +48,7 @@ struct PrototypeAppApp: App {
 
     init() {
         _ = NotificationManager.shared
-        PrototypeAppApp.seedBuiltInSubjects(in: sharedModelContainer.mainContext)
+        StudiiOSApp.seedBuiltInSubjects(in: sharedModelContainer.mainContext)
     }
 
     /// Seeds the 3 built-in subjects (club, uniform activity, lunch break) on

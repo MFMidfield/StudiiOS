@@ -340,7 +340,7 @@ struct SettingsView: View {
         PomodoroEngine.shared.stop(recordPartial: false)
         AppBlockManager.shared.stopBlocking(reason: "ล้างข้อมูลทั้งหมด")
 
-        PrototypeAppApp.seedBuiltInSubjects(in: context)
+        StudiiOSApp.seedBuiltInSubjects(in: context)
 
         hasCompletedOnboarding = false
         hasCompletedProfileSetup = false

@@ -12,50 +12,50 @@
 			containerPortal = D16C3DF53017B61D00CE7D8C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = D16C3DFC3017B61D00CE7D8C;
-			remoteInfo = PrototypeApp;
+			remoteInfo = StudiiOS;
 		};
 		D16C3E193017B61F00CE7D8C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D16C3DF53017B61D00CE7D8C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = D16C3DFC3017B61D00CE7D8C;
-			remoteInfo = PrototypeApp;
+			remoteInfo = StudiiOS;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		D16C3DFD3017B61D00CE7D8C /* PrototypeApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrototypeApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D16C3E0E3017B61F00CE7D8C /* PrototypeAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrototypeAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D16C3E183017B61F00CE7D8C /* PrototypeAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrototypeAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D16C3DFD3017B61D00CE7D8C /* StudiiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StudiiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D16C3E0E3017B61F00CE7D8C /* StudiiOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StudiiOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D16C3E183017B61F00CE7D8C /* StudiiOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StudiiOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		D16C3E203017B61F00CE7D8C /* Exceptions for "PrototypeApp" folder in "PrototypeApp" target */ = {
+		D16C3E203017B61F00CE7D8C /* Exceptions for "StudiiOS" folder in "StudiiOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = D16C3DFC3017B61D00CE7D8C /* PrototypeApp */;
+			target = D16C3DFC3017B61D00CE7D8C /* StudiiOS */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		D16C3DFF3017B61D00CE7D8C /* PrototypeApp */ = {
+		D16C3DFF3017B61D00CE7D8C /* StudiiOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				D16C3E203017B61F00CE7D8C /* Exceptions for "PrototypeApp" folder in "PrototypeApp" target */,
+				D16C3E203017B61F00CE7D8C /* Exceptions for "StudiiOS" folder in "StudiiOS" target */,
 			);
-			path = PrototypeApp;
+			path = StudiiOS;
 			sourceTree = "<group>";
 		};
-		D16C3E113017B61F00CE7D8C /* PrototypeAppTests */ = {
+		D16C3E113017B61F00CE7D8C /* StudiiOSTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PrototypeAppTests;
+			path = StudiiOSTests;
 			sourceTree = "<group>";
 		};
-		D16C3E1B3017B61F00CE7D8C /* PrototypeAppUITests */ = {
+		D16C3E1B3017B61F00CE7D8C /* StudiiOSUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PrototypeAppUITests;
+			path = StudiiOSUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -88,9 +88,9 @@
 		D16C3DF43017B61D00CE7D8C = {
 			isa = PBXGroup;
 			children = (
-				D16C3DFF3017B61D00CE7D8C /* PrototypeApp */,
-				D16C3E113017B61F00CE7D8C /* PrototypeAppTests */,
-				D16C3E1B3017B61F00CE7D8C /* PrototypeAppUITests */,
+				D16C3DFF3017B61D00CE7D8C /* StudiiOS */,
+				D16C3E113017B61F00CE7D8C /* StudiiOSTests */,
+				D16C3E1B3017B61F00CE7D8C /* StudiiOSUITests */,
 				D16C3DFE3017B61D00CE7D8C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -98,9 +98,9 @@
 		D16C3DFE3017B61D00CE7D8C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D16C3DFD3017B61D00CE7D8C /* PrototypeApp.app */,
-				D16C3E0E3017B61F00CE7D8C /* PrototypeAppTests.xctest */,
-				D16C3E183017B61F00CE7D8C /* PrototypeAppUITests.xctest */,
+				D16C3DFD3017B61D00CE7D8C /* StudiiOS.app */,
+				D16C3E0E3017B61F00CE7D8C /* StudiiOSTests.xctest */,
+				D16C3E183017B61F00CE7D8C /* StudiiOSUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,9 +108,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		D16C3DFC3017B61D00CE7D8C /* PrototypeApp */ = {
+		D16C3DFC3017B61D00CE7D8C /* StudiiOS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D16C3E213017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "PrototypeApp" */;
+			buildConfigurationList = D16C3E213017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "StudiiOS" */;
 			buildPhases = (
 				D16C3DF93017B61D00CE7D8C /* Sources */,
 				D16C3DFA3017B61D00CE7D8C /* Frameworks */,
@@ -121,18 +121,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				D16C3DFF3017B61D00CE7D8C /* PrototypeApp */,
+				D16C3DFF3017B61D00CE7D8C /* StudiiOS */,
 			);
-			name = PrototypeApp;
+			name = StudiiOS;
 			packageProductDependencies = (
 			);
-			productName = PrototypeApp;
-			productReference = D16C3DFD3017B61D00CE7D8C /* PrototypeApp.app */;
+			productName = StudiiOS;
+			productReference = D16C3DFD3017B61D00CE7D8C /* StudiiOS.app */;
 			productType = "com.apple.product-type.application";
 		};
-		D16C3E0D3017B61F00CE7D8C /* PrototypeAppTests */ = {
+		D16C3E0D3017B61F00CE7D8C /* StudiiOSTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D16C3E263017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "PrototypeAppTests" */;
+			buildConfigurationList = D16C3E263017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "StudiiOSTests" */;
 			buildPhases = (
 				D16C3E0A3017B61F00CE7D8C /* Sources */,
 				D16C3E0B3017B61F00CE7D8C /* Frameworks */,
@@ -144,18 +144,18 @@
 				D16C3E103017B61F00CE7D8C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				D16C3E113017B61F00CE7D8C /* PrototypeAppTests */,
+				D16C3E113017B61F00CE7D8C /* StudiiOSTests */,
 			);
-			name = PrototypeAppTests;
+			name = StudiiOSTests;
 			packageProductDependencies = (
 			);
-			productName = PrototypeAppTests;
-			productReference = D16C3E0E3017B61F00CE7D8C /* PrototypeAppTests.xctest */;
+			productName = StudiiOSTests;
+			productReference = D16C3E0E3017B61F00CE7D8C /* StudiiOSTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		D16C3E173017B61F00CE7D8C /* PrototypeAppUITests */ = {
+		D16C3E173017B61F00CE7D8C /* StudiiOSUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D16C3E293017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "PrototypeAppUITests" */;
+			buildConfigurationList = D16C3E293017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "StudiiOSUITests" */;
 			buildPhases = (
 				D16C3E143017B61F00CE7D8C /* Sources */,
 				D16C3E153017B61F00CE7D8C /* Frameworks */,
@@ -167,13 +167,13 @@
 				D16C3E1A3017B61F00CE7D8C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				D16C3E1B3017B61F00CE7D8C /* PrototypeAppUITests */,
+				D16C3E1B3017B61F00CE7D8C /* StudiiOSUITests */,
 			);
-			name = PrototypeAppUITests;
+			name = StudiiOSUITests;
 			packageProductDependencies = (
 			);
-			productName = PrototypeAppUITests;
-			productReference = D16C3E183017B61F00CE7D8C /* PrototypeAppUITests.xctest */;
+			productName = StudiiOSUITests;
+			productReference = D16C3E183017B61F00CE7D8C /* StudiiOSUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -199,7 +199,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D16C3DF83017B61D00CE7D8C /* Build configuration list for PBXProject "PrototypeApp" */;
+			buildConfigurationList = D16C3DF83017B61D00CE7D8C /* Build configuration list for PBXProject "StudiiOS" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -213,9 +213,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D16C3DFC3017B61D00CE7D8C /* PrototypeApp */,
-				D16C3E0D3017B61F00CE7D8C /* PrototypeAppTests */,
-				D16C3E173017B61F00CE7D8C /* PrototypeAppUITests */,
+				D16C3DFC3017B61D00CE7D8C /* StudiiOS */,
+				D16C3E0D3017B61F00CE7D8C /* StudiiOSTests */,
+				D16C3E173017B61F00CE7D8C /* StudiiOSUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -271,12 +271,12 @@
 /* Begin PBXTargetDependency section */
 		D16C3E103017B61F00CE7D8C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = D16C3DFC3017B61D00CE7D8C /* PrototypeApp */;
+			target = D16C3DFC3017B61D00CE7D8C /* StudiiOS */;
 			targetProxy = D16C3E0F3017B61F00CE7D8C /* PBXContainerItemProxy */;
 		};
 		D16C3E1A3017B61F00CE7D8C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = D16C3DFC3017B61D00CE7D8C /* PrototypeApp */;
+			target = D16C3DFC3017B61D00CE7D8C /* StudiiOS */;
 			targetProxy = D16C3E193017B61F00CE7D8C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -287,7 +287,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = PrototypeApp/PrototypeApp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = StudiiOS/StudiiOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DVQVPV7AMT;
@@ -295,7 +295,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = PrototypeApp/Info.plist;
+				INFOPLIST_FILE = StudiiOS/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -311,7 +311,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.PrototypeApp;
+				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.StudiiOS;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -332,7 +332,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = PrototypeApp/PrototypeApp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = StudiiOS/StudiiOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DVQVPV7AMT;
@@ -340,7 +340,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = PrototypeApp/Info.plist;
+				INFOPLIST_FILE = StudiiOS/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -356,7 +356,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.PrototypeApp;
+				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.StudiiOS;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -496,7 +496,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.PrototypeAppTests;
+				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.StudiiOSTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -506,7 +506,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PrototypeApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PrototypeApp";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StudiiOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StudiiOS";
 				XROS_DEPLOYMENT_TARGET = 26.5;
 			};
 			name = Debug;
@@ -521,7 +521,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.PrototypeAppTests;
+				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.StudiiOSTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -531,7 +531,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PrototypeApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PrototypeApp";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StudiiOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StudiiOS";
 				XROS_DEPLOYMENT_TARGET = 26.5;
 			};
 			name = Release;
@@ -545,7 +545,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.PrototypeAppUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.StudiiOSUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -555,7 +555,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = PrototypeApp;
+				TEST_TARGET_NAME = StudiiOS;
 				XROS_DEPLOYMENT_TARGET = 26.5;
 			};
 			name = Debug;
@@ -569,7 +569,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.PrototypeAppUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = mfmidfield.StudiiOSUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -579,7 +579,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = PrototypeApp;
+				TEST_TARGET_NAME = StudiiOS;
 				XROS_DEPLOYMENT_TARGET = 26.5;
 			};
 			name = Release;
@@ -587,7 +587,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D16C3DF83017B61D00CE7D8C /* Build configuration list for PBXProject "PrototypeApp" */ = {
+		D16C3DF83017B61D00CE7D8C /* Build configuration list for PBXProject "StudiiOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D16C3E243017B61F00CE7D8C /* Debug */,
@@ -596,7 +596,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D16C3E213017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "PrototypeApp" */ = {
+		D16C3E213017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "StudiiOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D16C3E223017B61F00CE7D8C /* Debug */,
@@ -605,7 +605,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D16C3E263017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "PrototypeAppTests" */ = {
+		D16C3E263017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "StudiiOSTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D16C3E273017B61F00CE7D8C /* Debug */,
@@ -614,7 +614,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D16C3E293017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "PrototypeAppUITests" */ = {
+		D16C3E293017B61F00CE7D8C /* Build configuration list for PBXNativeTarget "StudiiOSUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D16C3E2A3017B61F00CE7D8C /* Debug */,

@@ -5,7 +5,7 @@
 //
 
 import Testing
-@testable import PrototypeApp
+@testable import StudiiOS
 
 struct RIASECScorerTests {
 
