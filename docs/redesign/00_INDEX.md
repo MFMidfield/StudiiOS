@@ -14,7 +14,9 @@
 |---|---|
 | **W0** เตรียม | ✅ เสร็จ — commit rename PrototypeApp→StudiiOS, ตัด branch `redesign` |
 | **W1** Theme + Dashboard + tab bar | ✅ **จบแล้ว — Few ยืนยัน ⌘B เขียว 14 ส.ค.** |
-| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A จบ (build เขียว + Few กดลองแล้ว 14 ส.ค.)** · **ก้อน B (`02_Schedule`) เขียนโค้ดครบ ⏳ ยังไม่ build** · C–G ยังไม่เริ่ม |
+| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A + B จบ (Few ยืนยัน build เขียวทั้งคู่ 14 ส.ค.)** · **ก้อน C (`04_GradeCenter`) เขียนโค้ดครบ ⏳ ยังไม่ build** · D–G ยังไม่เริ่ม |
+
+**W2 เหลือ 4 ก้อน** — D `05_Settings` (ปลดล็อกแล้ว: C เสร็จ) · E `06_TCAS` · F `07_Portfolio` · G `08_Calendar` (ท้ายสุด เดี่ยว)
 | **W3** custom nav · แตก CalendarView · onboarding | ⬜ ยังไม่เริ่ม |
 
 **W2 เหลือ 6 ก้อน** — B `02_Schedule` · C `04_GradeCenter` · D `05_Settings` · E `06_TCAS` · F `07_Portfolio` · G `08_Calendar`
@@ -35,6 +37,14 @@
 | `03_QuickAdd` §3 — เลิก sheet ซ้อน sheet | **คง sheet ซ้อน sheet ไว้** · บันทึก → ปิดทั้งสองชั้น · ยกเลิก → กลับมาที่เมนู | `QuickAddSheet` ใช้ `.sheet(item:onDismiss:)` + ธง `didSave` |
 | `01_Tasks` §4.4 — ไอคอนกรองบน toolbar ขวาบน · เพิ่มงานด้วยปุ่ม `+` กลาง tab bar | **ขวาบนเป็นปุ่ม `+`** — แตะ = `AddTaskSheet` · กดค้าง = เมนูกรอง ประเภท/วิชา/ล้างตัวกรอง | `TaskFilterMenu.swift` → `TaskAddMenu.swift` (`Menu(primaryAction:)`) |
 | `03_QuickAdd` §4 — เมนู 4 ทาง กริด 2×2 (มี "คาบเรียน") | **3 ทาง กริด 1×3** — งาน · กิจกรรมปฏิทิน · ผลงาน (ตัด "โน๊ต" ตามเดิม · ไม่เพิ่ม "คาบเรียน") | `QuickAddSheet.options` เหลือ 3 |
+
+### ก้อน C ทิ้งอะไรไว้ให้ก้อนอื่น — 🔴 ก้อน D อ่านตรงนี้ก่อน
+
+| ของ | อยู่ที่ | ใครต้องทำอะไร |
+|---|---|---|
+| **`GPAXTargetSheet` เสร็จแล้ว** | `Features/GradeCenter/GPAXTargetSheet.swift` | **ก้อน D ลบ section เป้า GPAX ใน `SettingsView` ได้แล้ว** — เงื่อนไข "ต้องมีที่ตั้งเป้าใหม่ก่อน" ปลดล็อกแล้ว |
+| ปุ่ม **"ขึ้นชั้นแล้ว"** ใน Settings | `SettingsView` | ลิสต์เกรดกับกราฟอ้างชื่อปุ่มนี้ตรงๆ — **ห้ามลบ ห้ามเปลี่ยนชื่อ** |
+| `GPAXRangeBar` แยกเป็นคอมโพเนนต์แล้ว (ไม่ `private` แล้ว) | `Features/GradeCenter/GPAXRangeBar.swift` | ใครอยากใช้แถบ floor–ceiling ซ้ำ เรียกได้เลย |
 
 ### ก้อน B ทิ้งอะไรไว้ให้ก้อนอื่น
 

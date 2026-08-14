@@ -117,8 +117,15 @@ GradeCenterView
 | ประเภทแท่ง | ความสูง | หน้าตา | กดได้ |
 |---|---|---|---|
 | เทอมที่กรอกแล้ว | `gpa / 4.0` | ทึบ `primary` · เลข GPA อยู่บนหัวแท่ง | ✅ push `TermGradeEditView` |
-| เทอมปัจจุบัน | `requiredAverage / 4.0` | ลายทแยง + ขอบประ `primary` · ป้าย `"กำลัง"` | ❌ |
+| เทอมจบแล้วแต่ยังไม่กรอก | `requiredAverage / 4.0` | จาง `primarySoft` · ป้าย `"เพิ่ม"` | ✅ **push ได้ด้วย** |
+| เทอมปัจจุบัน | `requiredAverage / 4.0` | ~~ลายทแยง~~ **ขอบประ** `primary` + พื้นจาง · ป้าย `"กำลัง"` | ❌ |
 | เทอมอนาคต | `requiredAverage / 4.0` | ทึบ `primarySoft` · เลข `requiredAverage` สีจาง | ❌ |
+
+> **ลายทแยงเปลี่ยนเป็นขอบประอย่างเดียว** — ลายทแยงจริงต้องเขียน `Shape` เอง และที่ความกว้าง 46pt
+> มันอ่านเป็นสัญญาณรบกวนมากกว่าเป็นลาย · ขอบประสื่อว่า "ยังไม่นิ่ง" ได้เหมือนกันด้วยโค้ด 3 บรรทัด
+>
+> **แท่ง "เทอมจบแล้วแต่ยังไม่กรอก" เป็นของที่สเปคไม่ได้พูดถึง** แต่ต้องมี — ไม่งั้นนักเรียนที่ข้ามการกรอกไป 1 เทอม
+> จะเห็นแท่งจางที่กดไม่ได้ ทั้งที่เป็นเทอมที่ควรกรอกได้ (ลิสต์ข้างล่างขึ้น "เพิ่ม" อยู่แล้ว กราฟต้องตรงกัน)
 
 - **เส้นประแนวนอน = เป้า** ที่ระดับ `target / 4.0` พร้อมป้าย `"เป้า 3.50"` ชิดขวา
 - ถ้า **ยังไม่ตั้งเป้า** → `requiredAverage` เป็น nil → แท่งอนาคต/ปัจจุบันสูงเท่า `gpax` ปัจจุบัน ไม่มีตัวเลข และไม่มีเส้นประ
@@ -160,20 +167,24 @@ GradeCenterView
 
 ---
 
-## 6. ไฟล์ที่แตะ
+## 6. ไฟล์ที่แตะ — ✅ ทำครบแล้ว
 
-| ไฟล์ | ทำอะไร |
-|---|---|
-| `Features/GradeCenter/GradeCenterView.swift` | หัวข้อจาก `GPAXSettings` · ซ่อนลิสต์ตอน empty (§4.1, §4.3) |
-| `Features/GradeCenter/GPAXSummaryCard.swift` | โครงใหม่ · ลบ `TargetQuickSetter` · ป้ายที่ปลาย bar · ภาษาคน (§4.2) |
-| `Features/GradeCenter/TermGradeListSection.swift` | แถบวัดในแถว · chevron · ป้าย "เรียนอยู่" · บรรทัดอธิบาย (§4.4) |
-| `Features/GradeCenter/TermGradeChart.swift` | **ไฟล์ใหม่** — กราฟแท่ง 6 เทอม (~130 บรรทัด) |
-| `Features/GradeCenter/GPAXTargetSheet.swift` | **ไฟล์ใหม่** — ตั้ง/แก้เป้า GPAX (~70 บรรทัด) เขียนผ่าน `GPAXSettings.setTarget` เท่านั้น |
-| `Features/GradeCenter/TermGradeEditView.swift` | **ทาสีอย่างเดียว** — `Form` มาตรฐาน โครงไม่แตะ |
-| `Features/GradeCenter/GradeLevelSheet.swift` · `CumulativeGPAXSheet.swift` | **ทาสีอย่างเดียว** |
+| ไฟล์ | ทำอะไร | สถานะ |
+|---|---|---|
+| `GradeCenterView.swift` (79) | หัวข้อจาก `GPAXSettings.currentSortKey` · ซ่อนลิสต์ตอน empty (§4.1, §4.3) | ✅ |
+| `GPAXSummaryCard.swift` (259) | โครงใหม่ · ลบ `TargetQuickSetter` · ป้ายที่ปลาย bar · ภาษาคน (§4.2) | ✅ |
+| `TermGradeListSection.swift` (190) | แถบวัดในแถว · chevron · `PillLabel` "เรียนอยู่" · บรรทัดอธิบาย (§4.4) | ✅ |
+| `TermGradeChart.swift` (224) | **ไฟล์ใหม่** — กราฟแท่ง 6 เทอม | ✅ |
+| `GPAXTargetSheet.swift` (120) | **ไฟล์ใหม่** — ตั้ง/แก้เป้า + ปุ่มลัด 5 ค่า + ลบเป้า · เขียนผ่าน `GPAXSettings.setTarget` เท่านั้น | ✅ |
+| `GPAXRangeBar.swift` (45) | **ไฟล์ใหม่ นอกตารางสเปค** — แยก `GPAXRangeBar` ออกจาก `GPAXSummaryCard` ที่บวมถึง 294 บรรทัด | ✅ |
+| `TermGradeEditView.swift` (327) | ทาสี + เก็บคำว่า "ตารางสอน" 4 จุดที่ก้อน B ส่งต่อมา | ✅ |
+| `GradeLevelSheet.swift` · `CumulativeGPAXSheet.swift` | ทาสี | ✅ |
 
 **ห้ามแตะ:** `Core/Grades/GPAXCalculator.swift` · `Core/Grades/GPAXSettings.swift`
-(ยกเว้นถ้า `GPAXTargetSheet` ต้องการ setter ที่ยังไม่มี — ให้หยุดแล้วรายงาน ห้ามเพิ่มเอง)
+✅ **ไม่ได้แตะจริง** — `git diff --stat -- StudiiOS/Core/` ว่างเปล่า · `setTarget(_:source:)` ที่ `GPAXTargetSheet` ต้องใช้มีอยู่แล้ว ไม่ต้องเพิ่ม
+
+> ⚠️ **token ที่ขาด (รายงานตามกฎข้อ 1 ไม่ได้เพิ่มเอง):** แท่งกราฟอยากได้มุมประมาณ 6
+> `Radius.icon` (11) เป็นตัวเล็กสุดที่มี เลยใช้ตัวนั้นไปก่อน — ถ้าดูแล้วมนเกินไป ต้องเพิ่ม `Radius.bar` ใน `Theme.swift`
 
 ---
 
