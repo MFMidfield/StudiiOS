@@ -23,7 +23,7 @@ struct DashboardMenuGrid: View {
         MenuItem(title: "ปฏิทิน", icon: "calendar", destination: .calendar, tier: .free),
         MenuItem(title: "ศูนย์เกรด", icon: "chart.bar", destination: .gradeCenter, tier: .free),
         MenuItem(title: "TCAS", icon: "target", destination: .tcasPlanner, tier: .free),
-        MenuItem(title: "พอร์ต", icon: "folder", destination: .portfolio, tier: .free),
+        MenuItem(title: "ผลงาน", icon: "folder", destination: .portfolio, tier: .free),
         MenuItem(title: "ค้นหาอาชีพ", icon: "briefcase", destination: .careerDiscovery, tier: .free),
         MenuItem(title: "โหมดโฟกัส", icon: "timer", destination: .focusMode, tier: .free),
         MenuItem(title: "งานทั้งหมด", icon: "checkmark.square", destination: .assignments, tier: .free),

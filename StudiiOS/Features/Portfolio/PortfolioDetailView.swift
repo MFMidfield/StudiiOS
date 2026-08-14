@@ -15,6 +15,7 @@ struct PortfolioDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isPresentingEdit = false
     @State private var isPresentingDeleteConfirm = false
+    @State private var currentPage = 0
 
     private var sortedImages: [PortfolioImage] {
         item.images.sorted { $0.sortOrder < $1.sortOrder }
@@ -27,18 +28,23 @@ struct PortfolioDetailView: View {
                     gallery
                 }
                 Text(item.title)
-                    .font(.title2.bold())
+                    .font(Theme.Font.title)
                     .foregroundStyle(Theme.Colors.textPrimary)
                 HStack(spacing: Theme.Spacing.sm) {
                     categoryPill
                     Text(item.dateRangeText)
-                        .font(.subheadline)
+                        .font(Theme.Font.label)
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
                 if !item.detail.isEmpty {
-                    Text(item.detail)
-                        .font(.body)
-                        .foregroundStyle(Theme.Colors.textPrimary)
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        Text("รายละเอียด")
+                            .font(Theme.Font.label)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                        Text(item.detail)
+                            .font(Theme.Font.body)
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                    }
                 }
                 deleteButton
             }
@@ -63,19 +69,37 @@ struct PortfolioDetailView: View {
     }
 
     private var gallery: some View {
-        TabView {
-            ForEach(sortedImages, id: \.persistentModelID) { image in
-                GalleryPage(image: image)
+        TabView(selection: $currentPage) {
+            ForEach(Array(sortedImages.enumerated()), id: \.element.persistentModelID) { index, image in
+                GalleryPage(image: image).tag(index)
             }
         }
         .tabViewStyle(.page)
         .frame(height: 260)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
+        // Past ~5 images the page dots are too small to count — the readout says
+        // exactly where you are.
+        .overlay(alignment: .bottomTrailing) {
+            if sortedImages.count > 1 {
+                pageCounter
+            }
+        }
+    }
+
+    private var pageCounter: some View {
+        Text("\(currentPage + 1) / \(sortedImages.count)")
+            .font(Theme.Font.plex(11, .semibold))
+            .padding(.horizontal, Theme.Spacing.sm)
+            .padding(.vertical, 3)
+            .background(Color.black.opacity(0.5))
+            .foregroundStyle(.white)
+            .clipShape(Capsule())
+            .padding(Theme.Spacing.sm)
     }
 
     private var categoryPill: some View {
         Text(item.category.label)
-            .font(.system(size: 11, weight: .semibold))
+            .font(Theme.Font.plex(11, .semibold))
             .padding(.horizontal, Theme.Spacing.sm)
             .padding(.vertical, 3)
             .background(item.category.color.opacity(0.15))
@@ -96,11 +120,9 @@ struct PortfolioDetailView: View {
     }
 
     private func deleteItem() {
-        for image in item.images {
-            PortfolioImageStore.delete(image.filename)
-        }
-        context.delete(item)
-        try? context.save()
+        // Deletion lives in one place so the grid's context menu can't drift from
+        // this screen and leak image files. See PortfolioItemActions.
+        PortfolioItemActions.delete(item, in: context)
         dismiss()
     }
 }

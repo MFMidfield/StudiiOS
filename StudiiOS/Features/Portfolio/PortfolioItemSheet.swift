@@ -190,7 +190,7 @@ struct PortfolioItemSheet: View {
                     Image(systemName: "plus")
                         .font(.system(size: 16, weight: .semibold))
                     Text("เพิ่มรูป")
-                        .font(.system(size: 10))
+                        .font(Theme.Font.caption)
                 }
                 .foregroundStyle(Theme.Colors.textSecondary)
             }
@@ -218,7 +218,7 @@ struct PortfolioItemSheet: View {
                 DatePicker("วันที่สิ้นสุด", selection: $endDate, displayedComponents: .date)
                 if !isDateRangeValid {
                     Text("วันที่สิ้นสุดต้องอยู่หลังวันที่เริ่ม")
-                        .font(.caption)
+                        .font(Theme.Font.caption)
                         .foregroundStyle(Theme.Colors.danger)
                 }
             }
@@ -383,7 +383,7 @@ private struct ExistingImageThumbnail: View {
             Image(systemName: "xmark.circle.fill")
                 .foregroundStyle(.white, Color.black.opacity(0.6))
         }
-        .padding(4)
+        .padding(Theme.Spacing.xs)
     }
 }
 
@@ -408,7 +408,7 @@ private struct PendingImageThumbnail: View {
             Image(systemName: "xmark.circle.fill")
                 .foregroundStyle(.white, Color.black.opacity(0.6))
         }
-        .padding(4)
+        .padding(Theme.Spacing.xs)
     }
 }
 

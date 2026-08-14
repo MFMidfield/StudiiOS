@@ -5,7 +5,9 @@
 > หน้างาน · QuickAdd · ตารางเรียน · เกรด/GPAX · ตั้งค่า ยกเครื่องครบ (สเปครายหน้าอยู่ `docs/redesign/01–05`)
 > **ก้อน E `06_TCAS` build เขียว** — Few ยืนยันบนเครื่องแล้วว่าการ์ดคณะขึ้นคะแนน · ปุ่ม ＋ โอเค ·
 > หน้ากรอกคะแนนใช้ได้ (ยังไม่ได้ลอง: sheet ตั้งเป้า · "มีผลกับคณะเป้าหมาย" · dark mode)
-> **เหลือก้อน F `07_Portfolio` · G `08_Calendar`** — สถานะล่าสุดอยู่ที่ `docs/redesign/00_INDEX.md` เสมอ
+> **ก้อน F `07_Portfolio` build เขียว** — หน้าผลงานยกเครื่อง (การ์ดสรุป · ค้นหา · เรียง · contextMenu ลบ) + ทาสีฟอร์ม
+> (ยังไม่ได้ลองด้วยตา: ลบจากกริด · เมนู "ดูรายละเอียด" · ค้นหา · dark mode)
+> **เหลือก้อน G `08_Calendar`** — สถานะล่าสุดอยู่ที่ `docs/redesign/00_INDEX.md` เสมอ
 >
 > ⚠️ **ปุ่ม ＋ ขวาบนกลับมาแล้วทุกหน้า** — Few ล้ม `PLAN_TCASPlanner.md` §0.1 (ที่เคยสั่งให้เอา ＋ ออกจาก toolbar)
 > เมื่อ 15 ส.ค. · ทุกหน้าที่เพิ่มของได้ใช้ไอคอน ＋ เปล่าๆ เหมือนกันหมด ไม่ใช่ปุ่มมีพื้น
@@ -206,7 +208,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │              + DashboardStatsCard.swift      กริด 2×2 การ์ดเล็ก 4 ใบ: โฟกัสวันนี้ · งานค้าง · ส่งพรุ่งนี้ ·
     │                                    นับถอยหลังสอบ — ตัวเลข `.contentTransition(.numericText())` เวลาเปลี่ยน
     │                                    ไม่มีงาน `kind == .exam` → ช่องที่ 4 กลายเป็นปุ่มเปิด `AddTaskSheet(presetKind: .exam)`
-    │              + DashboardMenuGrid.swift       เมนูหลัก 3 คอลัมน์ 7 ช่อง (ปฏิทิน·ศูนย์เกรด·TCAS·พอร์ต·ค้นหาอาชีพ·
+    │              + DashboardMenuGrid.swift       เมนูหลัก 3 คอลัมน์ 7 ช่อง (ปฏิทิน·ศูนย์เกรด·TCAS·ผลงาน·ค้นหาอาชีพ·
     │                                    โหมดโฟกัส·งานทั้งหมด) ไอคอนใช้ `IconTile` ชุดสีเดียวกันหมด (primaryDeep บน
     │                                    primarySoft) ไม่ใช่สีต่อฟีเจอร์ · ปุ่มใช้ `PressScaleButtonStyle`
     │              + DashboardPendingCard.swift    งานค้าง — ติ๊กเสร็จได้ตรงจากการ์ด (เขียน `Assignment.isDone`
@@ -279,12 +281,26 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   └── CumulativeGPAXSheet.swift    (87)  "จำเกรดไม่ได้" — ตัวเลือก 1 เขียน `GPAXSettings.setCumulative`
     │                                         + entryMode `.cumulative` · ตัวเลือก 3 สร้าง `CalendarEvent` เตือนขอ ปพ.1
     ├── Onboarding/  (6 ไฟล์: Welcome→Profile→Schedule→GradeReport→Summary + ProfileImagePicker)
-    ├── Portfolio/   PortfolioView.swift (grid 2 คอลัมน์ + chip กรองหมวดหมู่, `.navigationDestination(for: PortfolioItem.self)`) · PortfolioCard.swift (การ์ดกริด ไม่ใช้ CardContainer เพราะรูปต้อง bleed ถึงขอบบน)
+    ├── Portfolio/  ผลงาน — **ยกเครื่องรอบ W2 ก้อน F** (`docs/redesign/07_Portfolio.md`)
+    │                PortfolioView.swift (216) หัวข้อ "ผลงาน" · `@Query` **ไม่มี sort** (เรียงใน `visibleItems`)
+    │                  pipeline คงที่ `กรองหมวด → คำค้น → เรียง` ห้ามสลับลำดับ · chip มีตัวเลขทุกอัน (สไตล์เดียวกับ
+    │                  `TaskFilterChips`) · `.searchable` ค้น `title`+`detail` · Menu เรียง 4 แบบท้ายแถว chip
+    │                  · `.contextMenu` กดค้างการ์ด = ดูรายละเอียด/ลบ (+alert) · ＋ ขวาบนเป็นไอคอนเปล่า
+    │                  ⚠️ มี `.navigationDestination` 2 ตัวในหน้าเดียว: `(for: PortfolioItem.self)` ให้ NavigationLink
+    │                  ของการ์ด + `(item:)` ให้เมนู "ดูรายละเอียด" push ได้
+    │                + PortfolioSortOrder.swift (45) 4 แบบ: ล่าสุด/เก่าสุด/ชื่อ ก–ฮ (`localizedStandardCompare`)/ตามหมวด
+    │                + PortfolioSummaryCard.swift (97) การ์ดสรุปบนสุด — แถบสัดส่วน 7pt + จุดตามหมวด
+    │                  ซ่อนหมวดที่ 0 ชิ้น · **ไม่แสดงตอนกรองหมวด** (สัดส่วนของหมวดเดียวไม่มีความหมาย)
+    │                + PortfolioItemActions.swift (21) `delete(_:in:)` — **จุดเดียวที่ลบผลงานได้ทั้งแอป**
+    │                  ลบไฟล์รูปก่อนลบแถว · เขียนโค้ดลบซ้ำที่อื่น = ไฟล์รูปค้างถาวร (ไม่มีใครรู้ชื่อไฟล์อีก)
+    │                · PortfolioCard.swift (การ์ดกริด ไม่ใช้ CardContainer เพราะรูปต้อง bleed ถึงขอบบน —
+    │                  ป้ายหมวดอยู่เหนือชื่อ · `detail` 2 บรรทัดจาง · `cardStroke` 1pt เงาตัดทิ้งในโหมดมืด)
     │                + PortfolioItemSheet.swift (สร้าง/แก้ไข ใช้ `Mode` เดียวกัน — รูปที่เลือกอยู่ staged ใน memory จนกด "บันทึก" ถึงเขียนไฟล์+insert
     │                  ปุ่ม "เพิ่มรูป" เปิด `.confirmationDialog` 4 ทาง: สแกนเอกสาร (`DocumentScannerView`) · ถ่ายรูป (`ProfileImagePicker(.camera, allowsEditing:false)`)
     │                  · เลือกจากคลังรูป (`.photosPicker` แบบ programmatic) · เลือกจากไฟล์ (`.fileImporter` [.image, .pdf], PDF หน้าแรกเรนเดอร์ด้วย PDFKit)
     │                  สแกน/กล้อง เช็ค `.isSupported`/`.isSourceTypeAvailable(.camera)` ก่อนเปิดเสมอ — ไม่มี guard = crash บน simulator)
-    │                + PortfolioDetailView.swift (gallery `TabView(.page)` โหลดรูปเต็ม + แก้ไข/ลบ — ลบจะลบทั้งแถว SwiftData และไฟล์บนดิสก์)
+    │                + PortfolioDetailView.swift (gallery `TabView(.page)` โหลดรูปเต็ม + ตัวนับ "2 / 5" มุมขวาล่าง
+    │                  + หัวข้อ "รายละเอียด" + แก้ไข/ลบ — ลบเรียก `PortfolioItemActions.delete` ไม่ได้ลบเอง)
     ├── Schedule/  ตารางเรียน — **ยกเครื่องรอบ W2 ก้อน B** (`docs/redesign/02_Schedule.md`)
     │   ├── ScheduleView.swift          (232)  root · toolbar **⚙︎ ซ้าย + ＋ ขวา**
     │   │                                     ⚙︎ = Menu: ร่นคาบวันนี้ (เปิด PeriodShiftSheet ตรง) · เปลี่ยนเทอม
@@ -514,7 +530,7 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
 | TermSubject | Core/Models/TermSubject.swift — join `Term` ↔ `Subject`, มี `creditHours`/`gradePoint` รอรอบ GPA (§9 ใน PLAN_TermSystem) · sync อัตโนมัติผ่าน `TermStore.syncTermSubjects` ทุกครั้งที่ ScheduleEntry ถูกบันทึกเข้าเทอม · **ไม่ใช่** ตัวเดียวกับ `TermGradeSubject` ด้านล่าง |
 | TermGradeSubject | Core/Models/TermGradeSubject.swift — เพิ่ม 2026-08-10 (PLAN_2026-08-10_Fixes Task 5) วิชา+เกรดรายวิชาของโหมด "กรอกละเอียด" ต่อเทอม แยกจาก `TermSubject` โดยตั้งใจ (กันข้อมูลเกรดหายเงียบๆ ถ้าคาบถูกลบจากตาราง) `name`/`code`/`creditHours`/`gradePoint`/`sortOrder` — seed จาก `ScheduleEntry` ของเทอมนั้นครั้งแรกที่เปิดโหมดละเอียด แก้ไข/ลบผ่าน `TermGradeEditView` เท่านั้น |
 | FocusSession | Core/Models/FocusSession.swift — `kindRaw` (โฟกัส/พักสั้น/พักยาว, อ่านผ่าน `phase`) · `endedAt: Date?` · `wasLocked` (3 ตัวนี้มี default ครบ → migrate ของเดิมได้)<br>⚠️ **ช่วงพักถูกบันทึกเป็น FocusSession ด้วย** — สถิติ "นาทีโฟกัส" ต้องกรอง `phase == .focus` เสมอ (Dashboard + FocusModeView ทำแล้ว)<br>ไฟล์นี้ยังเป็นที่ประกาศ `enum PomodoroPhase` ด้วย |
-| PortfolioItem | Core/Models/PortfolioItem.swift — `startDate`/`endDate: Date?` (rename จาก `date` เดิม — breaking, ต้องลบแอปก่อนติดตั้งรุ่นนี้) · `images: [PortfolioImage]` (cascade) · `coverImage` = ตัวแรกตาม `sortOrder` · `dateRangeText` ใช้ `Date+Thai.swift` · `PortfolioCategory.color` ใหม่ (ใช้ `Theme.Colors`, ผูกกับ pill ในการ์ด) |
+| PortfolioItem | Core/Models/PortfolioItem.swift — `startDate`/`endDate: Date?` (rename จาก `date` เดิม — breaking, ต้องลบแอปก่อนติดตั้งรุ่นนี้) · `images: [PortfolioImage]` (cascade) · `coverImage` = ตัวแรกตาม `sortOrder` · `dateRangeText` ใช้ `Date+Thai.swift` · `PortfolioCategory.color` = **computed** (ไม่ใช่ stored → แก้ได้โดยไม่กระทบ schema) ชุด W2 ก้อน F: เกียรติบัตร=`primary` · กิจกรรม=`subjectPalette[1]` · จิตอาสา=`[4]` · แข่งขัน=`[3]` · โปรเจกต์=`[5]` — เลิกยืม `danger`/`warning` ที่ทำให้ป้าย "การแข่งขัน" แดงเท่าปุ่มลบ |
 | PortfolioImage | Core/Models/PortfolioImage.swift — เก็บแค่ `filename`/`sortOrder`/`createdAt` ตัวไฟล์จริงอยู่ `PortfolioImageStore` (Core/Portfolio/) |
 | CareerInterestResult | Core/Models/CareerInterestResult.swift — 5 field เดิม (`interestTags`/`recommendedCareer`/`recommendedFaculty`/`recommendedSkills`/`takenAt`) + field ใหม่จาก RIASEC v2 (additive, มี default ครบ): `scoreR..scoreC: Int`, `hollandCode: String`, `isInconclusive: Bool`, `answers: [Int]` (18 คำตอบ Likert เรียงตาม item id, ไว้ re-score ย้อนหลังได้โดยไม่ต้องให้ทำแบบสำรวจใหม่) · `riasecScores` computed property คืน `[RIASECDimension: Int]` |
 | TCASEntry | Core/Models/TCASEntry.swift — `roundRaw`/`sortOrder`/`targetScore`/`admissionURL` (default ครบ) · `weights: [TCASScoreWeight]` (cascade) · `sopStore: [TCASSOP]` (cascade, มีได้ 0-1 ตัว) · `sop` computed คืน `sopStore.first` (SwiftData ยังงอแงกับ to-one optional relationship) |
@@ -625,7 +641,8 @@ Components:    CardContainer<Content>(padding:) (stroke(cardStroke) + เงา�
 ## 6. Entitlements
 
 `EntitlementStore.shared.isUnlocked(.pro)` — ปัจจุบันเป็น toggle ทดสอบใน Settings ยังไม่มี StoreKit จริง
-Gated: `PortfolioView`
+Gated: **ไม่มีหน้าไหน gate จริงเลยตอนนี้** — grep 15 ส.ค. เจอ `isUnlocked` แค่ในคอมเมนต์ของ `CareerDiscoveryView`
+(เอกสารเดิมเขียนว่า `PortfolioView` ถูก gate — ผิด โค้ดไม่เคยมี gate · คอมเมนต์ "Pro feature" ใน `PortfolioItem.swift` ถูกลบแล้วก้อน F)
 `TCASPlannerView` เป็น **Free ทั้งหมด** (PLAN_TCASPlanner.md §0.4 — โค้ดจริงไม่เคย gate มาก่อน เอกสารเดิมผิด)
 
 ---

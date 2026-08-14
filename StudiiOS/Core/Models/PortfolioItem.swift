@@ -1,7 +1,7 @@
 //
 //  PortfolioItem.swift
-//  Portfolio Hub (Pro feature): certificates, activities, volunteering,
-//  competitions, projects.
+//  Portfolio Hub: certificates, activities, volunteering, competitions,
+//  projects.
 //
 
 import Foundation
@@ -31,13 +31,16 @@ enum PortfolioCategory: String, Codable, CaseIterable {
         }
     }
 
+    /// Category colors are decorative, so they come from the subject palette
+    /// rather than the semantic tokens. The old set borrowed `danger` and
+    /// `warning`, which made "การแข่งขัน" the same red as the delete button.
     var color: Color {
         switch self {
-        case .certificate: return Theme.Colors.warning
-        case .activity: return Theme.Colors.primary
-        case .volunteer: return Theme.Colors.pink
-        case .competition: return Theme.Colors.danger
-        case .project: return Theme.Colors.indigo
+        case .certificate: return Theme.Colors.primary
+        case .activity: return Theme.Colors.subjectPalette[1]
+        case .volunteer: return Theme.Colors.subjectPalette[4]
+        case .competition: return Theme.Colors.subjectPalette[3]
+        case .project: return Theme.Colors.subjectPalette[5]
         }
     }
 }
