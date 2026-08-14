@@ -4,6 +4,12 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>Studii OS</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>IBMPlexSansThai-Regular.ttf</string>
+		<string>IBMPlexSansThai-Medium.ttf</string>
+		<string>IBMPlexSansThai-SemiBold.ttf</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

@@ -90,7 +90,15 @@ enum Theme {
         private static let semiBoldName = "IBMPlexSansThai-SemiBold"
 
         /// Resolved once — the font files either shipped in the bundle or they didn't.
-        private static let isBundled: Bool = UIFont(name: regularName, size: 12) != nil
+        private static let isBundled: Bool = {
+            let found = UIFont(name: regularName, size: 12) != nil
+            if found {
+                AppLog.action("Theme", "IBM Plex Sans Thai พร้อมใช้งาน")
+            } else {
+                AppLog.warn("Theme", "ไม่พบ IBM Plex Sans Thai — ใช้ฟอนต์ระบบแทน (ดู UIAppFonts ใน Info.plist)")
+            }
+            return found
+        }()
 
         private static func name(for weight: SwiftUI.Font.Weight) -> String {
             switch weight {
