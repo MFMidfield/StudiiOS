@@ -11,6 +11,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct GPAXSummaryCard: View {
     /// nil when the student has not set a current term yet (GPAXSettings.currentSortKey).
