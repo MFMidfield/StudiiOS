@@ -118,20 +118,14 @@ struct TCASPlannerView: View {
 
     // MARK: - Toolbar
 
-    /// ปุ่มมีพื้นตามสเปค §4.1 — หน้านี้กับ "ผลงาน" ใช้ปุ่มหน้าตาเดียวกัน
-    /// (ตรงข้ามกับ ＋ เปล่าๆ ของหน้างาน/ตารางเรียนที่เป็นแท็บหลัก)
+    /// ＋ เปล่าๆ แบบเดียวกับหน้างานและตารางเรียน (Few 15 ส.ค. — ล้มข้อ "ปุ่มมีพื้น
+    /// + คณะ" ใน 06_TCAS §4.1) ทุกหน้าในแอปจึงใช้ปุ่มเพิ่มหน้าตาเดียวกันหมด
     private var addButton: some View {
         Button {
             isPresentingNew = true
         } label: {
-            Label("คณะ", systemImage: "plus")
-                .font(Theme.Font.plex(13, .semibold))
-                .foregroundStyle(Theme.Colors.onPrimary)
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.vertical, Theme.Spacing.xs)
-                .background(Theme.Colors.primary, in: Capsule())
+            Image(systemName: "plus")
         }
-        .buttonStyle(PressScaleButtonStyle())
         .accessibilityLabel("เพิ่มคณะเป้าหมาย")
     }
 

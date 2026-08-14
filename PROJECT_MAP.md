@@ -3,7 +3,9 @@
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
 > **อัปเดตล่าสุด:** 2026-08-15 — **PLAN_Redesign.md Wave 2 ก้อน A–D** (branch `redesign`) build เขียวแล้ว:
 > หน้างาน · QuickAdd · ตารางเรียน · เกรด/GPAX · ตั้งค่า ยกเครื่องครบ (สเปครายหน้าอยู่ `docs/redesign/01–05`)
-> **เหลือก้อน E `06_TCAS` · F `07_Portfolio` · G `08_Calendar`** — สถานะล่าสุดอยู่ที่ `docs/redesign/00_INDEX.md` เสมอ
+> **ก้อน E `06_TCAS` เขียนครบแล้วแต่ยังไม่ verify** — §2 ส่วน TCASPlanner ข้างล่าง **ยังเป็นของก่อน redesign**
+> จะอัปเดตรวดเดียวเมื่อ Few ยืนยัน ⌘B เขียว · **เหลือก้อน F `07_Portfolio` · G `08_Calendar`**
+> สถานะล่าสุดอยู่ที่ `docs/redesign/00_INDEX.md` เสมอ
 >
 > ของใหม่ที่กระทบทั้งแอป: `AppTheme` (ธีมสว่าง/มืด) · `GPAXSettings.resetAll()` · สวิตช์ค่าเริ่มต้นการเตือนงาน ·
 > ลบ 4 ไฟล์ (`TaskStatsRow` · `TaskFilterSheet` · `ScheduleTodayTasksSection` · `ScheduleSettingsSheet`)

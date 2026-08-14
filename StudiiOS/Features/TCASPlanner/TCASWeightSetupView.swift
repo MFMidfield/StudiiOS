@@ -31,16 +31,16 @@ struct TCASWeightSetupView: View {
             Section {
                 HStack {
                     Text("น้ำหนักรวมตอนนี้")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(Theme.Font.plex(14, .medium))
                     Spacer()
                     Text(totalPercent, format: .number.precision(.fractionLength(2)))
-                        .font(.system(size: 16, weight: .bold))
+                        .font(Theme.Font.number(17))
                         .foregroundStyle(abs(totalPercent - 100) < 0.01 ? Theme.Colors.success : Theme.Colors.warning)
                     Text("%").foregroundStyle(Theme.Colors.textSecondary)
                 }
                 if abs(totalPercent - 100) > 0.01 {
                     Text("ไม่ครบ 100% ก็บันทึกได้ — บางคณะมีสัมภาษณ์/แฟ้มสะสมงานถ่วงน้ำหนักด้วย")
-                        .font(.caption)
+                        .font(Theme.Font.label)
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
@@ -89,16 +89,16 @@ struct TCASWeightSetupView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(TCASExamCatalog.exam(code: weight.examCode)?.displayName ?? weight.examCode)
-                    .font(.system(size: 14))
+                    .font(Theme.Font.body)
                 if !weight.groupName.isEmpty {
                     Text("กลุ่ม \(weight.groupName) · รวม \(weight.groupPercent.formatted(.number.precision(.fractionLength(1))))%")
-                        .font(.caption2)
+                        .font(Theme.Font.caption)
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
             Spacer()
             Text(weight.percent, format: .number.precision(.fractionLength(2)))
-                .font(.system(size: 14, weight: .semibold))
+                .font(Theme.Font.plex(14, .semibold))
             Text("%").foregroundStyle(Theme.Colors.textSecondary)
         }
     }
@@ -191,7 +191,7 @@ private struct GroupAddSection: View {
             if let groupPercent = Double(groupPercentText), !selected.isEmpty {
                 let split = TCASScoreEngine.setGroupPercent(groupPercent: groupPercent, memberCount: selected.count)
                 Text("วิชาละ \(split.formatted(.number.precision(.fractionLength(2))))%")
-                    .font(.caption)
+                    .font(Theme.Font.label)
                     .foregroundStyle(Theme.Colors.textSecondary)
             }
 

@@ -21,10 +21,10 @@ struct SOPGuideSheet: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                             Text(page.title)
-                                .font(.system(size: 20, weight: .bold))
+                                .font(Theme.Font.plex(20, .semibold))
                                 .foregroundStyle(Theme.Colors.textPrimary)
                             Text(page.body)
-                                .font(.system(size: 15))
+                                .font(Theme.Font.body)
                                 .foregroundStyle(Theme.Colors.textPrimary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)

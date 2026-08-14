@@ -47,7 +47,7 @@ struct SOPEditorView: View {
     private var modePicker: some View {
         VStack(spacing: Theme.Spacing.lg) {
             Text("เริ่มเขียน SOP ยังไงดี?")
-                .font(.system(size: 16, weight: .semibold))
+                .font(Theme.Font.plex(16, .semibold))
                 .foregroundStyle(Theme.Colors.textPrimary)
             VStack(spacing: Theme.Spacing.sm) {
                 Button {
@@ -67,7 +67,7 @@ struct SOPEditorView: View {
                 .buttonStyle(.bordered)
             }
             Text("เลือกได้ครั้งเดียวตอนเริ่ม — โหมด 6 ช่องกด \"รวมเป็นฉบับเดียว\" ทีหลังได้")
-                .font(.caption)
+                .font(Theme.Font.label)
                 .foregroundStyle(Theme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
         }
@@ -101,7 +101,7 @@ struct SOPEditorView: View {
             Section {
                 HStack {
                     Text("\(characterCount(sop: sop)) ตัวอักษร")
-                        .font(.caption)
+                        .font(Theme.Font.label)
                         .foregroundStyle(Theme.Colors.textSecondary)
                     Spacer()
                     Button {
@@ -123,7 +123,7 @@ struct SOPEditorView: View {
                                 .foregroundStyle(Theme.Colors.textPrimary)
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.caption2)
+                                .font(Theme.Font.caption)
                                 .foregroundStyle(Theme.Colors.textSecondary)
                         }
                     }
@@ -165,7 +165,7 @@ struct SOPEditorView: View {
         .overlay(alignment: .bottom) {
             if showCopiedToast {
                 Text("คัดลอกแล้ว")
-                    .font(.caption.bold())
+                    .font(Theme.Font.plex(13, .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, Theme.Spacing.md)
                     .padding(.vertical, Theme.Spacing.sm)
