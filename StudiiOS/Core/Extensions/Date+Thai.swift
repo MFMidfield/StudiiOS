@@ -55,7 +55,7 @@ extension DateFormatter {
         return f
     }()
 
-    /// Weekday + day + month — "พฤ 13 ส.ค." — for the day-group headers on the
+    /// Weekday + day + month — "พฤ. 13 ส.ค." — for the day-group headers on the
     /// task list. `thaiFull` is too long to sit above a list of rows.
     static let thaiWeekdayDayMonth: DateFormatter = {
         let f = DateFormatter()

@@ -47,8 +47,14 @@ struct PortfolioItemSheet: View {
     @State private var isScannerUnavailable = false
     @State private var isCameraUnavailable = false
 
-    init(mode: Mode) {
+    /// Called after a successful save — lets a presenting sheet (QuickAddSheet)
+    /// close itself too instead of staying behind the form. `nil` everywhere
+    /// else, so existing call sites are untouched.
+    private let onSaved: (() -> Void)?
+
+    init(mode: Mode, onSaved: (() -> Void)? = nil) {
         self.mode = mode
+        self.onSaved = onSaved
         switch mode {
         case .create:
             _title = State(initialValue: "")
@@ -334,6 +340,7 @@ struct PortfolioItemSheet: View {
 
         try? context.save()
         dismiss()
+        onSaved?()
     }
 }
 

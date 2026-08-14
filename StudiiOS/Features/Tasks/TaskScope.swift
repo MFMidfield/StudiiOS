@@ -88,7 +88,7 @@ enum TaskDayGroup: String, CaseIterable, Identifiable {
     var isAlarming: Bool { self == .overdue }
 }
 
-/// Type filter inside the toolbar's filter menu.
+/// Type filter inside the toolbar's add-menu (long press on "+").
 enum TaskKindFilter: String, CaseIterable, Identifiable {
     case all, homework, personal, exam
 

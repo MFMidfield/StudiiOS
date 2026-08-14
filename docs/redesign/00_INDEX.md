@@ -14,7 +14,7 @@
 |---|---|
 | **W0** เตรียม | ✅ เสร็จ — commit rename PrototypeApp→StudiiOS, ตัด branch `redesign` |
 | **W1** Theme + Dashboard + tab bar | ✅ เขียนโค้ดครบ 10 step · **⏳ Few ยังไม่ได้ยืนยันว่า build ผ่าน** |
-| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A (01_Tasks + 03_QuickAdd) เขียนโค้ดครบแล้ว · ยังไม่ build** · ก้อน B–G ยังไม่เริ่ม |
+| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A (01_Tasks + 03_QuickAdd) เขียนโค้ดครบ — รอบแก้ตามที่ Few สั่ง 14 ส.ค. · ยังไม่ build** · ก้อน B–G ยังไม่เริ่ม |
 | **W3** custom nav · แตก CalendarView · onboarding | ⬜ ยังไม่เริ่ม |
 
 ### การตัดสินของ Few — 14 ส.ค. 2569
@@ -23,19 +23,28 @@
   ยังเหลือคำว่า "ตารางสอน" ในเนื้อความของ `TermGradeEditView` · `AddScheduleEntrySheet` · `ScheduleSettingsSheet` (ไฟล์สุดท้ายจะถูกลบตาม `02_Schedule`) → agent ของโมดูลนั้นๆ เก็บตอนทำ
 - **ก้อน G (`08_Calendar`) ทำ** ไม่ตัดทิ้ง — ยังคงลำดับเดิม: ทำท้ายสุดเป็นก้อนของตัวเอง build ทีละขั้นตาม §8
 
+**🔴 ล้มการตัดสินเดิม 2 ข้อ — สเปค 01/03 ที่เขียนไว้ไม่ตรงกับโค้ดแล้ว**
+
+| สเปคเดิมเขียนว่า | Few สั่งใหม่ | ผลกับโค้ด |
+|---|---|---|
+| `01_Tasks` §5 · `03_QuickAdd` §5 — ปุ่ม `+` กลาง tab bar เปลี่ยนตามแท็บ + sheet ชั้นเดียว (`QuickAddTarget`/`QuickAddFlow`) | **ยกเลิกทั้งสองข้อ** — ปุ่ม `+` กลาง tab bar เปิดเมนู `QuickAddSheet()` เหมือนกันทุกแท็บ | `RootTabView` ไม่มี `QuickAddTarget` / `QuickAddFlow` / `quickAddTarget(for:)` แล้ว |
+| `03_QuickAdd` §3 — เลิก sheet ซ้อน sheet | **คง sheet ซ้อน sheet ไว้** · บันทึก → ปิดทั้งสองชั้น · ยกเลิก → กลับมาที่เมนู | `QuickAddSheet` ใช้ `.sheet(item:onDismiss:)` + ธง `didSave` |
+| `01_Tasks` §4.4 — ไอคอนกรองบน toolbar ขวาบน · เพิ่มงานด้วยปุ่ม `+` กลาง tab bar | **ขวาบนเป็นปุ่ม `+`** — แตะ = `AddTaskSheet` · กดค้าง = เมนูกรอง ประเภท/วิชา/ล้างตัวกรอง | `TaskFilterMenu.swift` → `TaskAddMenu.swift` (`Menu(primaryAction:)`) |
+| `03_QuickAdd` §4 — เมนู 4 ทาง กริด 2×2 (มี "คาบเรียน") | **3 ทาง กริด 1×3** — งาน · กิจกรรมปฏิทิน · ผลงาน (ตัด "โน๊ต" ตามเดิม · ไม่เพิ่ม "คาบเรียน") | `QuickAddSheet.options` เหลือ 3 |
+
 ### ก้อน A ทิ้งอะไรไว้ให้ก้อนอื่น
 
 | ของใหม่ | อยู่ที่ | ใครได้ใช้ต่อ |
 |---|---|---|
-| `ScheduleConstants.todayWeekday` + `defaultEntryDay` | `Features/Schedule/ScheduleConstants.swift` | **`02_Schedule` ไม่ต้องเพิ่ม `todayWeekday` ซ้ำแล้ว** — ก้อน A เพิ่มให้ตอนทำ `03_QuickAdd` §4 |
-| `Date.thaiWeekdayDayMonthString` ("พฤ 13 ส.ค.") | `Core/Extensions/Date+Thai.swift` | `08_Calendar` §3.5 (ของเดิม `thaiWeekdayShort` = "พฤ." ยังอยู่) |
-| `QuickAddTarget` + `QuickAddFlow` | `App/RootTabView.swift` · `Features/QuickAdd/QuickAddSheet.swift` | W3 §4.1 ตอนย้ายหน้าเข้า/ออก tab bar |
-| `TaskFilterMenu.swift` | `Features/Tasks/` | — (ไฟล์ใหม่นอกตารางสเปค ดูหมายเหตุล่าง) |
+| `ScheduleConstants.todayWeekday` + `defaultEntryDay` | `Features/Schedule/ScheduleConstants.swift` | **`02_Schedule` ไม่ต้องเพิ่ม `todayWeekday` ซ้ำแล้ว** · `defaultEntryDay` ยังไม่มีใครเรียก — `AddScheduleEntrySheet` ควรได้ใช้ |
+| `Date.thaiWeekdayDayMonthString` ("พฤ. 13 ส.ค.") | `Core/Extensions/Date+Thai.swift` | `08_Calendar` §3.5 (ของเดิม `thaiWeekdayShort` = "พฤ." ยังอยู่) |
+| `EventFormSheet(initialDate:onSaved:)` · `PortfolioItemSheet(mode:onSaved:)` | ไฟล์เดิมของโมดูล Calendar / Portfolio | **เป็น parameter ที่มี default `nil`** — call site เดิมไม่ต้องแก้ · `07_Portfolio` / `08_Calendar` **ห้ามลบทิ้ง** ไม่งั้น QuickAdd ปิด sheet ไม่หมด |
+| `TaskAddMenu.swift` | `Features/Tasks/` | — (ไฟล์ใหม่นอกตารางสเปค แทน `TaskFilterMenu` ที่รอบแรกเขียนไว้) |
 
 > หมายเหตุ: `01_Tasks` §7 บอกว่าถ้า `AssignmentListView` เกิน 250 บรรทัดให้แยก `TaskDayGroupSection.swift`
-> แต่ Section กับ `.swipeActions` อยู่ใน `List` เดียวกัน — ย้ายออกไปเสี่ยงปัดซ้ายลบพัง จึงแยก **toolbar menu** ออกเป็น `TaskFilterMenu.swift` แทน (`AssignmentListView` เหลือ 264 บรรทัด)
+> แต่ Section กับ `.swipeActions` อยู่ใน `List` เดียวกัน — ย้ายออกไปเสี่ยงปัดซ้ายลบพัง จึงแยก **toolbar menu** ออกเป็น `TaskAddMenu.swift` แทน (`AssignmentListView` เหลือ ~250 บรรทัด)
 
-**ยังไม่ได้ build แม้แต่ครั้งเดียวตลอด W1** — 12 commit ขึ้นต้น `wip:` ถ้า Few ยืนยันว่าเขียวแล้วค่อย squash
+**ยังไม่ได้ build แม้แต่ครั้งเดียวตลอด W1 + W2 ก้อน A** — commit ขึ้นต้น `wip:` ถ้า Few ยืนยันว่าเขียวแล้วค่อย squash
 
 **ค้างอยู่ที่ Few:** วางไฟล์ `IBMPlexSansThai-{Regular,Medium,SemiBold}.ttf` ใน `StudiiOS/Resources/Fonts/`
 (ยังว่างอยู่ · ไม่วางก็ไม่พัง — `Theme.Font` fallback เป็นฟอนต์ระบบ ดู log `[Theme]` ตอนเปิดแอป)
@@ -98,10 +107,10 @@
 | ต้นเหตุ | ผลกระทบ | ใครแก้ |
 |---|---|---|
 | `02_Schedule` ลบ `ScheduleTodayTasksSection` | Toggle "แสดงงานส่วนตัวในตารางเรียน" ที่ `SettingsView.swift:167` กลายเป็นสวิตช์ตาย | agent ของ `05_Settings` |
-| `01_Tasks` §5 ปุ่ม `+` ตามแท็บ | `RootTabView.swift` ถูกแตะโดย agent ของ Tasks — โมดูลอื่นห้ามแตะไฟล์นี้ซ้ำ · **W1 แก้แท็บไปแล้ว เหลือแค่ปุ่ม `+`** | agent ของ `01_Tasks` เท่านั้น |
+| ~~`01_Tasks` §5 ปุ่ม `+` ตามแท็บ~~ | ✅ **ยกเลิกแล้ว (Few 14 ส.ค.)** — `RootTabView` เสร็จหมดแล้ว ปุ่ม `+` เปิดเมนูเดียวกันทุกแท็บ · โมดูลอื่นยังห้ามแตะไฟล์นี้จนถึง W3 | — |
 | ~~`01_Tasks` เพิ่ม `presetKind:` ใน `AddTaskSheet`~~ | ✅ **W1 ทำแล้ว** — `init(editing:presetKind:onSaved:)` default `.homework` | — |
-| `03_QuickAdd` §5 sheet ชั้นเดียว | ต้องแก้ `RootTabView.swift` ก้อนเดียวกับ `01_Tasks` §5 — **ทำพร้อมกัน ห้ามแยกสองรอบ** | agent ของ `01_Tasks` |
-| `03_QuickAdd` เรียก `EventFormSheet` · `PortfolioItemSheet` · `AddScheduleEntrySheet` | ห้ามโมดูลใดแก้ signature ของสามตัวนี้ | ทุก agent |
+| ~~`03_QuickAdd` §5 sheet ชั้นเดียว~~ | ✅ **ยกเลิกแล้ว (Few 14 ส.ค.)** — คง sheet ซ้อน sheet ไว้ | — |
+| `03_QuickAdd` เรียก `EventFormSheet` · `PortfolioItemSheet` | ห้ามแก้ signature ของสองตัวนี้ · **`onSaved:` ที่ก้อน A เติมไว้ห้ามลบ** ไม่งั้นบันทึกแล้วเมนูค้าง · `AddScheduleEntrySheet` ไม่ถูกเรียกจาก QuickAdd แล้ว | ทุก agent |
 | `04_GradeCenter` ย้ายการตั้งเป้ามาที่ `GPAXTargetSheet` | `SettingsView` ต้องลบ section เป้า GPAX — **ทำหลัง GradeCenter เสร็จเท่านั้น** ไม่งั้นจะไม่มีที่ตั้งเป้าเลย | agent ของ `05_Settings` |
 | `04_GradeCenter` ลิสต์อ้างปุ่ม "ขึ้นชั้นแล้ว" | ปุ่มนั้นใน Settings ห้ามลบหรือเปลี่ยนชื่อ | agent ของ `05_Settings` |
 | `05_Settings` §4.3 สวิตช์ค่าเริ่มต้นการเตือนงาน | ต้องแก้ `AddTaskSheet.init` 1 บรรทัด — **agent Tasks เป็นคนแก้** ไม่ใช่ agent Settings | agent ของ `01_Tasks` |

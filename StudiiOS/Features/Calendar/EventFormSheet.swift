@@ -42,10 +42,16 @@ struct EventFormSheet: View {
         Array(zip(Theme.Colors.subjectPaletteHex, Theme.Colors.subjectPalette))
     }
 
+    /// Called after a successful save — lets a presenting sheet (QuickAddSheet)
+    /// close itself too instead of staying behind the form. `nil` everywhere
+    /// else, so existing call sites are untouched.
+    private let onSaved: (() -> Void)?
+
     // ── Add initializer ──
-    init(initialDate: Date) {
+    init(initialDate: Date, onSaved: (() -> Void)? = nil) {
         existingEvent = nil
         deleteOnCancel = false
+        self.onSaved = onSaved
         let dayStart = Calendar(identifier: .gregorian).startOfDay(for: initialDate)
         _title            = State(initialValue: "")
         _location         = State(initialValue: "")
@@ -61,9 +67,10 @@ struct EventFormSheet: View {
     }
 
     // ── Edit initializer ──
-    init(event: CalendarEvent, deleteOnCancel: Bool = false) {
+    init(event: CalendarEvent, deleteOnCancel: Bool = false, onSaved: (() -> Void)? = nil) {
         existingEvent     = event
         self.deleteOnCancel = deleteOnCancel
+        self.onSaved      = onSaved
         _title            = State(initialValue: event.title)
         _location         = State(initialValue: event.location)
         _notes            = State(initialValue: event.notes)
@@ -336,6 +343,7 @@ struct EventFormSheet: View {
         try? modelContext.save()
         Task { await notifications.schedule(for: savedEvent) }
         dismiss()
+        onSaved?()
     }
 
     private func delete() {

@@ -21,14 +21,6 @@ enum DashboardDestination: Hashable {
     case focusMode
 }
 
-/// Which screen the quick-add flow starts on. `.menu` is the full "เพิ่มอะไรดี?"
-/// grid; every other case jumps straight to a form.
-enum QuickAddTarget: String, Identifiable, CaseIterable {
-    case menu, task, event, scheduleEntry, portfolio
-
-    var id: String { rawValue }
-}
-
 struct RootTabView: View {
     enum Tab: Hashable {
         case dashboard, tasks, capture, schedule, settings
@@ -37,7 +29,6 @@ struct RootTabView: View {
     @State private var selectedTab: Tab = .dashboard
     @State private var previousTab: Tab = .dashboard
     @State private var showCapture = false
-    @State private var quickAddStart: QuickAddTarget = .menu
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -70,26 +61,14 @@ struct RootTabView: View {
         .onChange(of: selectedTab) { oldValue, newValue in
             if newValue == .capture {
                 previousTab = oldValue
-                quickAddStart = quickAddTarget(for: oldValue)
                 showCapture = true
                 selectedTab = oldValue
             }
         }
+        // ปุ่ม + กลางแถบล่างเปิดเมนูเดียวกันทุกแท็บ — หน้าที่มีปุ่มเพิ่มของตัวเอง
+        // (เช่นแท็บงาน) เก็บทางลัดไว้บน toolbar ขวาบนแทน
         .sheet(isPresented: $showCapture) {
-            QuickAddFlow(start: quickAddStart)
-        }
-    }
-
-    /// The "+" button adds whatever the tab you're standing on is about; the
-    /// menu is only for tabs with no obvious answer.
-    ///
-    /// Screens pushed from the Dashboard menu still count as หน้าแรก — teaching
-    /// child screens to announce their own kind needs a PreferenceKey (W3).
-    private func quickAddTarget(for tab: Tab) -> QuickAddTarget {
-        switch tab {
-        case .tasks: return .task
-        case .schedule: return .scheduleEntry
-        case .dashboard, .settings, .capture: return .menu
+            QuickAddSheet()
         }
     }
 

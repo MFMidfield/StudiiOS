@@ -6,7 +6,7 @@
 //  Uses List (not ScrollView) so swipe-to-delete works; separators and row
 //  backgrounds are hidden so the rows still read as floating cards.
 //
-//  เพิ่มงาน = ปุ่ม + กลาง tab bar (RootTabView) — หน้านี้ไม่มี FAB ของตัวเอง
+//  เพิ่มงาน = ปุ่ม + มุมขวาบน (TaskAddMenu) — ไม่มี FAB มุมขวาล่างแล้ว
 //
 
 import SwiftUI
@@ -29,6 +29,7 @@ struct AssignmentListView: View {
     @State private var subjectFilter = ""
 
     @State private var editingTask: Assignment?
+    @State private var isAddingTask = false
     @State private var isDoneGroupExpanded = false
 
     var body: some View {
@@ -53,14 +54,16 @@ struct AssignmentListView: View {
         .searchable(text: $searchText, prompt: "ค้นหางาน วิชา หรือรายละเอียด")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                TaskFilterMenu(
+                TaskAddMenu(
                     kindFilter: $kindFilter,
                     subjectFilter: $subjectFilter,
-                    subjectNames: subjectNames
+                    subjectNames: subjectNames,
+                    onAdd: { isAddingTask = true }
                 )
             }
         }
         .overlay { emptyState }
+        .sheet(isPresented: $isAddingTask) { AddTaskSheet() }
         .sheet(item: $editingTask) { task in AddTaskSheet(editing: task) }
     }
 
@@ -132,13 +135,13 @@ struct AssignmentListView: View {
             ContentUnavailableView(
                 "ยังไม่มีงาน",
                 systemImage: "checkmark.square",
-                description: Text("กดปุ่ม + ตรงกลางแถบล่างเพื่อเพิ่มงานชิ้นแรก")
+                description: Text("กดปุ่ม + มุมขวาบนเพื่อเพิ่มงานชิ้นแรก")
             )
         } else if visibleTasks.isEmpty && doneTasks.isEmpty {
             ContentUnavailableView(
                 "ไม่พบงานที่ตรงเงื่อนไข",
                 systemImage: "line.3.horizontal.decrease",
-                description: Text("ลองเปลี่ยนตัวกรองหรือคำค้นหา")
+                description: Text("ลองเปลี่ยนคำค้นหา หรือกดค้างที่ปุ่ม + มุมขวาบนเพื่อล้างตัวกรอง")
             )
         }
     }
