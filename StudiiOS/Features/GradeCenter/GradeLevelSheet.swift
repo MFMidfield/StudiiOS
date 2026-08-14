@@ -43,7 +43,7 @@ struct GradeLevelSheet: View {
                 if let progressText {
                     Section {
                         Text(progressText)
-                            .font(.subheadline)
+                            .font(Theme.Font.body)
                             .foregroundStyle(Theme.Colors.textSecondary)
                     }
                 }
@@ -51,7 +51,7 @@ struct GradeLevelSheet: View {
                 if band == .lower {
                     Section {
                         Text("GPAX สำหรับ TCAS นับเฉพาะ ม.ปลาย (ม.4–ม.6) — ตั้งไว้ก่อนได้ ระบบจะเริ่มคำนวณตอนขึ้น ม.4")
-                            .font(.caption)
+                            .font(Theme.Font.caption)
                             .foregroundStyle(Theme.Colors.textSecondary)
                     }
                 }
@@ -81,7 +81,7 @@ struct GradeLevelSheet: View {
                     selection.wrappedValue = value
                 } label: {
                     Text(label(value))
-                        .font(.system(size: 14, weight: .medium))
+                        .font(Theme.Font.plex(14, .medium))
                         .padding(.horizontal, Theme.Spacing.md)
                         .padding(.vertical, Theme.Spacing.sm)
                         .background(isSelected ? Theme.Colors.primary : Theme.Colors.background)

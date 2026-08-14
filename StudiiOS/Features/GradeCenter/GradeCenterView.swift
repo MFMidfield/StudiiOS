@@ -9,9 +9,11 @@ import SwiftUI
 import SwiftData
 
 struct GradeCenterView: View {
-    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+    // D7: `terms` feeds gpaxTermInputs only. TermStore.activeTermKey is
+    // deliberately absent — the title used to name the term being browsed in
+    // the timetable while every number below came from the real term, so the
+    // heading contradicted the page.
     @Query private var terms: [Term]
-    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
 
     // MARK: - Level 1 GPAX
     // D7: reads GPAXSettings.currentSortKey (the student's real term), never
@@ -46,15 +48,27 @@ struct GradeCenterView: View {
         )
     }
 
+    /// No GPAX yet = nothing for the six-row list to say. Six identical
+    /// "ยังไม่มีข้อมูล" rows are a wall, not information.
+    private var hasGPAX: Bool { gpaxResult?.gpax != nil }
+
+    private var title: String {
+        guard let sortKey = GPAXSettings.currentSortKey else { return "เกรดและ GPAX" }
+        return "เกรดและ GPAX · ม.\(sortKey / 10) เทอม \(sortKey % 10)"
+    }
+
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: Theme.Spacing.xl) {
                 GPAXSummaryCard(result: gpaxResult)
-                TermGradeListSection(result: gpaxResult, terms: terms)
+                if hasGPAX {
+                    TermGradeListSection(result: gpaxResult, terms: terms)
+                }
             }
             .padding()
         }
-        .navigationTitle(activeTerm.map { "เกรด & GPA · \($0.displayName)" } ?? "เกรด & GPA")
+        .background(Theme.Colors.background)
+        .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
     }
 }

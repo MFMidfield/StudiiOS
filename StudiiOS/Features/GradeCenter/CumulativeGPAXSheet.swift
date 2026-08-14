@@ -31,7 +31,7 @@ struct CumulativeGPAXSheet: View {
                     TextField("จำนวนเทอมที่ผ่านมา", text: $termCountText)
                         .keyboardType(.numberPad)
                     Text("เลขนี้อยู่ท้ายใบ ปพ.1")
-                        .font(.caption2)
+                        .font(Theme.Font.caption)
                         .foregroundStyle(Theme.Colors.textSecondary)
                     Button("ใช้ค่านี้") { useCumulative() }
                         .disabled(!canUseCumulative)

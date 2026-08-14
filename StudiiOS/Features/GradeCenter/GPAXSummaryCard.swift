@@ -1,7 +1,12 @@
 //
 //  GPAXSummaryCard.swift
-//  Level 1 GPAX — the big card: GPAX, floor/ceiling range bar, required average.
-//  Read-only in this round; input lands in TermGradeEditView/GradeLevelSheet.
+//  Level 1 GPAX — the big card: GPAX now, how low and how high it can still
+//  end up, and what that means for the target.
+//
+//  "พื้น / เพดาน" is gone: floor and ceiling are the most useful numbers on the
+//  screen and they were behind two words no student uses. They are now a label
+//  at each end of the bar plus one plain sentence each.
+//
 //  Math lives entirely in GPAXCalculator — this file only formats.
 //
 
@@ -12,6 +17,7 @@ struct GPAXSummaryCard: View {
     let result: GPAXCalculator.Result?
 
     @State private var showingGradeLevelSheet = false
+    @State private var showingTargetSheet = false
 
     var body: some View {
         CardContainer {
@@ -21,64 +27,155 @@ struct GPAXSummaryCard: View {
                 emptyState
             }
         }
-        .sheet(isPresented: $showingGradeLevelSheet) {
-            GradeLevelSheet()
-        }
+        .sheet(isPresented: $showingGradeLevelSheet) { GradeLevelSheet() }
+        .sheet(isPresented: $showingTargetSheet) { GPAXTargetSheet() }
     }
+
+    // MARK: - Filled state
 
     @ViewBuilder
     private func content(result: GPAXCalculator.Result, gpax: Double) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("GPAX สะสม · \(provenanceLabel(result.provenance))")
-                .font(.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
-
-            Text(GPAXCalculator.formatted(gpax))
-                .font(.system(size: 34, weight: .bold))
-                .foregroundStyle(Theme.Colors.primaryDeep)
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            headerRow(result: result, gpax: gpax)
 
             if let floor = result.floor, let ceiling = result.ceiling {
-                GPAXRangeBar(
-                    floor: floor,
-                    ceiling: ceiling,
-                    gpax: gpax,
-                    target: GPAXSettings.hasTarget ? GPAXSettings.target : nil
-                )
-                Text(rangeLabel(floor: floor, ceiling: ceiling))
-                    .font(.caption2)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                rangeBlock(floor: floor, ceiling: ceiling, gpax: gpax)
             }
 
             if let state = result.state {
-                Text(copy(for: state, gpax: gpax))
-                    .font(.subheadline).fontWeight(.medium)
-                    .foregroundStyle(color(for: state, gpax: gpax))
-                    .padding(.top, Theme.Spacing.xs)
-            } else {
-                // Data exists but no target yet (§7 edge case) — offer one inline.
-                // The full target editor belongs in Settings (build order step 6);
-                // this is just enough to unblock verifying the §3.3 fixture now.
-                TargetQuickSetter()
-                    .padding(.top, Theme.Spacing.xs)
+                statusBox(state: state, gpax: gpax, result: result)
             }
         }
     }
+
+    private func headerRow(result: GPAXCalculator.Result, gpax: Double) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("GPAX สะสม · \(provenanceLabel(result.provenance))")
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+
+                // A fact, not a link. Orange is reserved for things you can tap.
+                Text(GPAXCalculator.formatted(gpax))
+                    .font(Theme.Font.plex(34, .semibold))
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .contentTransition(.numericText())
+            }
+
+            Spacer(minLength: Theme.Spacing.sm)
+
+            targetButton
+        }
+    }
+
+    /// Always present, target or not — the old inline setter disappeared the
+    /// moment a target existed, so there was no way back to change it.
+    private var targetButton: some View {
+        Button {
+            showingTargetSheet = true
+        } label: {
+            VStack(alignment: .trailing, spacing: Theme.Spacing.xs) {
+                Text("เป้า")
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                HStack(spacing: Theme.Spacing.xs) {
+                    Text(GPAXSettings.hasTarget
+                         ? GPAXCalculator.formatted(GPAXSettings.target)
+                         : "ตั้งเป้า")
+                    .font(Theme.Font.plex(19, .semibold))
+                    Image(systemName: "pencil")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundStyle(Theme.Colors.primaryDeep)
+            }
+        }
+        .buttonStyle(PressScaleButtonStyle())
+        .accessibilityLabel(GPAXSettings.hasTarget
+                            ? "แก้เป้า GPAX ปัจจุบัน \(GPAXCalculator.formatted(GPAXSettings.target))"
+                            : "ตั้งเป้า GPAX")
+    }
+
+    private func rangeBlock(floor: Double, ceiling: Double, gpax: Double) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            GPAXRangeBar(
+                floor: floor,
+                ceiling: ceiling,
+                gpax: gpax,
+                target: GPAXSettings.hasTarget ? GPAXSettings.target : nil
+            )
+
+            HStack {
+                Text(GPAXCalculator.formatted(floor))
+                Spacer()
+                Text(GPAXCalculator.formatted(ceiling))
+            }
+            .font(Theme.Font.caption)
+            .foregroundStyle(Theme.Colors.textSecondary)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("ถ้าเลิกตั้งใจเลยจะจบที่ \(GPAXCalculator.formatted(floor))")
+                Text("ถ้าได้ 4.00 ทุกเทอมที่เหลือจะจบที่ \(GPAXCalculator.formatted(ceiling))")
+            }
+            .font(Theme.Font.caption)
+            .foregroundStyle(Theme.Colors.textSecondary)
+        }
+    }
+
+    private func statusBox(state: GPAXCalculator.State, gpax: Double, result: GPAXCalculator.Result) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(copy(for: state, gpax: gpax))
+                .font(Theme.Font.plex(13, .semibold))
+                .foregroundStyle(color(for: state, gpax: gpax))
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let remainingTerms = remainingTermCount(result), remainingTerms > 0 {
+                Text("เหลืออีก \(remainingTerms) เทอม")
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Theme.Spacing.md)
+        .background(boxBackground(for: state, gpax: gpax))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+    }
+
+    // MARK: - Empty state
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text("GPAX สะสม")
-                .font(.caption)
+                .font(Theme.Font.caption)
                 .foregroundStyle(Theme.Colors.textSecondary)
             Text("ยังไม่มีข้อมูล — เพิ่มผลการเรียนเทอมแรก")
-                .font(.subheadline)
+                .font(Theme.Font.body)
                 .foregroundStyle(Theme.Colors.textSecondary)
 
             if GPAXSettings.currentSortKey == nil {
                 Button("ตั้งระดับชั้นปัจจุบัน") { showingGradeLevelSheet = true }
-                    .font(.subheadline).fontWeight(.semibold)
+                    .font(Theme.Font.plex(15, .semibold))
                     .foregroundStyle(Theme.Colors.primaryDeep)
+            } else if let firstSortKey = firstEditableSortKey {
+                NavigationLink {
+                    TermGradeEditView(
+                        gradeLevel: firstSortKey / 10,
+                        termNumber: firstSortKey % 10,
+                        existingTerm: nil
+                    )
+                } label: {
+                    Text("เพิ่มผลการเรียนเทอมแรก")
+                        .font(Theme.Font.plex(15, .semibold))
+                        .foregroundStyle(Theme.Colors.primaryDeep)
+                }
             }
         }
+    }
+
+    /// The most recent term that is already over — the one a student with no
+    /// data at all should be filling in first.
+    private var firstEditableSortKey: Int? {
+        guard let current = GPAXSettings.currentSortKey else { return nil }
+        return GPAXCalculator.upperBandSortKeys.last { $0 < current }
     }
 
     // MARK: - Copy (§3.4 / §6.6)
@@ -92,12 +189,9 @@ struct GPAXSummaryCard: View {
         }
     }
 
-    private func rangeLabel(floor: Double, ceiling: Double) -> String {
-        var text = "พื้น \(GPAXCalculator.formatted(floor)) · เพดาน \(GPAXCalculator.formatted(ceiling))"
-        if GPAXSettings.hasTarget {
-            text += " · เป้า \(GPAXCalculator.formatted(GPAXSettings.target))"
-        }
-        return text
+    private func remainingTermCount(_ result: GPAXCalculator.Result) -> Int? {
+        guard let current = GPAXSettings.currentSortKey else { return nil }
+        return GPAXCalculator.upperBandSortKeys.filter { $0 >= current }.count
     }
 
     private func copy(for state: GPAXCalculator.State, gpax: Double) -> String {
@@ -129,83 +223,37 @@ struct GPAXSummaryCard: View {
         case .noData: return Theme.Colors.textSecondary
         }
     }
-}
 
-/// Minimal target entry — Settings (step 6) gets the real editor with source
-/// programme text (§4.2 targetSource); this just writes GPAXSettings.target.
-private struct TargetQuickSetter: View {
-    @State private var text = ""
-
-    private var parsed: Double? { Double(text) }
-    private var isValid: Bool { parsed.map { (0.0...4.0).contains($0) } ?? false }
-
-    var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            TextField("ตั้งเป้า GPAX เช่น 3.50", text: $text)
-                .keyboardType(.decimalPad)
-                .textFieldStyle(.roundedBorder)
-                .font(.subheadline)
-            Button("ตั้งเป้า") {
-                guard let value = parsed else { return }
-                GPAXSettings.setTarget(value, source: "")
-                text = ""
-            }
-            .disabled(!isValid)
-            .font(.subheadline).fontWeight(.semibold)
+    private func boxBackground(for state: GPAXCalculator.State, gpax: Double) -> Color {
+        switch state {
+        case .achieved, .finished: return Theme.Colors.success.opacity(0.12)
+        case .outOfReach: return Theme.Colors.danger.opacity(0.12)
+        default: return Theme.Colors.primarySoft
         }
-    }
-}
-
-/// x = (value − floor) / (ceiling − floor), clamped 0...1. Shows where the
-/// current GPAX sits between the mathematical floor and ceiling, with the
-/// target as a tick mark on the same scale.
-private struct GPAXRangeBar: View {
-    let floor: Double
-    let ceiling: Double
-    let gpax: Double
-    let target: Double?
-
-    private func fraction(_ value: Double) -> CGFloat {
-        guard ceiling > floor else { return 0 }
-        return CGFloat(min(max((value - floor) / (ceiling - floor), 0), 1))
-    }
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Theme.Colors.separator)
-                Capsule()
-                    .fill(Theme.Colors.primary)
-                    .frame(width: geo.size.width * fraction(gpax))
-                if let target {
-                    Rectangle()
-                        .fill(Theme.Colors.textPrimary)
-                        .frame(width: 2)
-                        .offset(x: geo.size.width * fraction(target) - 1)
-                }
-            }
-        }
-        .frame(height: 8)
     }
 }
 
 #Preview {
-    ScrollView {
-        VStack(spacing: 20) {
-            GPAXSummaryCard(result: nil)
-            GPAXSummaryCard(result: GPAXCalculator.calculate(
-                terms: [
-                    .init(sortKey: 41, gpa: 3.15, totalCredits: 21.0),
-                    .init(sortKey: 42, gpa: 3.32, totalCredits: 20.5),
-                    .init(sortKey: 51, gpa: 3.41, totalCredits: 21.5),
-                    .init(sortKey: 52, gpa: 3.28, totalCredits: 20.0),
-                    .init(sortKey: 61, gpa: nil, totalCredits: 20.5),
-                    .init(sortKey: 62, gpa: nil, totalCredits: 20.5),
-                ],
-                currentSortKey: 61,
-                target: 3.50
-            ))
+    NavigationStack {
+        ScrollView {
+            VStack(spacing: 20) {
+                GPAXSummaryCard(result: nil)
+                GPAXSummaryCard(result: GPAXCalculator.calculate(
+                    terms: [
+                        .init(sortKey: 41, gpa: 3.15, totalCredits: 21.0),
+                        .init(sortKey: 42, gpa: 3.32, totalCredits: 20.5),
+                        .init(sortKey: 51, gpa: 3.41, totalCredits: 21.5),
+                        .init(sortKey: 52, gpa: 3.28, totalCredits: 20.0),
+                        .init(sortKey: 61, gpa: nil, totalCredits: 20.5),
+                        .init(sortKey: 62, gpa: nil, totalCredits: 20.5),
+                    ],
+                    currentSortKey: 61,
+                    target: 3.50
+                ))
+            }
+            .padding()
         }
-        .padding()
+        .background(Theme.Colors.background)
     }
+    .modelContainer(for: [Term.self, TermSubject.self, TermGradeSubject.self, ScheduleEntry.self, Subject.self], inMemory: true)
 }

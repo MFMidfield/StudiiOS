@@ -117,15 +117,15 @@ struct TermGradeEditView: View {
         Section {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text("เกรดเฉลี่ยเทอมนี้")
-                    .font(.subheadline).fontWeight(.medium)
+                    .font(Theme.Font.plex(15, .medium))
                 TextField("เช่น 3.28", text: $gpaText)
                     .keyboardType(.decimalPad)
                 Text("อยู่บนใบ ปพ.1 ช่อง \"ผลการเรียนเฉลี่ย\"")
-                    .font(.caption2)
+                    .font(Theme.Font.caption)
                     .foregroundStyle(Theme.Colors.textSecondary)
                 if !gpaIsValid {
                     Text("กรอกได้ 0.00–4.00")
-                        .font(.caption2)
+                        .font(Theme.Font.caption)
                         .foregroundStyle(Theme.Colors.danger)
                 }
             }
@@ -137,15 +137,15 @@ struct TermGradeEditView: View {
         Section {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text("หน่วยกิตรวม (ไม่บังคับ)")
-                    .font(.subheadline).fontWeight(.medium)
+                    .font(Theme.Font.plex(15, .medium))
                 TextField("เช่น 20.0", text: $creditsText)
                     .keyboardType(.decimalPad)
                 Text("ไม่กรอกก็ได้ แต่ GPAX จะคลาดเคลื่อน ±0.03")
-                    .font(.caption2)
+                    .font(Theme.Font.caption)
                     .foregroundStyle(Theme.Colors.textSecondary)
                 if !creditsAreValid {
                     Text("กรอกได้ 0.5–40.0")
-                        .font(.caption2)
+                        .font(Theme.Font.caption)
                         .foregroundStyle(Theme.Colors.danger)
                 }
             }
@@ -156,7 +156,7 @@ struct TermGradeEditView: View {
     private var cumulativeSection: some View {
         Section {
             Button("จำเกรดเทอมนี้ไม่ได้") { showCumulativeSheet = true }
-                .font(.caption)
+                .font(Theme.Font.caption)
                 .foregroundStyle(Theme.Colors.textSecondary)
         }
     }
@@ -189,17 +189,17 @@ struct TermGradeEditView: View {
                 seedSubjectsFromTimetable(term: term)
                 recomputeDetailedTotals()
             } label: {
-                Label("ดึงวิชาจากตารางสอนอีกครั้ง", systemImage: "arrow.clockwise")
+                Label("ดึงวิชาจากตารางเรียนอีกครั้ง", systemImage: "arrow.clockwise")
             }
-            .font(.caption)
+            .font(Theme.Font.caption)
             .disabled(!termHasTimetable)
         } header: {
             Text("รายวิชา")
         } footer: {
             if subjects.isEmpty {
                 Text(termHasTimetable
-                     ? "ยังไม่มีวิชา — กด \"ดึงวิชาจากตารางสอน\" หรือเพิ่มเอง"
-                     : "เทอมนี้ยังไม่มีตารางสอน — กด \"เพิ่มวิชา\" เพื่อเริ่มกรอกเอง")
+                     ? "ยังไม่มีวิชา — กด \"ดึงวิชาจากตารางเรียน\" หรือเพิ่มเอง"
+                     : "เทอมนี้ยังไม่มีตารางเรียน — กด \"เพิ่มวิชา\" เพื่อเริ่มกรอกเอง")
             }
         }
     }
@@ -236,7 +236,7 @@ struct TermGradeEditView: View {
     }
 
     /// วิชาที่ยังไม่มีในลิสต์เท่านั้นที่ถูกเพิ่ม — ไม่เคยลบของเดิม แม้คาบนั้นจะ
-    /// ถูกลบออกจากตารางสอนไปแล้วก็ตาม (เกรดที่กรอกไว้ต้องไม่หายเงียบๆ)
+    /// ถูกลบออกจากตารางเรียนไปแล้วก็ตาม (เกรดที่กรอกไว้ต้องไม่หายเงียบๆ)
     private func seedSubjectsFromTimetable(term: Term) {
         let entries = allEntries.filter { $0.term?.id == term.id }
         var existingNames = Set(subjects.map(\.name))
@@ -276,7 +276,7 @@ private struct TermGradeSubjectRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             TextField("ชื่อวิชา", text: $subject.name)
-                .font(.system(size: 14, weight: .medium))
+                .font(Theme.Font.plex(14, .medium))
                 .onChange(of: subject.name) { _, _ in onChanged() }
 
             HStack {
@@ -286,13 +286,13 @@ private struct TermGradeSubjectRow: View {
                     in: 0.5...4.0,
                     step: 0.5
                 )
-                .font(.caption)
+                .font(Theme.Font.caption)
                 .onChange(of: subject.creditHours) { _, _ in onChanged() }
             }
 
             HStack {
                 Text("เกรด")
-                    .font(.caption)
+                    .font(Theme.Font.caption)
                     .foregroundStyle(Theme.Colors.textSecondary)
                 Spacer()
                 Stepper(
@@ -301,7 +301,7 @@ private struct TermGradeSubjectRow: View {
                     onDecrement: { stepGrade(by: -1) }
                 )
                 .fixedSize()
-                .font(.system(size: 14, weight: .semibold))
+                .font(Theme.Font.plex(14, .semibold))
                 .onChange(of: subject.gradePoint) { _, _ in onChanged() }
             }
         }
