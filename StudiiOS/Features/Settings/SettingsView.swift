@@ -228,7 +228,12 @@ struct SettingsView: View {
                 .contentShape(Rectangle())
                 .onTapGesture(perform: registerVersionTap)
 
-            LabeledContent("แผน") {
+            // Plain HStack, not LabeledContent: with a trailing closure the
+            // compiler picks LabeledContent(content:label:) and reads the title
+            // as the content view.
+            HStack {
+                Text("แผน")
+                Spacer()
                 if entitlements.hasPro || entitlements.hasPlus {
                     TierBadge(tier: entitlements.hasPlus ? .plus : .pro)
                 } else {
