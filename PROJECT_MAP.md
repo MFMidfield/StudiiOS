@@ -1,7 +1,9 @@
-# PROJECT_MAP — Student OS (PrototypeApp)
+# PROJECT_MAP — Student OS (StudiiOS)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-10 — Dashboard redesign: dark mode (Theme.Colors adaptive ทั้งหมด) + คาบเรียนถัดไป
+> **อัปเดตล่าสุด:** 2026-08-14 — รีแบรนด์ทั้งโปรเจกต์จาก PrototypeApp เป็น **Studii OS** (target/project/bundle ID
+> เปลี่ยนเป็น `StudiiOS`/`mfmidfield.StudiiOS`, `CFBundleDisplayName` = "Studii OS") — ก่อนหน้านั้น 2026-08-10 —
+> Dashboard redesign: dark mode (Theme.Colors adaptive ทั้งหมด) + คาบเรียนถัดไป
 > + ติ๊กงานเสร็จตรงจากการ์ด + animation เข้าหน้า (ดู §5 Design tokens + Dashboard ใน §2) · ก่อนหน้านั้น
 > PLAN_TCASPlanner ครบทั้ง 4 รอบแล้ว — models ใหม่ → TCASScoreEngine/เทสต์ → ลิสต์คณะ/ตั้งน้ำหนัก/คะแนนของฉัน →
 > SOPEditorView/SOPGuideSheet · โมดูล TCAS Planner ถือว่าสมบูรณ์ตามแผน รอ Few verify build จริง
@@ -16,10 +18,10 @@
 |---|---|
 | Deployment target | **iOS 26.5** |
 | SWIFT_VERSION | 5.0 |
-| Bundle ID | `mfmidfield.PrototypeApp` |
+| Bundle ID | `mfmidfield.StudiiOS` |
 | Framework | SwiftUI + SwiftData (ไม่มี dependency ภายนอกเลย) |
 | Xcode project | objectVersion 77, ใช้ **file-system-synchronized groups** |
-| Test targets | `PrototypeAppTests`, `PrototypeAppUITests` (ยังเป็น template เปล่า) |
+| Test targets | `StudiiOSTests`, `StudiiOSUITests` (ยังเป็น template เปล่า) |
 
 **ผลจาก file-system-synchronized groups:** สร้างไฟล์ `.swift` ใหม่ในโฟลเดอร์ = เข้า target อัตโนมัติ **ไม่ต้องแก้ `.pbxproj` เลย** อย่าไปยุ่งกับ pbxproj โดยไม่จำเป็น
 
@@ -30,9 +32,9 @@
 ## 2. โครงสร้างไฟล์จริง (~60 ไฟล์ Swift)
 
 ```
-PrototypeApp/                      ← โฟลเดอร์ซอร์ส (ชั้นในของ repo)
+StudiiOS/                      ← โฟลเดอร์ซอร์ส (ชั้นในของ repo)
 ├── App/
-│   ├── PrototypeAppApp.swift      (72)  @main + Schema + RootContainerView + NotificationManager.shared bootstrap + seed Subject
+│   ├── StudiiOSApp.swift      (72)  @main + Schema + RootContainerView + NotificationManager.shared bootstrap + seed Subject
 │   └── RootTabView.swift          (84)  5-tab shell + DashboardDestination
 ├── Core/
 │   ├── DesignSystem/
@@ -344,7 +346,7 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
         ├── `Core/TCAS/TCASExamCatalog.swift`   ~24 วิชาสอบ, logic ล้วน (⚠️ ยังไม่ verify กับ mytcas จริง)
         ├── `Core/TCAS/TCASScoreEngine.swift`   logic ล้วน ไม่ import SwiftData — รับ/คืน struct เปล่า
         │                                  `TCASWeightInput`/`TCASScoreInput`/`TCASSubjectBreakdown` ไม่ใช่
-        │                                  @Model ตรงๆ เทียบเคียง GPAXCalculator · `PrototypeAppTests/
+        │                                  @Model ตรงๆ เทียบเคียง GPAXCalculator · `StudiiOSTests/
         │                                  TCASScoreEngineTests.swift` ครอบ 10 เคส รวม worked example จาก
         │                                  §4.2/§4.3 ของแผนเป๊ะ
         └── `Core/TCAS/SOPGuideContent.swift`   13 หน้าคำแนะนำ static let เนื้อหาจาก Few 2026-08-10 ตรงๆ
@@ -357,7 +359,7 @@ PrototypeApp/                      ← โฟลเดอร์ซอร์ส (
 
 ## 3. SwiftData Models (23 @Model — ทั้งหมดต้องอยู่ใน Schema)
 
-Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
+Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
 
 | Model | ไฟล์ |
 |---|---|
@@ -391,7 +393,7 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
 
 **กฎเหล็ก:** เพิ่ม `@Model` ใหม่ → ต้องเพิ่มใน `Schema([...])` ด้วย ไม่งั้น crash ตอนรัน (Term/TermSubject/TermGradeSubject ทำแล้ว — ลบ TermSubject **และ** TermGradeSubject **ก่อน** Term เสมอ, และเคลียร์ `TermStore.activeTermKey` ออกจาก UserDefaults ด้วย)
 และต้องเพิ่มใน `SettingsView.resetAllData()` ด้วย (เคยลืมมาแล้วกับ Calendar 3 ตัว)
-`resetAllData()` ลบ `Subject` แล้วเรียก `PrototypeAppApp.seedBuiltInSubjects(in:)` ทันทีเพื่อ reseed 3 วิชาเริ่มต้น — ถ้าเพิ่ม built-in subject ใหม่ ต้องแก้ทั้งสองจุด (seed function + resetAllData ยังคงเรียก function เดิม จุดเดียวพอ)
+`resetAllData()` ลบ `Subject` แล้วเรียก `StudiiOSApp.seedBuiltInSubjects(in:)` ทันทีเพื่อ reseed 3 วิชาเริ่มต้น — ถ้าเพิ่ม built-in subject ใหม่ ต้องแก้ทั้งสองจุด (seed function + resetAllData ยังคงเรียก function เดิม จุดเดียวพอ)
 
 ---
 
@@ -403,7 +405,7 @@ Schema ประกาศที่ `App/PrototypeAppApp.swift:15-36`
   → ผู้ใช้เลือกก่อนว่าจะเพิ่มอะไร (งาน / ปฏิทิน / โน๊ต / Portfolio) แล้วค่อยเปิดฟอร์ม
   **นี่คือทางเข้าเดียวของ ปฏิทิน/โน๊ต/Portfolio** — ถ้าเปลี่ยนปุ่มนี้ให้เปิดฟอร์มใดฟอร์มหนึ่งตรงๆ อีก 3 โหมดจะกลายเป็นโค้ดตาย
 - Dashboard push ต่อผ่าน `DashboardDestination`: `.assignments` `.gradeCenter` `.tcasPlanner` `.portfolio` `.careerDiscovery` `.focusMode`
-- Onboarding gate อยู่ที่ `RootContainerView` (`PrototypeAppApp.swift:53-74`) ใช้ `@AppStorage` 5 ตัวเรียงลำดับหน้า
+- Onboarding gate อยู่ที่ `RootContainerView` (`StudiiOSApp.swift:53-74`) ใช้ `@AppStorage` 5 ตัวเรียงลำดับหน้า
 - แท็บ "ตารางเรียน" (`ScheduleView`) toolbar มี 2 ปุ่ม: เฟือง (ซ้าย) เปิด `ScheduleSettingsSheet`
   (สลับเทอม + ร่นคาบ — เดิมนาฬิกาเปิด `PeriodShiftSheet` ตรงๆ, ตอนนี้ย้ายไปซ้อนข้างในแล้ว)
   · `+` (ขวา) เปิด `AddScheduleEntrySheet` (เพิ่ม/แก้คาบ, หรือแตะแถวคาบเพื่อแก้) → ซ้อน `AddSubjectSheet`
@@ -475,8 +477,8 @@ Gated: `PortfolioView`
 |---|---|
 | `StudentOS_รวมเอกสาร.md` | **สโคป/vision — ยังใช้อ้างอิงได้** (เป้าหมาย ไม่ใช่สถานะจริง) |
 | `session-2026-07-28-restructure.md` | log เก่า — อธิบายเวอร์ชันที่ยังมี Subject/Chapter/BinderAttachment |
-| `PrototypeApp/PrototypeApp_Audit_Report.md` | ⚠️ **ล้าสมัย** อ้างถึง 45 ไฟล์/6,857 บรรทัด และไฟล์ที่ไม่มีแล้ว (`SubjectDetailView`, `DigitalBinderView`, `GPAPlannerView`, `Subject.swift`) — **ห้ามเชื่อโดยไม่ verify กับซอร์สจริง** |
-| `PrototypeApp/SchedulePage_Prompt.md` | prompt ของหน้า Schedule |
+| `StudiiOS/StudiiOS_Audit_Report.md` | ⚠️ **ล้าสมัย** อ้างถึง 45 ไฟล์/6,857 บรรทัด และไฟล์ที่ไม่มีแล้ว (`SubjectDetailView`, `DigitalBinderView`, `GPAPlannerView`, `Subject.swift`) — **ห้ามเชื่อโดยไม่ verify กับซอร์สจริง** |
+| `StudiiOS/SchedulePage_Prompt.md` | prompt ของหน้า Schedule |
 
 ---
 
@@ -487,10 +489,10 @@ Gated: `PortfolioView`
 - **ระบบบล็อกแอปยังไม่มี `DeviceActivityMonitor` extension** — ถ้าผู้ใช้บังคับปิด Student OS ทิ้ง แอปที่บล็อกไว้จะยังถูกบล็อกจนกว่าจะเปิด Student OS อีกครั้ง (`reconcile()` ปลดให้) มีปุ่มปลดฉุกเฉินใน ตั้งค่า Pomodoro เป็นทางออกสำรอง
 - **แจ้งเตือนจบ Pomodoro ยังไม่ใช่ `.timeSensitive`** — เด้งทะลุโหมดห้ามรบกวนไม่ได้ ต้องเพิ่ม capability "Time Sensitive Notifications" ก่อน
 - Calendar models ฝังใน `CalendarView.swift` แทนที่จะอยู่ `Core/Models/`
-- ~~ไม่มี unit test จริงเลย~~ **มีแล้วบางส่วน** — `PrototypeAppTests/GPAXCalculatorTests.swift` (152 บรรทัด) ครอบ `GPAXCalculator`
-  ทั้ง 6 state + fixture §3.3 ของ PLAN_GPA.md + cumulative mode · `PrototypeAppTests/RIASECScorerTests.swift` ครอบ `RIASECScorer`
+- ~~ไม่มี unit test จริงเลย~~ **มีแล้วบางส่วน** — `StudiiOSTests/GPAXCalculatorTests.swift` (152 บรรทัด) ครอบ `GPAXCalculator`
+  ทั้ง 6 state + fixture §3.3 ของ PLAN_GPA.md + cumulative mode · `StudiiOSTests/RIASECScorerTests.swift` ครอบ `RIASECScorer`
   9 เคส (worked example §3.3, invariant น้ำหนักรวม, flat profiles, straight-lining, missing answer, deterministic tie-break)
-  ของ PLAN_RIASEC.md · `PrototypeAppTests/TCASScoreEngineTests.swift` ครอบ `TCASScoreEngine` 10 เคส (คะแนนปกติ,
+  ของ PLAN_RIASEC.md · `StudiiOSTests/TCASScoreEngineTests.swift` ครอบ `TCASScoreEngine` 10 เคส (คะแนนปกติ,
   gap, น้ำหนักไม่ครบ 100, โหมดกลุ่ม × 2, โหมดล็อกตรงกับ worked example §4.3, required > 100%, ล็อกครบทุกวิชา,
   ไม่มีคะแนนเลย) ของ PLAN_TCASPlanner.md ส่วนที่เหลือของแอปยังไม่มีเทสต์
 - **`CareerInterestResult` เพิ่ม field ใหม่ (RIASEC v2)** — ถ้าเครื่อง/simulator มีแถวเก่าอยู่แล้วต้อง **ลบแอปก่อนติดตั้งรุ่นนี้**
