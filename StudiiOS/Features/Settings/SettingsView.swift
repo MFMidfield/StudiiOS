@@ -266,7 +266,10 @@ struct SettingsView: View {
     private var developerSection: some View {
         #if DEBUG
         if isShowingDeveloperTools {
-            Section("สำหรับนักพัฒนา") {
+            // header/footer as closures: there is no
+            // Section(_ title:, content:, footer:) — passing a title string
+            // alongside a footer makes the compiler read the string as content.
+            Section {
                 Toggle("เปิด Pro", isOn: $entitlements.hasPro)
 
                 Button("เปิดหน้า Setup อีกครั้ง") { startSetupTest() }
@@ -283,6 +286,8 @@ struct SettingsView: View {
                 Button("ลบข้อมูลทั้งหมดถาวร", role: .destructive) {
                     isConfirmingReset = true
                 }
+            } header: {
+                Text("สำหรับนักพัฒนา")
             } footer: {
                 Text("กล่องนี้ไม่ขึ้นในเวอร์ชันจริง และซ่อนใหม่ทุกครั้งที่เปิดแอป")
                     .font(Theme.Font.caption)
