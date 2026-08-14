@@ -39,19 +39,21 @@
 ```
 StudiiOS/                      ← โฟลเดอร์ซอร์ส (ชั้นในของ repo)
 ├── App/
-│   ├── StudiiOSApp.swift      (72)  @main + Schema + RootContainerView + NotificationManager.shared bootstrap + seed Subject
-│   └── RootTabView.swift          (87)  5-tab shell (หน้าแรก·งาน·+·ตารางสอน·ตั้งค่า) + DashboardDestination
+│   ├── StudiiOSApp.swift     (136)  @main + Schema + RootContainerView + NotificationManager.shared bootstrap + seed Subject
+│   └── RootTabView.swift          (89)  5-tab shell (หน้าแรก·งาน·+·ตารางสอน·ตั้งค่า) + DashboardDestination
 ├── Core/
 │   ├── DesignSystem/
-│   │   ├── Theme.swift           (180)  design tokens + Theme.Font + CardContainer + TierBadge + PressScaleButtonStyle
-│   │   ├── PillLabel.swift        (78)  ป้ายแคปซูล 5 tone (accent/neutral/danger/warning/custom)
-│   │   ├── IconTile.swift         (56)  SF Symbol บนพื้นสี่เหลี่ยมมน — ปรับ size/tint/background/radius ได้
-│   │   ├── SectionHeader.swift    (76)  หัวข้อ section + trailing ViewBuilder + SectionMoreLabel
+│   │   ├── Theme.swift           (191)  design tokens + Theme.Font + CardContainer + TierBadge + PressScaleButtonStyle
+│   │   ├── PillLabel.swift        (83)  ป้ายแคปซูล 5 tone (accent/neutral/danger/warning/custom)
+│   │   ├── IconTile.swift         (55)  SF Symbol บนพื้นสี่เหลี่ยมมน — ปรับ size/tint/background/radius ได้
+│   │   ├── SectionHeader.swift    (75)  หัวข้อ section + trailing ViewBuilder + SectionMoreLabel
 │   │   └── ProUpsellView.swift
 │   ├── Entitlements/FeatureTier.swift  (62)  Free/Pro/Plus + EntitlementStore.shared
 │   ├── Extensions/
 │   │   ├── Color+Hex.swift
-│   │   └── Date+Thai.swift              วันที่ไทย/พ.ศ. + thaiShortNoYear/thaiDayMonthYear
+│   │   └── Date+Thai.swift              วันที่ไทย/พ.ศ. + thaiShortNoYear/thaiDayMonthYear/thaiWeekdayShort
+│   │                                    + `Date.thaiDueLabel` — ป้ายกำหนดส่งแบบสัมพัทธ์ ("เลย 2 วัน"/"วันนี้"/
+│   │                                    "พรุ่งนี้"/"ศ."/"12 ก.ย.") ใช้ร่วมกันทั้ง Dashboard และหน้างาน
 │   ├── Grades/                          Level 1 GPAX (PLAN_GPA.md) — ตัวเลขคำนวณจากเทอมที่กรอกเองเท่านั้น
 │   │   │                                ไม่แตะ GradeComponent/SemesterRecord (คนละ Level กัน ดู §12 ของแผน)
 │   │   ├── GPAXCalculator.swift  (166)  math ล้วน ไม่ import SwiftUI/SwiftData — เทสต์ได้โดยไม่ต้องมี ModelContainer
@@ -199,9 +201,9 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                ⚠️ **ไม่มีหน้าจอล็อกในแอปแล้ว** — `FocusLockOverlay.swift` ถูกลบตามคำสั่ง Few
     │                  (2026-08-09) เหลือการบล็อกแอปอื่นผ่าน Screen Time API อย่างเดียว
     │                  ห้ามใส่กลับโดยไม่ถามก่อน · โค้ดเดิมอยู่ใน commit `4626607`
-    │   ├── PomodoroSettings.swift   (76)  **จุดเดียวที่รู้จัก UserDefaults key ของ Pomodoro**
+    │   ├── PomodoroSettings.swift   (70)  **จุดเดียวที่รู้จัก UserDefaults key ของ Pomodoro**
     │   │                                  ห้ามเขียน key ตรงๆ ที่อื่น · duration(for:) แปลง phase → วินาที
-    │   ├── PomodoroEngine.swift     (362) `@Observable @MainActor` singleton — **หัวใจของโหมดโฟกัส**
+    │   ├── PomodoroEngine.swift     (328) `@Observable @MainActor` singleton — **หัวใจของโหมดโฟกัส**
     │   │                                  ⚠️ **นับจาก `deadline: Date` ไม่ใช่นับ tick** ห้ามกลับไปใช้
     │   │                                    `secondsRemaining -= 1` เด็ดขาด (ของเดิมพังเพราะข้อนี้ —
     │   │                                    Timer หยุดตอนแอปเข้า background → เวลาค้าง)
@@ -280,7 +282,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                                              งาน → AddTaskSheet · ปฏิทิน/โน๊ต/Portfolio → CaptureDetailSheet (private ในไฟล์เดียวกัน)
     │                                              **เพิ่มโหมดใหม่ = เพิ่ม 1 บรรทัดใน `options`** (แทน SmartCaptureView เดิมที่ถูกลบ)
     ├── Settings/
-    │   ├── SettingsView.swift             (585) section "สำหรับนักพัฒนา" อยู่ใน `developerSection`
+    │   ├── SettingsView.swift             (588) section "สำหรับนักพัฒนา" อยู่ใน `developerSection`
     │   │                                         (computed property เพราะ `#if DEBUG` ใน ViewBuilder ทำ type-check เพี้ยน)
     │   │                                         section "ระดับชั้นและเป้า GPAX": ระดับชั้นจริง+ปุ่ม "ขึ้นชั้นแล้ว"
     │   │                                         (เขียนผ่าน `GPAXSettings.setCurrentTerm` เท่านั้น) · เป้า GPAX/entryMode
