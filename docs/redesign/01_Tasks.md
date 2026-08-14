@@ -69,7 +69,8 @@ List(.plain)
 ## 4. หน้าตาใหม่
 
 ```
-toolbar:  งาน                          🔍  ⚙︎กรอง
+toolbar:  งาน                             🔍  ＋
+                                    (แตะ = เพิ่มงาน · กดค้าง = กรอง)
 ──────────────────────────────────────────────
 chip:    [ ค้าง 4 ]  เลยกำหนด 1   เสร็จ 8   ทั้งหมด
 ──────────────────────────────────────────────
@@ -176,7 +177,10 @@ enum TaskDayGroup: String, CaseIterable, Identifiable {
 สีป้าย: เลยกำหนด `danger` · วันนี้ `primaryDeep` บน `primarySoft` · ที่เหลือ `textSecondary` บน `surfaceRaised`
 งานที่เสร็จแล้ว: `.opacity(0.55)` + `strikethrough` (คงเดิม)
 
-### 4.4 `AssignmentListView.swift`
+### 4.4 `AssignmentListView.swift` — ✅ ทำแล้ว (แก้ตามที่ Few สั่ง 14 ส.ค.)
+
+> 🔴 **ของเดิมในสเปคข้อนี้ถูกล้ม** — เดิมเขียนว่า "ไอคอนกรองบน toolbar · เพิ่มงานด้วยปุ่ม `+` กลาง tab bar"
+> Few สั่งใหม่: **ขวาบนเป็นปุ่ม `+`** แตะ = เพิ่มงาน · กดค้าง = เมนูกรอง
 
 ```
 List(.plain)
@@ -186,64 +190,63 @@ List(.plain)
 └── doneSection       DisclosureGroup (คงเดิม)
 ```
 
-toolbar:
+toolbar — ตัวเมนูแยกไปอยู่ `TaskAddMenu.swift`:
 
 ```swift
 .searchable(text: $searchText, prompt: "ค้นหางาน วิชา หรือรายละเอียด")
 .toolbar {
     ToolbarItem(placement: .topBarTrailing) {
-        Menu {
-            Picker("ประเภท", selection: $kindFilter) { … }
-            Picker("วิชา", selection: $subjectFilter) { … }
-            if hasActiveFilters { Button("ล้างตัวกรอง", role: .destructive) { … } }
-        } label: {
-            Image(systemName: hasActiveFilters
-                ? "line.3.horizontal.decrease.circle.fill"
-                : "line.3.horizontal.decrease.circle")
-        }
+        TaskAddMenu(kindFilter: $kindFilter,
+                    subjectFilter: $subjectFilter,
+                    subjectNames: subjectNames,
+                    onAdd: { isAddingTask = true })
     }
 }
 ```
 
-ที่ต้องลบออกจากไฟล์นี้: `addButton` (FAB) · `dueSoonSection` · `dueSoonHighlights` · `select(stat:)` · `overdueOnly` · `sortOrder` · `showFilterSheet` · สาขา `.priority`/`.recent` ใน `sorted()`
+`TaskAddMenu` = `Menu(content:label:primaryAction:)`
+`primaryAction` (แตะ) → `AddTaskSheet` · content (กดค้าง) → ปุ่ม "เพิ่มงาน" + Section "ตัวกรอง" (ประเภท · วิชา · ล้างตัวกรอง)
+ป้ายเป็น `Image(systemName: "plus")` + จุดเล็กสี `primary` มุมขวาบนตอนมีตัวกรองเปิดอยู่ — ไม่งั้นผู้ใช้ซ่อนงานครึ่งลิสต์ไว้หลังเมนูกดค้างโดยไม่รู้ตัว
 
-`hasActiveFilters` เหลือ `kindFilter != .all || !subjectFilter.isEmpty`
+ลบออกจากไฟล์นี้แล้ว: `addButton` (FAB) · `dueSoonSection` · `dueSoonHighlights` · `select(stat:)` · `overdueOnly` · `sortOrder` · `showFilterSheet` · สาขา `.priority`/`.recent` ใน `sorted()`
 
-**แก้ข้อความ empty state** — ของเดิมเขียนว่า *"กดปุ่ม + มุมขวาล่างเพื่อเพิ่มงานชิ้นแรก"* → เปลี่ยนเป็น *"กดปุ่ม + ตรงกลางแถบล่างเพื่อเพิ่มงานชิ้นแรก"* (ไม่งั้นชี้ไปที่ปุ่มที่ถูกลบไปแล้ว)
+`hasActiveFilters` (ย้ายไปอยู่ใน `TaskAddMenu`) = `kindFilter != .all || !subjectFilter.isEmpty`
 
----
-
-## 5. ปุ่ม `+` กลาง tab bar เปลี่ยนตามแท็บ
-
-`RootTabView.swift` มีโค้ดดักไว้อยู่แล้ว (`onChange` เด้งกลับ `previousTab` แล้วเปิด sheet) — เพิ่ม `switch` เข้าไป
-
-| อยู่แท็บ | กด `+` แล้วเปิด |
-|---|---|
-| งาน | `AddTaskSheet()` |
-| ตารางสอน | `AddScheduleEntrySheet(...)` |
-| ปฏิทิน (ถ้าผู้ใช้ย้ายเข้า tab bar ใน W3) | `EventFormSheet(...)` |
-| หน้าแรก · ตั้งค่า · อื่นๆ | `QuickAddSheet()` เมนูเต็มเหมือนเดิม |
-
-⚠️ **กดค้างบน tab item ทำไม่ได้** — `TabView` มาตรฐานไม่รับ gesture บนปุ่มแท็บ
-ทางออก: ใส่แถวล่างสุดใน sheet ที่เปิดตรง ว่า **"เพิ่มอย่างอื่น →"** กดแล้วปิด sheet นี้เปิด `QuickAddSheet` แทน
-
-หน้าที่ push มาจากเมนูหลัก (พอร์ต · เกรด · TCAS) แท็บยังเป็น "หน้าแรก" → ได้เมนูเต็ม
-ถ้าอยากให้ฉลาดถึงระดับนั้นต้องใช้ `PreferenceKey` ให้หน้าลูกประกาศเอง — **ยกไป W3 ไม่ทำรอบนี้**
+**ข้อความ empty state** → *"กดปุ่ม + มุมขวาบนเพื่อเพิ่มงานชิ้นแรก"* ·
+กรณีกรองแล้วไม่เจอ → *"ลองเปลี่ยนคำค้นหา หรือกดค้างที่ปุ่ม + มุมขวาบนเพื่อล้างตัวกรอง"*
 
 ---
 
-## 6. ไฟล์ที่แตะ
+## 5. ~~ปุ่ม `+` กลาง tab bar เปลี่ยนตามแท็บ~~ — 🔴 ยกเลิกทั้งข้อ (Few 14 ส.ค.)
 
-| ไฟล์ | ทำอะไร |
-|---|---|
-| `Features/Tasks/TaskScope.swift` | chip ชุดใหม่ · ลบ `stats`/`chipTarget` · เพิ่ม `TaskDayGroup` |
-| `Features/Tasks/TaskFilterChips.swift` | รับ counts · แสดงเลข · ลบปุ่มกรอง |
-| `Features/Tasks/TaskRowCard.swift` | เหลือ 4 อย่างตาม §4.3 |
-| `Features/Tasks/AssignmentListView.swift` | จัดกลุ่มตามวัน · toolbar Menu · ลบ FAB/dueSoon/sort |
-| `Features/Tasks/AddTaskSheet.swift` | เพิ่ม `presetKind:` (จาก `PLAN_Redesign.md` §2.2) |
-| `App/RootTabView.swift` | ปุ่ม `+` ตามแท็บ (§5) |
-| ~~`Features/Tasks/TaskStatsRow.swift`~~ | **ลบไฟล์** |
-| ~~`Features/Tasks/TaskFilterSheet.swift`~~ | **ลบไฟล์** |
+**ปุ่ม `+` กลาง tab bar เปิด `QuickAddSheet()` เหมือนกันทุกแท็บ** ไม่มี `switch` ตามแท็บ
+
+เหตุผล: ปุ่มเดียวควรทำอย่างเดียวเสมอ — ผู้ใช้กด `+` แล้วได้คนละอย่างขึ้นกับว่ายืนอยู่แท็บไหน คือปุ่มที่เดาไม่ได้
+หน้าที่มีทางเพิ่มของตัวเอง (แท็บงาน) เก็บทางลัดไว้ที่ **ปุ่ม `+` ขวาบน** แทน (§4.4)
+
+`RootTabView.swift` จบแล้ว — ไม่มี `QuickAddTarget` · ไม่มี `QuickAddFlow` · ไม่มี `quickAddTarget(for:)`
+เหลือ `onChange` เด้งกลับ `previousTab` + `.sheet(isPresented:) { QuickAddSheet() }` เท่านั้น
+**ไฟล์นี้ห้ามแตะจนถึง W3**
+
+---
+
+## 6. ไฟล์ที่แตะ — ✅ ทำครบแล้ว
+
+| ไฟล์ | ทำอะไร | สถานะ |
+|---|---|---|
+| `Features/Tasks/TaskScope.swift` (114) | chip ชุดใหม่ · ลบ `stats`/`chipTarget` · เพิ่ม `TaskDayGroup` + `TaskKindFilter` | ✅ |
+| `Features/Tasks/TaskFilterChips.swift` (66) | รับ counts · แสดงเลข · ลบปุ่มกรอง | ✅ |
+| `Features/Tasks/TaskRowCard.swift` (130) | เหลือ 4 อย่างตาม §4.3 | ✅ |
+| `Features/Tasks/AssignmentListView.swift` (267) | จัดกลุ่มตามวัน · ลบ FAB/dueSoon/sort | ✅ |
+| `Features/Tasks/TaskAddMenu.swift` (74) | **ไฟล์ใหม่** — ปุ่ม `+` ขวาบน แตะเพิ่ม/กดค้างกรอง (§4.4) | ✅ |
+| `Features/Tasks/AddTaskSheet.swift` | `presetKind:` — W1 ทำไปแล้ว ไม่ต้องแตะซ้ำ | ✅ |
+| `App/RootTabView.swift` | ~~ปุ่ม `+` ตามแท็บ~~ ยกเลิก (§5) — ไม่แตะ | — |
+| ~~`Features/Tasks/TaskStatsRow.swift`~~ | **ลบไฟล์** | ✅ หายจากโฟลเดอร์แล้ว |
+| ~~`Features/Tasks/TaskFilterSheet.swift`~~ | **ลบไฟล์** | ✅ หายจากโฟลเดอร์แล้ว |
+
+> §7 บอกว่าถ้า `AssignmentListView` เกิน 250 บรรทัดให้แยก `TaskDayGroupSection.swift`
+> แต่ Section กับ `.swipeActions` อยู่ใน `List` เดียวกัน — ย้ายออกเสี่ยงปัดซ้ายลบพัง
+> จึงแยก **toolbar menu** ออกเป็น `TaskAddMenu.swift` แทน
 
 ⚠️ ลบไฟล์ใน sandbox อาจติด `Operation not permitted` → เรียก `mcp__cowork__allow_cowork_file_delete` แล้วลองใหม่
 ไฟล์หายจากโฟลเดอร์ = หายจาก target อัตโนมัติ (file-system-synchronized groups) ไม่ต้องแตะ `.pbxproj`
@@ -270,6 +273,7 @@ Few กด ⌘B เขียว แล้วเข้าแท็บ "งาน"
 3. งานถูกจัดเป็นกลุ่มตามวัน · กลุ่มที่ไม่มีงานไม่โผล่หัวข้อ
 4. ไม่มีงานใบไหนโผล่ซ้ำ 2 ที่ในจอเดียว
 5. **ปัดซ้ายลบยังทำงาน**
-6. ไม่มี FAB มุมขวาล่างแล้ว · กดปุ่ม `+` กลางแถบล่างขณะอยู่แท็บงาน → `AddTaskSheet` เด้งขึ้นตรงๆ ไม่ผ่านเมนู
-7. กดไอคอนกรองบนขวา → Menu เด้ง เลือกประเภท/วิชาได้ ไม่มี sheet เปิดขึ้นมาทั้งใบ
-8. สลับ dark mode แล้วทุกอย่างยังอ่านออก
+6. ไม่มี FAB มุมขวาล่างแล้ว · **แตะปุ่ม `+` ขวาบน → `AddTaskSheet` เด้งขึ้นตรงๆ**
+7. **กดค้างปุ่ม `+` ขวาบน → Menu เด้ง** เลือกประเภท/วิชาได้ ไม่มี sheet เปิดทั้งใบ · เลือกแล้วมีจุดเล็กบนปุ่ม
+8. กดปุ่ม `+` กลางแถบล่างขณะอยู่แท็บงาน → ได้เมนู "เพิ่มอะไรดี?" เหมือนทุกแท็บ (ไม่ใช่ฟอร์มงานตรง)
+9. สลับ dark mode แล้วทุกอย่างยังอ่านออก

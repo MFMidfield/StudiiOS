@@ -14,8 +14,11 @@
 |---|---|
 | **W0** เตรียม | ✅ เสร็จ — commit rename PrototypeApp→StudiiOS, ตัด branch `redesign` |
 | **W1** Theme + Dashboard + tab bar | ✅ เขียนโค้ดครบ 10 step · **⏳ Few ยังไม่ได้ยืนยันว่า build ผ่าน** |
-| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A (01_Tasks + 03_QuickAdd) เขียนโค้ดครบ — รอบแก้ตามที่ Few สั่ง 14 ส.ค. · ยังไม่ build** · ก้อน B–G ยังไม่เริ่ม |
+| **W2** หน้าที่เหลือ (ไฟล์ 01–08 ในโฟลเดอร์นี้) | 🔄 **ก้อน A (01_Tasks + 03_QuickAdd) ปิดแล้ว — โค้ดตรงสเปคครบทุกข้อ ตรวจย้อน 14 ส.ค.** · ก้อน B–G ยังไม่เริ่ม |
 | **W3** custom nav · แตก CalendarView · onboarding | ⬜ ยังไม่เริ่ม |
+
+**W2 เหลือ 6 ก้อน** — B `02_Schedule` · C `04_GradeCenter` · D `05_Settings` · E `06_TCAS` · F `07_Portfolio` · G `08_Calendar`
+ลำดับบังคับ: **C ก่อน D เสมอ** · **G ท้ายสุดเป็นก้อนเดี่ยว** · B/E/F สลับกันได้
 
 ### การตัดสินของ Few — 14 ส.ค. 2569
 
@@ -23,7 +26,8 @@
   ยังเหลือคำว่า "ตารางสอน" ในเนื้อความของ `TermGradeEditView` · `AddScheduleEntrySheet` · `ScheduleSettingsSheet` (ไฟล์สุดท้ายจะถูกลบตาม `02_Schedule`) → agent ของโมดูลนั้นๆ เก็บตอนทำ
 - **ก้อน G (`08_Calendar`) ทำ** ไม่ตัดทิ้ง — ยังคงลำดับเดิม: ทำท้ายสุดเป็นก้อนของตัวเอง build ทีละขั้นตาม §8
 
-**🔴 ล้มการตัดสินเดิม 2 ข้อ — สเปค 01/03 ที่เขียนไว้ไม่ตรงกับโค้ดแล้ว**
+**🔴 ล้มการตัดสินเดิม 4 ข้อ — ✅ เขียนกลับเข้าสเปค `01_Tasks.md` / `03_QuickAdd.md` เรียบร้อยแล้ว (14 ส.ค.)**
+อ่านสเปคสองไฟล์นั้นได้ตรงๆ ไม่ต้องมาไล่ตารางนี้ก่อน — เก็บไว้เป็นบันทึกว่าทำไมถึงเปลี่ยน
 
 | สเปคเดิมเขียนว่า | Few สั่งใหม่ | ผลกับโค้ด |
 |---|---|---|
@@ -44,7 +48,25 @@
 > หมายเหตุ: `01_Tasks` §7 บอกว่าถ้า `AssignmentListView` เกิน 250 บรรทัดให้แยก `TaskDayGroupSection.swift`
 > แต่ Section กับ `.swipeActions` อยู่ใน `List` เดียวกัน — ย้ายออกไปเสี่ยงปัดซ้ายลบพัง จึงแยก **toolbar menu** ออกเป็น `TaskAddMenu.swift` แทน (`AssignmentListView` เหลือ ~250 บรรทัด)
 
-**ยังไม่ได้ build แม้แต่ครั้งเดียวตลอด W1 + W2 ก้อน A** — commit ขึ้นต้น `wip:` ถ้า Few ยืนยันว่าเขียวแล้วค่อย squash
+### ✅ ตรวจโค้ดก้อน A กับสเปค — 14 ส.ค. 2569 (รอบปิดก้อน)
+
+ไล่ทีละไฟล์แล้ว ตรงสเปคฉบับแก้ครบทุกข้อ ไม่มีอะไรค้าง:
+
+| ตรวจอะไร | ผล |
+|---|---|
+| `TaskStatsRow.swift` · `TaskFilterSheet.swift` | หายจากโฟลเดอร์แล้วทั้งคู่ |
+| เศษชื่อเก่าทั้งแอป (`CaptureDetailSheet` · `QuickAddTarget` · `QuickAddFlow` · `chipTarget` · `overdueOnly` · `dueSoonSection`) | เหลือแค่ในคอมเมนต์ 2 บรรทัดที่อธิบายว่า "ของเดิมถูกลบไปแล้ว" — ไม่มีโค้ดจริงเรียกถึง |
+| `TaskScope` | chip 4 ตัว `[.notDone, .overdue, .done, .all]` · `dueSoon` ยังอยู่ในเนื้อ enum · `showsCount` · `TaskDayGroup` 6 กลุ่ม + `TaskKindFilter` ครบ |
+| `AssignmentListView` (267 บรรทัด) | `List(.plain)` + `plainRow()` + `.swipeActions` ยังอยู่ · default scope `.notDone` · ไม่มี FAB · empty state ชี้ไปปุ่มขวาบนถูกแล้ว |
+| `TaskAddMenu` | `Menu(primaryAction:)` แตะเพิ่ม/กดค้างกรอง + จุดบอกตัวกรอง |
+| `QuickAddSheet` (124 บรรทัด) | 3 ตัวเลือก · `.sheet(item:onDismiss:)` + ธง `didSave` ตาม §5 |
+| `onSaved:` ของฟอร์มที่ QuickAdd เรียก | มีครบ 3 ตัว เป็น optional default `nil` → call site เดิมไม่กระทบ |
+| `RootTabView` | `.sheet { QuickAddSheet() }` เหมือนกันทุกแท็บ · แท็บ 4 = "ตารางเรียน" |
+| `Date.thaiWeekdayDayMonth` · `ScheduleConstants.defaultEntryDay` | มีจริง (`defaultEntryDay` ยังไม่มีใครเรียก — ยกให้ `02_Schedule`) |
+| grep ค่า hardcode ใน `Features/Tasks/` + `Features/QuickAdd/` | เจอจุดเดียว `TaskRowCard.swift:47 .font(.system(size: 20))` = SF Symbol → **อยู่ในข้อยกเว้นที่ยอมได้** |
+
+**⏳ ยังไม่มีบันทึกว่า ⌘B เขียว** ตลอด W1 + W2 ก้อน A — commit ยังขึ้นต้น `wip:` ถ้า Few ยืนยันว่าเขียวแล้วค่อย squash
+ใครยืนยันแล้วให้มาแก้บรรทัดนี้ทันที ไม่งั้น session หน้าจะไม่มีทางรู้
 
 **ค้างอยู่ที่ Few:** วางไฟล์ `IBMPlexSansThai-{Regular,Medium,SemiBold}.ttf` ใน `StudiiOS/Resources/Fonts/`
 (ยังว่างอยู่ · ไม่วางก็ไม่พัง — `Theme.Font` fallback เป็นฟอนต์ระบบ ดู log `[Theme]` ตอนเปิดแอป)
