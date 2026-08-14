@@ -27,13 +27,6 @@ struct DashboardView: View {
         scopedAssignments.filter { !$0.isDone }
     }
 
-    private var dueTodayAssignments: [Assignment] {
-        pendingAssignments.filter {
-            guard let due = $0.resolvedDueDate else { return false }
-            return Calendar.current.isDateInToday(due)
-        }
-    }
-
     var body: some View {
         ScrollView {
             VStack(spacing: Theme.Spacing.xl) {
@@ -46,7 +39,7 @@ struct DashboardView: View {
                 )
                 GPAXDashboardCard()
                 DashboardMenuGrid()
-                DashboardPendingCard(dueToday: dueTodayAssignments, pending: pendingAssignments)
+                DashboardPendingCard(pending: pendingAssignments)
             }
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.bottom, Theme.Spacing.xxl)

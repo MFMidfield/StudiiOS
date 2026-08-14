@@ -42,30 +42,36 @@ struct GPAXDashboardCard: View {
     var body: some View {
         if let result, let gpax = result.gpax {
             NavigationLink(value: DashboardDestination.gradeCenter) {
-                CardContainer {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
+                CardContainer(padding: Theme.Spacing.md) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        IconTile(systemName: "chart.bar", size: 34)
+
+                        VStack(alignment: .leading, spacing: 1) {
                             Text("GPAX สะสม")
-                                .font(.caption)
+                                .font(Theme.Font.caption)
                                 .foregroundStyle(Theme.Colors.textSecondary)
                             Text(GPAXCalculator.formatted(gpax))
-                                .font(.system(size: 22, weight: .bold))
+                                .font(Theme.Font.number(20))
+                                .contentTransition(.numericText())
+                                .animation(.snappy, value: gpax)
                                 .foregroundStyle(Theme.Colors.primaryDeep)
                         }
-                        Spacer()
+
+                        Spacer(minLength: Theme.Spacing.sm)
+
                         if let required = result.requiredAverage {
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text("ต้องได้เทอมละ")
-                                    .font(.caption2)
-                                    .foregroundStyle(Theme.Colors.textSecondary)
-                                Text(GPAXCalculator.formatted(required))
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(requiredColor(for: result.state))
-                            }
+                            PillLabel(
+                                "เทอมละ \(GPAXCalculator.formatted(required))",
+                                tone: requiredTone(for: result.state)
+                            )
                         }
                         Image(systemName: "chevron.right")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+
+                    if GPAXSettings.hasTarget {
+                        GPAXTargetBar(gpax: gpax, target: GPAXSettings.target)
                     }
                 }
             }
@@ -73,12 +79,48 @@ struct GPAXDashboardCard: View {
         }
     }
 
-    private func requiredColor(for state: GPAXCalculator.State?) -> Color {
+    private func requiredTone(for state: GPAXCalculator.State?) -> PillLabel.Tone {
         switch state {
-        case .outOfReach: return Theme.Colors.danger
-        case .tight: return Theme.Colors.warning
-        case .achieved, .finished: return Theme.Colors.success
-        default: return Theme.Colors.textPrimary
+        case .outOfReach: return .danger
+        case .tight: return .warning
+        case .achieved, .finished:
+            return .custom(foreground: Theme.Colors.success, background: Theme.Colors.success.opacity(0.14))
+        default: return .neutral
+        }
+    }
+}
+
+/// Progress toward the GPAX target, with the target spelled out on the right so
+/// the bar isn't the only thing carrying the number.
+private struct GPAXTargetBar: View {
+    let gpax: Double
+    let target: Double
+
+    private var progress: Double {
+        guard target > 0 else { return 0 }
+        return min(1, max(0, gpax / target))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Theme.Colors.surfaceRaised)
+                    Capsule()
+                        .fill(Theme.Colors.primary)
+                        .frame(width: geo.size.width * progress)
+                }
+            }
+            .frame(height: 5)
+            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: progress)
+
+            HStack {
+                Spacer()
+                Text("เป้า \(GPAXCalculator.formatted(target))")
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
         }
     }
 }

@@ -46,6 +46,15 @@ extension DateFormatter {
         return f
     }()
 
+    /// Abbreviated Thai weekday — "จ." "อ." "พ." — for due dates inside this week.
+    static let thaiWeekdayShort: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "th_TH")
+        f.dateFormat = "EEE"
+        f.calendar = Calendar(identifier: .buddhist)
+        return f
+    }()
+
     static let time24h: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
@@ -59,6 +68,21 @@ extension Date {
     var thaiShortNoYearString: String { DateFormatter.thaiShortNoYear.string(from: self) }
     var thaiDayMonthYearString: String { DateFormatter.thaiDayMonthYear.string(from: self) }
     var thaiDayOnlyString: String { DateFormatter.thaiDayOnly.string(from: self) }
+
+    /// Short human label for a deadline: "เลย 2 วัน" · "วันนี้" · "พรุ่งนี้" ·
+    /// "ศ." for the rest of this week · "12 ก.ย." beyond that.
+    /// The caller picks the color — see `PillLabel.Tone`.
+    var thaiDueLabel: String {
+        let cal = Calendar.current
+        let days = cal.dateComponents([.day], from: cal.startOfDay(for: Date()), to: cal.startOfDay(for: self)).day ?? 0
+        switch days {
+        case ..<0: return "เลย \(-days) วัน"
+        case 0: return "วันนี้"
+        case 1: return "พรุ่งนี้"
+        case 2...6: return DateFormatter.thaiWeekdayShort.string(from: self)
+        default: return thaiShortNoYearString
+        }
+    }
 
     /// Days remaining until this date, from now, floored at 0.
     var daysRemaining: Int {
