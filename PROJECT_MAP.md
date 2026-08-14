@@ -3,9 +3,12 @@
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
 > **อัปเดตล่าสุด:** 2026-08-15 — **PLAN_Redesign.md Wave 2 ก้อน A–D** (branch `redesign`) build เขียวแล้ว:
 > หน้างาน · QuickAdd · ตารางเรียน · เกรด/GPAX · ตั้งค่า ยกเครื่องครบ (สเปครายหน้าอยู่ `docs/redesign/01–05`)
-> **ก้อน E `06_TCAS` เขียนครบแล้วแต่ยังไม่ verify** — §2 ส่วน TCASPlanner ข้างล่าง **ยังเป็นของก่อน redesign**
-> จะอัปเดตรวดเดียวเมื่อ Few ยืนยัน ⌘B เขียว · **เหลือก้อน F `07_Portfolio` · G `08_Calendar`**
-> สถานะล่าสุดอยู่ที่ `docs/redesign/00_INDEX.md` เสมอ
+> **ก้อน E `06_TCAS` build เขียว** — Few ยืนยันบนเครื่องแล้วว่าการ์ดคณะขึ้นคะแนน · ปุ่ม ＋ โอเค ·
+> หน้ากรอกคะแนนใช้ได้ (ยังไม่ได้ลอง: sheet ตั้งเป้า · "มีผลกับคณะเป้าหมาย" · dark mode)
+> **เหลือก้อน F `07_Portfolio` · G `08_Calendar`** — สถานะล่าสุดอยู่ที่ `docs/redesign/00_INDEX.md` เสมอ
+>
+> ⚠️ **ปุ่ม ＋ ขวาบนกลับมาแล้วทุกหน้า** — Few ล้ม `PLAN_TCASPlanner.md` §0.1 (ที่เคยสั่งให้เอา ＋ ออกจาก toolbar)
+> เมื่อ 15 ส.ค. · ทุกหน้าที่เพิ่มของได้ใช้ไอคอน ＋ เปล่าๆ เหมือนกันหมด ไม่ใช่ปุ่มมีพื้น
 >
 > ของใหม่ที่กระทบทั้งแอป: `AppTheme` (ธีมสว่าง/มืด) · `GPAXSettings.resetAll()` · สวิตช์ค่าเริ่มต้นการเตือนงาน ·
 > ลบ 4 ไฟล์ (`TaskStatsRow` · `TaskFilterSheet` · `ScheduleTodayTasksSection` · `ScheduleSettingsSheet`)
@@ -409,10 +412,13 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     └── TCASPlanner/  ระบบคิดคะแนนย้อนกลับ + SOP ต่อคณะ แทน readiness checklist เดิม (PLAN_TCASPlanner.md
         │            ครบทั้ง 4 รอบแล้ว) · ทุกจุดคะแนน/เกณฑ์การรับจริงเปิด mytcas.com แทนเก็บเอง (§0.3 กฎเหล็ก)
         │            · Free ทั้งหมด ไม่ gate
-        ├── TCASPlannerView.swift        ลิสต์: Section "คะแนนสอบของฉัน" (→ MyScoresView) + Section
-        │                                "คณะเป้าหมาย" (แถวคณะ ปัดซ้ายลบ → TCASEntryDetailView, แถว
-        │                                "เพิ่มคณะเป้าหมาย" ท้ายลิสต์ → NewTCASEntrySheet — **ไม่มีปุ่ม + บน
-        │                                toolbar แล้ว** ตาม §0.1) เรียงตาม `TCASEntry.sortOrder`
+        ├── TCASPlannerView.swift        W2-E: `List(.plain)` การ์ดลอยบนพื้นหน้า — การ์ด "คะแนนสอบของฉัน"
+        │                                (→ MyScoresView, บรรทัดรอง "กรอกแล้ว N จาก M วิชา") + การ์ดคณะ
+        │                                ใบละ 1 คณะพร้อมคะแนน (`TCASEntryCard`) เรียงตาม `TCASEntry.sortOrder`
+        │                                · **ปุ่ม ＋ ขวาบนกลับมาแล้ว** → NewTCASEntrySheet (Few 15 ส.ค. ล้ม §0.1
+        │                                ของ PLAN_TCASPlanner ที่เคยสั่งให้เอาออก — ตั้งใจ ให้เหมือนหน้างาน/ตารางเรียน)
+        │                                · ปัดซ้ายลบ → **`.alert` ยืนยันก่อน** (บอกว่าน้ำหนัก+SOP หายด้วย)
+        │                                · empty state `ContentUnavailableView` + ปุ่ม "เพิ่มคณะแรก"
         ├── NewTCASEntrySheet.swift      กรอกคณะ/มหาลัย/รอบ → บันทึก → push ต่อ TCASWeightSetupView ทันที
         │                                (`showsSkipButton: true`, ปุ่ม "ข้ามก่อน"/"เสร็จ" ปิด sheet ทั้งชุด)
         ├── TCASWeightSetupView.swift    ตั้งน้ำหนัก % — สลับ 2 โหมด (รายวิชา/กลุ่ม) ได้ตลอด ทั้งสองโหมดเขียน
@@ -421,23 +427,48 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
         │                                (ไม่ใช่ตั้งชื่อกลุ่มเอง — ตัดสินใจเอง ดูหมายเหตุท้าย PLAN_TCASPlanner.md)
         │                                แล้วหารเท่ากันผ่าน `TCASScoreEngine.setGroupPercent` เสมอ · แก้ %
         │                                วิชาเดิมซ้ำ = `context.delete` ของเก่าก่อนเสมอ (กันแถวค้าง)
-        ├── TCASScoreCard.swift          การ์ดอ่านอย่างเดียวบนสุดของ TCASEntryDetailView (ห่อด้วย
-        │                                NavigationLink ไป TCASWeightSetupView) — คะแนนช่วงปัจจุบัน–เพดาน
-        │                                (มีป้าย "ปัจจุบัน – เพดาน" กำกับตาม §4.4) · คำเตือนน้ำหนักไม่ครบ 100 ·
-        │                                gap ถ้าตั้งเป้า · **leverage 3 อันดับแรกคู่กับ headroom เสมอ** (§4.2 —
-        │                                ห้ามโชว์ leverage เดี่ยว วิชาที่คุ้มแต่ได้คะแนนสูงแล้วเหลือให้ดันน้อย) ·
-        │                                ผลโหมดล็อกถ้ามีวิชา hasTaken แสดง**ครบ 5 บรรทัดตามตัวอย่าง §4.3**
-        │                                (ล็อกแล้ว/เป้าหมาย/ที่เหลือต้องช่วยอีก/น้ำหนักที่ยังไม่สอบ/ต้องได้เฉลี่ย)
+        ├── TCASEntryCard.swift          🆕 W2-E · การ์ดคณะ 1 ใบในลิสต์ — ชื่อคณะ + คะแนนปัจจุบัน + มหาลัย/รอบ
+        │                                + เพดาน + แถบ + "เป้า N · อีก X"/"ถึงเป้าแล้ว" + ป้ายเตือนน้ำหนักไม่ครบ
+        │                                คณะที่ `weights.isEmpty` = **การ์ดขอบเส้นประ** ป้าย "ยังไม่ตั้งน้ำหนัก" ไม่มีแถบ
+        │                                · ในไฟล์เดียวกันมี **`TCASScoreBar`** (ไม่ `private` — ใช้ร่วมกับ
+        │                                TCASScoreCard): แถบ 3 ชั้นสเกล 0–100 ชั้นเข้ม = ที่ล็อกแล้ว ·
+        │                                ชั้นอ่อน = ถึงเพดาน · ขีดตั้ง = เป้า (ไม่วาดถ้า targetScore == 0)
+        │                                ถึงเป้าแล้วเปลี่ยนเป็นตระกูล `success` · **ห้ามใช้แดงกับคะแนนน้อย**
+        ├── TCASScoreCard.swift          การ์ดคะแนนรวมบนสุดของ TCASEntryDetailView — **ไม่ถูกห่อ NavigationLink
+        │                                แล้ว** (ปุ่มดินสอซ้อนใน label ของ link กดไม่ติด) รับ `onEditTarget:` เข้ามา
+        │                                · คะแนนตอนนี้ (ตัวใหญ่ `textPrimary` — สีส้มสงวนให้ของที่กดได้) +
+        │                                "เต็มที่ได้ถึง N" + `TCASScoreBar` + เป้ามุมขวาบน+ดินสอ → TCASTargetSheet
+        │                                ("ตั้งเป้า" แทนเลขเมื่อยังไม่ตั้ง) · คำเตือนน้ำหนักไม่ครบ 100 ·
+        │                                ผลโหมดล็อกเป็น **`DisclosureGroup`**: หัว = ข้อสรุป + "ล็อกแล้ว X ·
+        │                                เหลือน้ำหนัก Y%" แตะแล้วกาง**ครบ 4 บรรทัดตาม §4.3** ข้อมูลไม่หาย
         │                                >100% ใช้ Theme.Colors.warning + ข้อความจาก §4.3 เป๊ะ ห้ามใช้สีแดง
         │                                ทุกตัวเลขผ่าน `TCASScoreEngine` ล้วน
-        ├── TCASEntryDetailView.swift    การ์ดคะแนน + TextField `targetScore` (0 = ไม่ระบุ — จุดเดียวที่ตั้งเป้าได้
-        │                                ตอนนี้, ตัดสินใจเอง แผนไม่ได้ระบุตำแหน่ง UI) + แถว "SOP" (→
+        ├── TCASLeverageCard.swift       🆕 W2-E · "ดันวิชาไหนคุ้มสุด" 3 อันดับ — **แถบ = leverage** (normalize
+        │                                เทียบตัวสูงสุด) **คู่กับตัวเลข = headroom** เสมอ (§4.2 ห้ามโชว์อย่างเดียว
+        │                                ไม่งั้นผู้ใช้ไปทุ่มวิชาที่คุ้มแต่สอบไปแล้ว) · เลข leverage ดิบ 3 ทศนิยม
+        │                                ถูกถอดออกเพราะแปลไม่ออก · วิชา `hasTaken` = แถบว่าง จาง เขียน "สอบแล้ว"
+        ├── TCASTargetSheet.swift        🆕 W2-E · ตั้งคะแนนเป้า `.presentationDetents([.height(260)])` —
+        │                                ช่องกรอก + ปุ่มลัด 50/60/70/80 + **ปุ่ม "ไม่ระบุเป้า"** (เขียน 0 ให้เอง
+        │                                ผู้ใช้ไม่ต้องรู้ว่า 0 มีความหมายพิเศษ) + เตือนเมื่อเป้าสูงกว่าเพดาน
+        ├── TCASEntryDetailView.swift    การ์ดคะแนน + การ์ด leverage (ซ่อนเมื่อยังไม่มีน้ำหนัก) + แถว
+        │                                **"น้ำหนักวิชา · N% · M วิชา"** (→ TCASWeightSetupView — ทางเข้าที่
+        │                                มองเห็นได้ แทนของเดิมที่ซ่อนไว้ว่า "แตะการ์ดสิ") + แถว "SOP" (→
         │                                SOPEditorView) + TextField `admissionURL` (ลิงก์ระเบียบการที่ผู้ใช้
         │                                แปะเอง — ยังไม่มีใน UI ตอนสร้างคณะ) + ปุ่ม "เปิดดูเกณฑ์ใน mytcas"
         │                                (เปิด admissionURL ถ้ามี ไม่งั้น mytcas.com เฉยๆ) + โน้ต
+        │                                ❌ Section "คะแนนเป้าหมาย" ถูกลบ — ย้ายไป TCASTargetSheet
         ├── MyScoresView.swift           คะแนนสอบของผู้ใช้ ชุดเดียวใช้ร่วมทุกคณะ (`TCASScoreRecord` ค้นด้วย
-        │                                `examCode`) — List ทุกวิชาใน `TCASExamCatalog.grouped` ตรงๆ (24 แถว)
-        │                                แต่ละแถว TextField คะแนน + Toggle "สอบไปแล้ว" เขียนตรงทันที
+        │                                `examCode`) — List ทุกวิชาใน `TCASExamCatalog.grouped` (26 แถว)
+        │                                หัว Section มีตัวนับ "กรอกแล้ว N/M" · **ไม่มี Toggle "สอบไปแล้ว" แล้ว**
+        │                                แถวละบรรทัดเดียว: ชื่อวิชา · ช่องกรอก · `/ เต็ม`
+        │                                🔴 **ยังไม่กรอก ≠ กรอกว่า 0** — ช่องว่าง = ไม่มี record เลย (แสดง "—" จาง) ·
+        │                                พิมพ์เลข (รวม 0) = สร้าง/อัปเดต record + `hasTaken = true` ·
+        │                                **ลบจนว่าง = `context.delete(record)`** ห้ามตั้ง `score = 0` ทิ้งไว้
+        │                                เพราะ `TCASScoreEngine.breakdown()` ตัดสิน "ยังไม่ระบุ" จากการไม่มี
+        │                                record ไม่ใช่จาก `hasTaken` → ทิ้งไว้ = คะแนนทุกคณะที่ใช้วิชานั้นเพี้ยนเงียบๆ
+        │                                (บั๊กที่มีอยู่เดิม W2-E แก้ไปในตัว) · พิมพ์เกินคะแนนเต็มถูกดึงกลับที่เพดาน
+        │                                · ท้ายหน้า section **"มีผลกับคณะเป้าหมาย"** — คะแนนแต่ละคณะ + ลูกศร
+        │                                เทียบ snapshot ตอนเปิดหน้า (`@State` ไม่ลงฐานข้อมูล) ซ่อนถ้ายังไม่มีคณะ
         ├── SOPEditorView.swift          1 ฉบับ/คณะ (`TCASSOP` ผ่าน `entry.sop` computed) — เลือกโหมด
         │                                "ก้อนเดียว"/"6 ช่อง" ได้ครั้งเดียวตอนเริ่ม · ปุ่ม "รวมเป็นฉบับเดียว"
         │                                (โหมด 6 ช่องเท่านั้น) → **`.alert`** เตือนก่อนเสมอ (§5.1 แยกไว้ชัด:
@@ -488,7 +519,7 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
 | CareerInterestResult | Core/Models/CareerInterestResult.swift — 5 field เดิม (`interestTags`/`recommendedCareer`/`recommendedFaculty`/`recommendedSkills`/`takenAt`) + field ใหม่จาก RIASEC v2 (additive, มี default ครบ): `scoreR..scoreC: Int`, `hollandCode: String`, `isInconclusive: Bool`, `answers: [Int]` (18 คำตอบ Likert เรียงตาม item id, ไว้ re-score ย้อนหลังได้โดยไม่ต้องให้ทำแบบสำรวจใหม่) · `riasecScores` computed property คืน `[RIASECDimension: Int]` |
 | TCASEntry | Core/Models/TCASEntry.swift — `roundRaw`/`sortOrder`/`targetScore`/`admissionURL` (default ครบ) · `weights: [TCASScoreWeight]` (cascade) · `sopStore: [TCASSOP]` (cascade, มีได้ 0-1 ตัว) · `sop` computed คืน `sopStore.first` (SwiftData ยังงอแงกับ to-one optional relationship) |
 | TCASScoreWeight | Core/Models/TCASScoreWeight.swift — น้ำหนัก % รายวิชาต่อคณะ ผู้ใช้กรอกเอง · `groupName`/`groupPercent` เก็บซ้ำทุกแถวในกลุ่มแทนแยก model `TCASWeightGroup` (ตั้งใจ, ดู PLAN_TCASPlanner.md §2.2) — แก้ % กลุ่มต้องผ่าน `TCASScoreEngine.setGroupPercent(...)` จุดเดียว ห้าม View เขียนตรง |
-| TCASScoreRecord | Core/Models/TCASScoreRecord.swift — คะแนนสอบของผู้ใช้ ชุดเดียวใช้ร่วมทุกคณะ (ค้นด้วย `examCode`) **ไม่ผูก relationship กับ TCASEntry** · `hasTaken` ใช้ในโหมดล็อก "สอบไปแล้ว" |
+| TCASScoreRecord | Core/Models/TCASScoreRecord.swift — คะแนนสอบของผู้ใช้ ชุดเดียวใช้ร่วมทุกคณะ (ค้นด้วย `examCode`) **ไม่ผูก relationship กับ TCASEntry** · `hasTaken` ใช้ในโหมดล็อก "สอบไปแล้ว" — **W2-E: UI เป็นคนตั้งค่าให้ ไม่ใช่ผู้ใช้กด Toggle เอง** (มี record = กรอกแล้ว = `hasTaken` true เสมอ · ไม่กรอก = ไม่มี record) model ไม่ถูกแตะ |
 | TCASSOP | Core/Models/TCASSOP.swift — 1 ฉบับต่อ 1 คณะ · โหมด `single`/`sections` (6 ช่อง) · `isMerged = true` แล้วกลับไปแก้ทีละส่วนไม่ได้อีก |
 | SemesterRecord | Core/Models/SemesterRecord.swift |
 | CalendarEvent + CalendarTag + CalendarAttachmentItem | Features/Calendar/CalendarView.swift ⚠️ model ฝังอยู่ในไฟล์ view |
@@ -651,4 +682,4 @@ Gated: `PortfolioView`
 
 **`PLAN_ScheduleView.md` ครบทั้ง 3 รอบแล้ว** (Models/Schema → UI ตาราง+ฟอร์ม → งานวันนี้+ร่นคาบ) — ฟีเจอร์ตารางเรียนถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป
 
-**`PLAN_TCASPlanner.md` ครบทั้ง 4 รอบแล้ว** (Models/Schema+resetAllData → TCASScoreEngine+เทสต์ → ลิสต์คณะ/ตั้งน้ำหนัก/คะแนนของฉัน → SOPEditorView/SOPGuideSheet) — โมดูล TCAS Planner ทั้งหมดถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป (จุดอ่อนที่รู้อยู่แล้ว: swipe-back gesture ใน SOPEditorView ยังไม่ถูกดักด้วย confirmationDialog เตือนไม่บันทึก, ต้องใช้ปุ่ม back ที่ทำเองถึงจะเตือน — ดู §2 บรรทัด SOPEditorView.swift)
+**`PLAN_TCASPlanner.md` ครบทั้ง 4 รอบแล้ว** (Models/Schema+resetAllData → TCASScoreEngine+เทสต์ → ลิสต์คณะ/ตั้งน้ำหนัก/คะแนนของฉัน → SOPEditorView/SOPGuideSheet) — โมดูล TCAS Planner ทั้งหมดถือว่าสมบูรณ์ตามแผน · **ยกเครื่องหน้าตาใหม่ทั้งโมดูลใน W2 ก้อน E (15 ส.ค.) ตาม `docs/redesign/06_TCAS.md`** — logic ไม่ถูกแตะเลย (จุดอ่อนที่รู้อยู่แล้ว: swipe-back gesture ใน SOPEditorView ยังไม่ถูกดักด้วย confirmationDialog เตือนไม่บันทึก, ต้องใช้ปุ่ม back ที่ทำเองถึงจะเตือน — ดู §2 บรรทัด SOPEditorView.swift)
