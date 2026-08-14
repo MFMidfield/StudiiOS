@@ -44,6 +44,16 @@ struct SettingsView: View {
     @State private var versionTapCount = 0
     @State private var isShowingDeveloperTools = false
 
+    @AppStorage(AppTheme.storageKey) private var appTheme: AppTheme = .system
+
+    /// Read back by AddTaskSheet when it builds a NEW task. Without that read
+    /// this switch would be decoration — the model's own default is `false`.
+    @AppStorage(SettingsView.reminderDefaultKey) private var remindersDefaultOn = true
+
+    /// The key AddTaskSheet reads. Declared here because Settings owns the
+    /// preference; AddTaskSheet only consumes it.
+    static let reminderDefaultKey = "com.studentos.assignment.remindersDefaultOn"
+
     // MARK: - Level 1 GPAX (D7: currentGradeLevel/currentTermNumber are the
     // student's REAL term — unrelated to TermStore.activeTermKey)
 
@@ -88,6 +98,7 @@ struct SettingsView: View {
             profileSection
             studySection
             notificationSection
+            displaySection
             aboutSection
             developerSection
         }
@@ -214,9 +225,29 @@ struct SettingsView: View {
                 }
             }
 
+            Toggle("เตือนงานใหม่อัตโนมัติ", isOn: $remindersDefaultOn)
+
+            // Wording matches NotificationManager's three slots exactly — a
+            // promise here that the scheduler doesn't keep is worse than no
+            // description at all.
+            Text("เปิดไว้ = งานใหม่ที่มีกำหนดส่งจะเตือน 3 ครั้ง — 1 วันก่อน · 07:00 ของวันกำหนด · 1 ชั่วโมงก่อน (ปรับรายชิ้นได้ในฟอร์มเพิ่มงาน)")
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.Colors.textSecondary)
+
             NavigationLink("การแจ้งเตือนที่ตั้งไว้") {
                 PendingNotificationsView()
             }
+        }
+    }
+
+    private var displaySection: some View {
+        Section("การแสดงผล") {
+            Picker("ธีม", selection: $appTheme) {
+                ForEach(AppTheme.allCases) { theme in
+                    Text(theme.label).tag(theme)
+                }
+            }
+            .pickerStyle(.menu)
         }
     }
 
@@ -380,6 +411,12 @@ struct SettingsView: View {
 
         NotificationManager.shared.cancelAll()
         StudentProfileStore.shared.reset()
+
+        // GPAX lives in UserDefaults, not SwiftData — without this the wipe
+        // left "ระดับชั้น ม.5 เทอม 1" and the target sitting there afterwards.
+        // Device preferences (ธีม · ค่าเริ่มต้นการเตือน · PomodoroSettings) are
+        // deliberately kept: they are not the student's data.
+        GPAXSettings.resetAll()
 
         // การบล็อกแอปเป็นค่าระดับ**ระบบ** ไม่ได้อยู่ใน SwiftData — ถ้าไม่เคลียร์
         // ตรงนี้ ล้างข้อมูลแล้วแอปอื่นจะยังถูกบล็อกค้างอยู่

@@ -15,6 +15,9 @@ final class StudentProfileStore {
     private let firstNameKey = "com.studentos.profile.firstName"
     private let lastNameKey  = "com.studentos.profile.lastName"
     private let nicknameKey  = "com.studentos.profile.nickname"
+    private let schoolKey    = "com.studentos.profile.school"
+    private let roomKey      = "com.studentos.profile.room"
+    private let programKey   = "com.studentos.profile.program"
 
     var firstName: String {
         didSet { UserDefaults.standard.set(firstName, forKey: firstNameKey) }
@@ -26,6 +29,21 @@ final class StudentProfileStore {
         didSet { UserDefaults.standard.set(nickname, forKey: nicknameKey) }
     }
 
+    // Display-only, all optional. Nothing computes from these — they exist so
+    // the profile reads like a real student's, not a name in a box.
+    var school: String {
+        didSet { UserDefaults.standard.set(school, forKey: schoolKey) }
+    }
+    /// เช่น "5/2"
+    var room: String {
+        didSet { UserDefaults.standard.set(room, forKey: roomKey) }
+    }
+    /// เช่น "วิทย์-คณิต" — free text, not a picker: Thai study programmes vary
+    /// far too much between schools to hardcode a list.
+    var program: String {
+        didSet { UserDefaults.standard.set(program, forKey: programKey) }
+    }
+
     // Cached in-memory so @Observable views react automatically when changed.
     var cachedProfileImage: UIImage?
 
@@ -33,6 +51,9 @@ final class StudentProfileStore {
         firstName = UserDefaults.standard.string(forKey: firstNameKey) ?? ""
         lastName  = UserDefaults.standard.string(forKey: lastNameKey)  ?? ""
         nickname  = UserDefaults.standard.string(forKey: nicknameKey)  ?? ""
+        school    = UserDefaults.standard.string(forKey: schoolKey)    ?? ""
+        room      = UserDefaults.standard.string(forKey: roomKey)      ?? ""
+        program   = UserDefaults.standard.string(forKey: programKey)   ?? ""
         cachedProfileImage = Self.readImageFromDisk()
     }
 
@@ -65,6 +86,9 @@ final class StudentProfileStore {
         firstName = ""
         lastName  = ""
         nickname  = ""
+        school    = ""
+        room      = ""
+        program   = ""
         try? FileManager.default.removeItem(at: profileImageURL)
         cachedProfileImage = nil
     }

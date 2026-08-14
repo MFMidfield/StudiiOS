@@ -17,6 +17,9 @@ struct EditProfileView: View {
     @State private var firstName: String = ""
     @State private var lastName: String = ""
     @State private var nickname: String = ""
+    @State private var school: String = ""
+    @State private var room: String = ""
+    @State private var program: String = ""
     @State private var profileImage: UIImage?
     @State private var imageRemoved = false
     @State private var showImageSourcePicker = false
@@ -60,6 +63,16 @@ struct EditProfileView: View {
                 Section("ชื่อเล่น") {
                     TextField("ชื่อเล่น", text: $nickname)
                 }
+
+                Section {
+                    TextField("โรงเรียน", text: $school)
+                    TextField("ห้อง เช่น 5/2", text: $room)
+                    TextField("แผนการเรียน เช่น วิทย์-คณิต", text: $program)
+                } header: {
+                    Text("โรงเรียน")
+                } footer: {
+                    Text("ไม่กรอกก็ได้ — ใช้แสดงบนโปรไฟล์อย่างเดียว")
+                }
             }
             .navigationTitle("แก้ไขโปรไฟล์")
             .navigationBarTitleDisplayMode(.inline)
@@ -76,6 +89,9 @@ struct EditProfileView: View {
                 firstName = profile.firstName
                 lastName = profile.lastName
                 nickname = profile.nickname
+                school = profile.school
+                room = profile.room
+                program = profile.program
                 profileImage = profile.cachedProfileImage
             }
             .confirmationDialog("เลือกรูปภาพจาก", isPresented: $showImageSourcePicker) {
@@ -125,6 +141,9 @@ struct EditProfileView: View {
         profile.firstName = firstName.trimmingCharacters(in: .whitespaces)
         profile.lastName  = lastName.trimmingCharacters(in: .whitespaces)
         profile.nickname  = nickname.trimmingCharacters(in: .whitespaces)
+        profile.school    = school.trimmingCharacters(in: .whitespaces)
+        profile.room      = room.trimmingCharacters(in: .whitespaces)
+        profile.program   = program.trimmingCharacters(in: .whitespaces)
         if let img = profileImage {
             profile.saveProfileImage(img)
         } else if imageRemoved {

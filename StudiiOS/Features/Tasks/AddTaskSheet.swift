@@ -51,7 +51,12 @@ struct AddTaskSheet: View {
         // An exam with no date can't be counted down to — start it switched on.
         _hasDueDate = State(initialValue: editing?.hasDueDate ?? (presetKind == .exam))
         _dueDate = State(initialValue: editing?.resolvedDueDate ?? Self.defaultDueDate())
-        _remindersEnabled = State(initialValue: editing?.remindersEnabled ?? false)
+        // A NEW task follows the "เตือนงานใหม่อัตโนมัติ" switch in Settings;
+        // an existing one always keeps whatever it was saved with.
+        // `object(forKey:)` rather than `bool(forKey:)`: bool returns false for
+        // a key never written, which would read as "switched off" on first run.
+        _remindersEnabled = State(initialValue: editing?.remindersEnabled
+            ?? (UserDefaults.standard.object(forKey: SettingsView.reminderDefaultKey) as? Bool ?? true))
     }
 
     // MARK: - Derived

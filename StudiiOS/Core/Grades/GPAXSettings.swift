@@ -103,4 +103,27 @@ enum GPAXSettings {
         guard entryMode == .cumulative, priorGPAX > 0 else { return nil }
         return GPAXCalculator.CumulativeOverride(gpax: priorGPAX, credits: priorCredits)
     }
+
+    // MARK: - ล้างข้อมูล
+
+    /// ล้างค่า GPAX ทั้งหมด — ใช้โดย `SettingsView.resetAllData()` เท่านั้น
+    ///
+    /// ต้องอยู่ในไฟล์นี้เพราะนี่คือจุดเดียวที่รู้จัก UserDefaults key ของ GPAX
+    /// ถ้าไปเขียน `removeObject` ตรงๆ ที่ SettingsView จะมีสองที่ที่รู้จัก key
+    /// แล้วเพี้ยนกันเงียบๆ ตอนมีใครเพิ่ม key ใหม่
+    ///
+    /// ⚠️ เพิ่ม `Key` ใหม่เมื่อไร ต้องมาเพิ่มในลิสต์นี้ด้วย ไม่งั้นลบข้อมูลแล้วค่าจะค้าง
+    static func resetAll() {
+        let keys = [
+            Key.currentGradeLevel,
+            Key.currentTermNumber,
+            Key.target,
+            Key.targetSource,
+            Key.entryMode,
+            Key.priorGPAX,
+            Key.priorCredits,
+            Key.priorTermCount,
+        ]
+        keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+    }
 }

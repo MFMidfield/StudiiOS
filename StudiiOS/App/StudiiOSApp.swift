@@ -100,6 +100,10 @@ private struct RootContainerView: View {
     @Query private var terms: [Term]
     private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
 
+    /// The only place the theme choice is applied. `.system` resolves to nil,
+    /// which hands the decision back to iOS.
+    @AppStorage(AppTheme.storageKey) private var appTheme: AppTheme = .system
+
     var body: some View {
         Group {
             if !hasCompletedOnboarding {
@@ -116,6 +120,7 @@ private struct RootContainerView: View {
                 RootTabView()
             }
         }
+        .preferredColorScheme(appTheme.colorScheme)
         .task {
             TermStore.bootstrap(in: modelContext)
         }
