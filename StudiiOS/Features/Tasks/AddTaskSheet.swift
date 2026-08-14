@@ -35,16 +35,21 @@ struct AddTaskSheet: View {
     @State private var showSubjectSheet = false
     @State private var saveError: String?
 
-    init(editing: Assignment? = nil, onSaved: (() -> Void)? = nil) {
+    /// - Parameter presetKind: which kind the form opens on when creating a new
+    ///   task. Ignored when `editing` is non-nil — an existing task keeps its own
+    ///   kind. Lets a caller open the form already set to "สอบ" (Dashboard's
+    ///   exam-countdown card) without the user having to switch tabs in the form.
+    init(editing: Assignment? = nil, presetKind: AssignmentKind = .homework, onSaved: (() -> Void)? = nil) {
         self.editing = editing
         self.onSaved = onSaved
         _title = State(initialValue: editing?.title ?? "")
-        _kind = State(initialValue: editing?.kind ?? .homework)
+        _kind = State(initialValue: editing?.kind ?? presetKind)
         _examScope = State(initialValue: editing?.examScope ?? .midterm)
         _subjectName = State(initialValue: editing?.subjectName ?? "")
         _detail = State(initialValue: editing?.detail ?? "")
         _priorityChoice = State(initialValue: PriorityChoice.forEditing(editing))
-        _hasDueDate = State(initialValue: editing?.hasDueDate ?? false)
+        // An exam with no date can't be counted down to — start it switched on.
+        _hasDueDate = State(initialValue: editing?.hasDueDate ?? (presetKind == .exam))
         _dueDate = State(initialValue: editing?.resolvedDueDate ?? Self.defaultDueDate())
         _remindersEnabled = State(initialValue: editing?.remindersEnabled ?? false)
     }
