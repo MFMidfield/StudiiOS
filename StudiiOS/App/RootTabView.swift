@@ -10,6 +10,7 @@ import SwiftUI
 /// Destinations reachable from the Dashboard's main menu grid.
 enum DashboardDestination: Hashable {
     case assignments
+    case calendar
     case gradeCenter
     case tcasPlanner
     case portfolio
@@ -70,6 +71,7 @@ struct RootTabView: View {
     private func destinationView(for destination: DashboardDestination) -> some View {
         switch destination {
         case .assignments: AssignmentListView()
+        case .calendar: CalendarView()
         case .gradeCenter: GradeCenterView()
         case .tcasPlanner: TCASPlannerView()
         case .portfolio: PortfolioView()
