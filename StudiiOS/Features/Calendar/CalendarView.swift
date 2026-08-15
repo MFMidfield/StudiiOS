@@ -245,9 +245,8 @@ struct CalendarView: View {
                 isBeingDragged: isBeingDragged,
                 onSelectDay: { selectedDate = $0 }
             )
-            .coordinateSpace(name: "monthGrid")
             .onGeometryChange(for: CGSize.self, of: { $0.size }) { gridSize = $0 }
-            .simultaneousGesture(ghostGesture)
+            .gesture(ghostGesture)
             .overlay(ghostOverlay)
             .padding(.horizontal, 6)
             .padding(.bottom, 10)

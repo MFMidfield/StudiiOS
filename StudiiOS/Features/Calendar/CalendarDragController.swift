@@ -81,23 +81,12 @@ extension CalendarView {
 
     // ── Gesture ──────────────────────────────────────────
 
-    var ghostGesture: some Gesture {
-        LongPressGesture(minimumDuration: 0.5)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("monthGrid")))
-            .onChanged { value in
-                guard case .second(true, let drag) = value, let drag else { return }
-                if ghostPayload == nil {
-                    beginGhost(at: drag.startLocation)
-                }
-                moveGhost(to: drag.location)
-            }
-            .onEnded { value in
-                guard case .second(true, let drag) = value else {
-                    cancelGhostIfNeeded()
-                    return
-                }
-                endGhost(at: drag?.location)
-            }
+    var ghostGesture: some UIGestureRecognizerRepresentable {
+        CalendarPressDragGesture(
+            onBegan: { beginGhost(at: $0) },
+            onChanged: { moveGhost(to: $0) },
+            onEnded: { endGhost(at: $0) }
+        )
     }
 
     func beginGhost(at point: CGPoint) {
@@ -180,10 +169,6 @@ extension CalendarView {
         } completion: {
             resetGhostState()
         }
-    }
-
-    func cancelGhostIfNeeded() {
-        if ghostPayload != nil { flyBack() }
     }
 
     func resetGhostState() {
