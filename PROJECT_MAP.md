@@ -568,7 +568,9 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
   ⚠️ อ่านตำแหน่งด้วย `context.converter.location(in:)` เท่านั้น **ห้าม `recognizer.location(in: recognizer.view)`** — view ที่ SwiftUI แปะไว้เป็น host ก้อนใหญ่ ghost จะลงต่ำกว่านิ้วหนึ่งแถว
   hit-test เลิกใช้ `gridSize` ก้อนเดียว → `monthFrames: [String: CGRect]` ระดับเดือน (12 รายการ) · เดือนที่ `LazyVStack` ยังไม่ render = ปล่อยไม่ได้ (flyBack)
 - **สถานะ ghost/toast ย้ายออกจาก view แล้ว** อยู่ใน `CalendarDragController` (`@Observable`) ทุกอย่างที่มันต้องรู้ส่งเข้าไปเป็น `Environment` ตอนเรียก — สมาชิกของ `CalendarView` กลับเป็น `private` ครบแล้ว
-- ยังไม่ทำ: auto-scroll ตอนลากใกล้ขอบจอ (เฟส 2 ของ §5.2 — สเปคบอกตัดได้)
+- **auto-scroll ตอนลากใกล้ขอบจอ** (เฟส 2 ของ §5.2) เขียนแล้ว — โซนขอบ 60pt · 2–14pt ต่อเฟรม · `Task` เดินเอง ~60 เฟรม/วินาที เพราะนิ้วค้างนิ่งแล้ว recognizer ไม่ยิง `.changed`
+  ตำแหน่งสายเลื่อนคุมด้วย `ScrollPosition(idType:)` ตัวเดียว (`viewID(type:)` อ่านเดือนบนสุด · `scrollTo(id:)` เด้งเดือน · `scrollTo(y:)` auto-scroll)
+  ⚠️ ถ้าลากค้างขอบแล้วหน้านิ่งสนิท สาเหตุคือ `.scrollDisabled(drag.isDragging)` บล็อก `scrollTo(y:)` ไปด้วย ต้องเปลี่ยนวิธีล็อกนิ้ว
 
 **กฎเหล็ก:** เพิ่ม `@Model` ใหม่ → ต้องเพิ่มใน `Schema([...])` ด้วย ไม่งั้น crash ตอนรัน (Term/TermSubject/TermGradeSubject ทำแล้ว — ลบ TermSubject **และ** TermGradeSubject **ก่อน** Term เสมอ, และเคลียร์ `TermStore.activeTermKey` ออกจาก UserDefaults ด้วย)
 และต้องเพิ่มใน `SettingsView.resetAllData()` ด้วย (เคยลืมมาแล้วกับ Calendar 3 ตัว)
