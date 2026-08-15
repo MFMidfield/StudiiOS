@@ -136,7 +136,8 @@ struct EventFormSheet: View {
                 Text("การลบจะไม่สามารถกู้คืนได้")
             }
         }
-        .presentationDetents([.medium, .large])
+        // เต็มจอเสมอ — ฟอร์มมี 7 section เปิดครึ่งจอแล้วต้องลากขึ้นเองทุกครั้ง
+        .presentationDetents([.large])
         .onAppear { titleFocused = true }
     }
 
