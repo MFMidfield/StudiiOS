@@ -45,10 +45,11 @@ enum CalendarSheet: Identifiable {
 // ══════════════════════════════════════════════════════════════
 
 struct CalendarView: View {
-    // `internal` ไม่ใช่ `private` เพราะ CalendarDragController.swift
-    // เป็น extension ของ struct นี้ อยู่คนละไฟล์ — ขั้นที่ 6 จะย้ายสถานะ ghost
-    // ออกไปเป็นตัวควบคุมของตัวเอง แล้วค่อยปิดกลับเป็น private
-    @Environment(\.modelContext) var modelContext
+    /// ชื่อระบบพิกัดของสายเลื่อน — `CalendarMonthSection` รายงาน frame เข้ามาในระบบนี้
+    /// และ ghost drag อ่านตำแหน่งนิ้วในระบบเดียวกัน
+    static let gridSpaceName = "calScroll"
+
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \CalendarEvent.startDate) private var allEvents: [CalendarEvent]
     @Query private var allAssignments: [Assignment]
     @Query(sort: \Subject.createdAt) private var subjects: [Subject]
@@ -57,32 +58,22 @@ struct CalendarView: View {
     @Query private var terms: [Term]
     private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
 
-    @State var selectedDate = Date()
-    @State var activeSheet: CalendarSheet?
+    @State private var selectedDate = Date()
+    @State private var activeSheet: CalendarSheet?
     /// sheet ที่รอเปิดต่อหลัง sheet ปัจจุบันปิด (แตะแถวใน sheet รายวัน)
     @State private var pendingSheet: CalendarSheet?
     @State private var displayedYear = Calendar(identifier: .gregorian).component(.year, from: .now)
     /// id ของเดือนที่อยู่บนสุดของจอ — ผูกกับ `scrollPosition` หัวเดือนอ่านจากตัวนี้
     @State private var visibleMonthID: String?
 
-    // Ghost Event drag state — kept at CalendarView level per §4.3, not per-cell.
-    @State var ghostPayload: CalendarGhostPayload?
-    @State var ghostOrigin: CGPoint = .zero
-    @State var ghostCurrentPosition: CGPoint = .zero
-    @State var ghostScale: CGFloat = 1.0
-    /// id เดือน → frame ในระบบพิกัดสายเลื่อน · 12 รายการ ไม่ใช่ 365 (§5.1)
-    @State var monthFrames: [String: CGRect] = [:]
-    @State var lastHapticDay: Date?
-    @State var lastHapticTime: Date = .distantPast
-    @State var toastMessage: String?
-    @State var toastUndo: (() -> Void)?
-    @State var toastDismissTask: Task<Void, Never>?
+    /// สถานะการลาก + toast อยู่ในตัวควบคุมของมันเอง ไม่กระจายใน view (ขั้นที่ 6)
+    @State private var drag = CalendarDragController()
 
-    let cal = Calendar(identifier: .gregorian)
+    private let cal = Calendar(identifier: .gregorian)
 
     // ── Derived ───────────────────────────────────────────
 
-    var months: [CalendarMonthInfo] {
+    private var months: [CalendarMonthInfo] {
         CalendarMonthBuilder.months(inYear: displayedYear, calendar: cal)
     }
 
@@ -118,12 +109,12 @@ struct CalendarView: View {
         CalendarItemBuilder.itemsByDay(allItems, calendar: cal)
     }
 
-    var itemsByID: [String: CalendarItem] {
+    private var itemsByID: [String: CalendarItem] {
         CalendarItemBuilder.byID(allItems)
     }
 
     /// ผลจัดเลนของสัปดาห์ที่ขึ้นต้นด้วย `weekStart` — ใช้ทั้งตอนวาดและตอน hit-test
-    func weekLayout(weekStart: Date) -> WeekLayout {
+    private func weekLayout(weekStart: Date) -> WeekLayout {
         MonthLayoutEngine.layout(
             items: CalendarItemBuilder.layoutItems(allItems, calendar: cal),
             weekStart: weekStart,
@@ -132,15 +123,29 @@ struct CalendarView: View {
         )
     }
 
-    func itemsFor(_ date: Date) -> [CalendarItem] {
+    private func itemsFor(_ date: Date) -> [CalendarItem] {
         itemsByDay[cal.startOfDay(for: date)] ?? []
     }
 
-    func subjectColor(for task: Assignment) -> Color {
+    private func subjectColor(for task: Assignment) -> Color {
         guard !task.subjectName.isEmpty,
               let subject = subjects.first(where: { $0.name.caseInsensitiveCompare(task.subjectName) == .orderedSame })
         else { return Theme.Colors.primaryDeep }
         return subject.color
+    }
+
+    /// ทุกอย่างที่ตัวควบคุมการลากต้องรู้ในจังหวะนี้
+    private var dragEnvironment: CalendarDragController.Environment {
+        .init(
+            calendar: cal,
+            months: months,
+            itemsByID: itemsByID,
+            weekLayout: weekLayout(weekStart:),
+            modelContext: modelContext,
+            subjectColor: subjectColor,
+            onCreatedEvent: { present(.editNewGhost($0)) },
+            onSelectDate: { selectedDate = $0 }
+        )
     }
 
     // ── Body ─────────────────────────────────────────────
@@ -151,7 +156,7 @@ struct CalendarView: View {
             CalendarDayHeaderRow()
             monthScroll
         }
-        .overlay(alignment: .bottom) { moveToast }
+        .overlay(alignment: .bottom) { CalendarMoveToast(controller: drag) }
         .background(Theme.Colors.background)
         // หัวเดือนอยู่ในหน้าแล้ว nav bar จึงเหลือไว้แค่ปุ่มย้อนกลับ
         // (ห้าม `.navigationBarHidden(true)` — ปุ่มย้อนกลับจะหายไปด้วย เข้ามาแล้วออกไม่ได้)
@@ -230,10 +235,10 @@ struct CalendarView: View {
                         calendar: cal,
                         itemsByID: itemsByID,
                         weekLayout: weekLayout(weekStart:),
-                        isBeingDragged: isBeingDragged,
+                        isBeingDragged: drag.isBeingDragged,
                         onSelectDay: selectDay,
                         onSelectItem: openItem,
-                        onFrameChange: { monthFrames[month.id] = $0 }
+                        onFrameChange: { drag.monthFrames[month.id] = $0 }
                     )
                     .id(month.id)
                 }
@@ -242,9 +247,19 @@ struct CalendarView: View {
         }
         .coordinateSpace(.named(Self.gridSpaceName))
         .scrollPosition(id: $visibleMonthID, anchor: .top)
-        .scrollDisabled(ghostPayload != nil)
+        .scrollDisabled(drag.isDragging)
         .gesture(ghostGesture)
-        .overlay(ghostOverlay)
+        .overlay(CalendarGhostOverlay(controller: drag, env: dragEnvironment))
+    }
+
+    /// กดค้างแล้วลาก — ห้ามใช้ gesture ของ SwiftUI ตรงนี้ ScrollView จะเลื่อนไม่ได้
+    private var ghostGesture: some UIGestureRecognizerRepresentable {
+        CalendarPressDragGesture(
+            space: .named(Self.gridSpaceName),
+            onBegan: { drag.begin(at: $0, env: dragEnvironment) },
+            onChanged: { drag.move(to: $0, env: dragEnvironment) },
+            onEnded: { drag.end(at: $0, env: dragEnvironment) }
+        )
     }
 
     // ── Sheet ────────────────────────────────────────────

@@ -67,7 +67,8 @@ struct CalendarDaySheet: View {
     private var emptyState: some View {
         VStack(spacing: Theme.Spacing.sm) {
             Image(systemName: "calendar.badge.plus")
-                .font(.system(size: 34))
+                .font(.system(size: 34))   // SF Symbol — ต้องใช้ system font
+
                 .foregroundStyle(Theme.Colors.textSecondary.opacity(0.4))
             Text("ยังไม่มีอะไรในวันนี้")
                 .font(Theme.Font.body)
@@ -110,25 +111,29 @@ struct CalendarItemRow: View {
     }
 }
 
-/// Shared row layout — used by `CalendarDayItemsCard` (tap = open editor) and
+/// Shared row layout — used by `CalendarDaySheet` (tap = open editor) and
 /// `CalendarSearchView` (tap = jump to that date) so the two never drift.
 struct CalendarItemRowContent: View {
     let item: CalendarItem
 
+    /// ขีดสีหน้าแถว — บางแค่ 4pt มุมต้องเล็กกว่าทุก token ที่มีใน `Theme.Radius`
+    private let stripeRadius: CGFloat = 2
+
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
+            HStack(spacing: Theme.Spacing.md) {
                 leadingMark
                     .frame(width: 54, alignment: .leading)
 
-                RoundedRectangle(cornerRadius: 2)
+                RoundedRectangle(cornerRadius: stripeRadius)
                     .fill(item.color)
                     .frame(width: 4, height: 40)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: Theme.Spacing.xs) {
                         Text(item.title)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(Theme.Font.body)
+                            .fontWeight(.semibold)
                             .foregroundStyle(item.isDone ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
                             .strikethrough(item.isDone)
                             .lineLimit(1)
@@ -140,7 +145,7 @@ struct CalendarItemRowContent: View {
                     }
                     if let subtitle = subtitle {
                         Text(subtitle)
-                            .font(.system(size: 12))
+                            .font(Theme.Font.label)
                             .foregroundStyle(Theme.Colors.textSecondary)
                             .lineLimit(1)
                     }
@@ -152,8 +157,8 @@ struct CalendarItemRowContent: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Theme.Colors.textSecondary.opacity(0.6))
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.sm)
 
             Divider().padding(.leading, 82)
         }
@@ -169,7 +174,8 @@ struct CalendarItemRowContent: View {
                     Text(item.date, format: .dateTime.hour().minute())
                 }
             }
-            .font(.system(size: 13, weight: .medium, design: .monospaced))
+            .font(Theme.Font.label)
+            .monospacedDigit()
             .foregroundStyle(Theme.Colors.textSecondary)
         } else {
             Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")

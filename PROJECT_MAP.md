@@ -181,7 +181,15 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
 │   │                                     ⚠️ **ห้ามลบ Subject** — Assignment.subjectName ผูกด้วยชื่อแบบ lookup
 │   └── Tasks/AssignmentPriorityEngine.swift  logic ล้วน: priority(kind:dueDate:) + daysUntil() + dueLabel() — สูตรความสำคัญอัตโนมัติที่เดียว
 └── Features/
-    ├── Calendar/CalendarView.swift        (~900+) ← ไฟล์ใหญ่สุด — ยังไม่แยกไฟล์ ตามที่ PROMPT_Calendar_MonthView.md §13 เตือนไว้ว่าต้องแยกก่อนทำ Ghost Event (Round 4)
+    ├── Calendar/CalendarView.swift        (366) root — สถานะหน้า · query · header เดือน/ปี · ScrollView 12 เดือน · sheet routing (W2 ก้อน G)
+    │   ├── CalendarMonthSection.swift     หนึ่งเดือน + CalendarStrings/CalendarDay/CalendarMonthInfo/CalendarMonthBuilder + แถวชื่อวัน
+    │   ├── CalendarWeekRow.swift          แถวสัปดาห์ (ZStack ช่องวัน + แถบพาดข้ามช่อง) + CalendarDayCell + **CalendarGeometry** (ขนาดแถวจุดเดียว)
+    │   ├── CalendarEventBar.swift         ชิป 3 แบบ (กิจกรรม / งาน / งานเสร็จแล้ว)
+    │   ├── CalendarDaySheet.swift         sheet รายวัน + CalendarItemRow/CalendarItemRowContent (ใช้ร่วมกับหน้าค้นหา)
+    │   ├── CalendarSearchView.swift       CalendarSearchSheet + ลิสต์ผลค้นหาจัดกลุ่มตามเดือน
+    │   ├── CalendarDragController.swift   @Observable — สถานะ ghost + toast + hit-test + บันทึกการย้าย (ไม่ใช่ extension ของ view แล้ว)
+    │   ├── CalendarPressDragGesture.swift UIGestureRecognizerRepresentable ห่อ UILongPressGestureRecognizer
+    │   ├── CalendarItemBuilder.swift      สร้าง CalendarItem/MonthLayoutItem — ตรรกะล้วน ไม่มี View
     │   └── CalendarItem.swift             เพิ่ม 10 ส.ค. 2569 (Round 2) — struct รวม CalendarEvent+Assignment ไม่ใช่ @Model
     ├── CareerDiscovery/  RIASEC v2 (PLAN_RIASEC.md) — 18 ข้อ Likert แทนที่ chip picker เดิม
     │   ├── CareerDiscoveryView.swift     หน้า hub: intro card เริ่มแบบสำรวจ + การ์ดผลล่าสุด + ประวัติ 5 รายการ
@@ -545,6 +553,22 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
 **Round 3 (10 ส.ค. 2569):** `CalendarEvent` เพิ่ม `subjectName: String = ""` (เหมือน `Assignment.subjectName` — ใช้แทน title ใน pill/shortLabel เมื่อมีค่า) · `EventFormSheet` เพิ่มช่องสถานที่/โน้ต(`TextEditor` 80pt)/วิชา(`Picker` แบบเดียวกับ `AddTaskSheet`, **ไม่ใช่** `SubjectPickerFields` — ตัวนั้นออกแบบมาสำหรับสร้างวิชาใหม่พร้อมกลุ่มสาระ/รหัส ไม่ใช่เลือกวิชาที่มีอยู่)/แท็ก (chip เลือก/สร้างใหม่ ผูก `CalendarTag` ผ่านชื่อ) · จานสีอ้างจาก `Theme.Colors.subjectPalette` ตรง (8 สี ไม่ hardcode ซ้ำ) · `.presentationDetents([.medium, .large])` + auto-focus ช่องชื่อ<br>`CalendarView` เอา custom `topBar`/ปุ่ม test-notification/ปัดเปลี่ยนเดือนออกทั้งหมด (ชนกับ scroll ตามที่พรอมต์เตือน) ครอบด้วย `.navigationTitle(monthTitle)` + `.toolbar`(‹ ›/วันนี้) แทน — **อาศัย `NavigationStack` ที่ `RootTabView` ครอบไว้ให้แล้ว ไม่ได้เพิ่มอันใหม่ซ้อน** · เพิ่ม `.searchable` ค้นทั้ง event+assignment จัดกลุ่มตามเดือน แตะแล้ว `jumpToSearchResult` เคลียร์ค้นหา+ตั้ง `currentMonth`/`selectedDate`<br>ไฟล์ยาวขึ้นเป็น ~1080 บรรทัด — ยังไม่แยกไฟล์ ตาม §13 ของพรอมต์ที่เตือนว่าต้องแยกก่อน Round 4 (Ghost Event)
 
 **Round 4 (10 ส.ค. 2569):** ก่อนเริ่ม Ghost Event แยก `CalendarView.swift` ออกเป็น 3 ไฟล์ — `CalendarModels.swift` (EventAlert/CalendarTag/CalendarAttachmentItem/CalendarEvent), `EventFormSheet.swift`, `GhostEventLayer.swift` (แค่ `GhostPillView` — visual ล้วน) ตัว `CalendarView.swift` เหลือ ~963 บรรทัด (โค้ด Ghost Event ใหม่ยาวพอๆกับที่ตัดออกไป) **ตัดสินใจไม่แยก gesture/state logic ของ Ghost Event ออกไฟล์แยกเพิ่ม** เพราะต้อง cascade เปลี่ยน `private`→internal ทั้ง @State และ helper function จำนวนมากที่ Ghost logic เรียกใช้ (modelContext, cal, calendarDays, itemsFor, activeSheet, CalendarSheet เอง ฯลฯ) เสี่ยงพลาดจุดใดจุดหนึ่งโดยไม่มี compiler ยืนยันในนี้ — เก็บไว้เป็น extension ในไฟล์เดียวกันแทน ปลอดภัยกว่า<br>Ghost gesture: `LongPressGesture(0.5).sequenced(before: DragGesture(minimumDistance:0, coordinateSpace:.named("monthGrid")))` แนบที่ `monthGrid` ด้วย `.simultaneousGesture` (ไม่ใช้ `.gesture` เฉยๆ กัน block `dayCell`'s `.onTapGesture`) วัดขนาดกริดครั้งเดียวด้วย `.onGeometryChange` แล้วคำนวณ cell ด้วยเลขคณิตล้วน (`cellIndex`/`cellCenter`/`hitTestItem` — ค่าคงที่ 27/16 ผูกกับ layout จริงใน `dayCell`/`dayPills` ห้ามแก้ที่เดียวไม่แก้อีกที่) เอา `dayCell`'s เดิม `.onLongPressGesture` (เปิด add sheet ตรงๆ) ออกแล้ว เพราะ mode A drop-in-same-cell ทำหน้าที่แทนอยู่แล้ว<br>⚠️ **จุดเสี่ยงที่ยังไม่ได้ทดสอบจริง**: tap (เลือกวัน) ที่ `dayCell` กับ long-press-drag ที่ `monthGrid` เป็น gesture recognizer คนละตัวคนละระดับ — ถ้ากดค้างแล้วปล่อยโดยไม่ลาก อาจ fire ทั้ง `selectedDate` (จาก tap) และเปิด sheet สร้างกิจกรรมใหม่ (จาก ghost) พร้อมกัน ต้องให้ Few ทดสอบจริงบนเครื่อง<br>สร้างกิจกรรมจากการลากใช้ `CalendarSheet.editNewGhost(CalendarEvent)` แยกจาก `.edit` ปกติ — `EventFormSheet` มี `deleteOnCancel: Bool` param กด "ยกเลิก" แล้วลบ event ที่สร้างไว้ล่วงหน้าทิ้ง<br>ย้าย event/assignment ที่มีอยู่: เก็บ `originalStart/originalEnd`/`originalDue` ไว้ก่อน mutate เพื่อรองรับปุ่ม "เลิกทำ" ใน toast (`@State toastUndo`, auto-dismiss 4 วิด้วย `Task.sleep`)<br>Assignment ที่ `hasDueDate == false` ไม่เคยขึ้นเป็น pill ในกริดอยู่แล้ว (กรองออกตั้งแต่ Round 2) จึงลากไม่ได้โดยธรรมชาติ ไม่ต้องเขียน guard/haptic `.warning` เพิ่ม (unreachable case)
+
+**W2 ก้อน G (15 ส.ค. 2569) — เขียนหน้าปฏิทินใหม่ตาม `docs/redesign/08_Calendar.md`** ทับของ Round 3/4 ข้างบนเกือบทั้งหมด:
+
+- **ตารางเดือนเดียว → สายเลื่อนแนวตั้ง 12 เดือนในปีเดียว** · `LazyVStack` + `.scrollPosition(id:anchor:.top)` · หัวเดือนอ่านจาก id ที่ผูกไว้ **ห้ามใช้ `GeometryReader` ต่อแถวเพื่ออ่านตำแหน่ง**
+- **หัวเดือน/ปี/ปุ่มวันนี้/ค้นหา อยู่ในหน้าเอง** ไม่ใช่ `navigationTitle`/`toolbar` แล้ว · ค้นหาเป็น `CalendarSearchSheet` ของตัวเอง
+  ⚠️ ใช้ `.navigationTitle("")` + `.inline` เท่านั้น **ห้าม `.navigationBarHidden(true)`** ปุ่มย้อนกลับจะหาย (หน้านี้ถูก push จากเมนู Dashboard ไม่มีแท็บของตัวเอง)
+- **ชิปซ้ำทุกช่อง → แถบเดียวพาดข้ามช่อง** จัดเลนด้วย `Core/Calendar/MonthLayoutEngine.swift` (ฟังก์ชันบริสุทธิ์ ไม่ import SwiftUI · เทสต์ `StudiiOSTests/MonthLayoutEngineTests.swift` 10 เคส)
+  4 เลนต่อสัปดาห์ เกินยุบเป็น `+N` **นับต่อคอลัมน์ ไม่ใช่ต่อสัปดาห์**
+- **ขนาดทุกอย่างของแถวอยู่ที่ `CalendarGeometry` จุดเดียว** (แถบ 17 · ห่าง 3 · แถว 132 · ป้ายชื่อเดือน 40) — ghost drag หารพิกัดจากค่าชุดนี้ **แก้ที่เดียวไม่แก้อีกที่ = ลากลงผิดช่อง**
+- **การ์ดรายการใต้ตาราง + FAB ถูกลบแล้ว** แตะวัน/`+N` = sheet รายวัน · แตะชิป = เปิดฟอร์มของรายการนั้น · เปิด sheet ทับ sheet ไม่ได้ ต้องผ่าน `pendingSheet` + `onDismiss`
+- **Ghost drag เขียนใหม่:** `LongPressGesture.sequenced(before: DragGesture)` ของ SwiftUI **ใช้ไม่ได้** — มันจับนิ้วตั้งแต่แตะแรก ScrollView เลยเลื่อนไม่ได้
+  เปลี่ยนเป็น `UILongPressGestureRecognizer` ผ่าน `UIGestureRecognizerRepresentable` (`CalendarPressDragGesture`)
+  ⚠️ อ่านตำแหน่งด้วย `context.converter.location(in:)` เท่านั้น **ห้าม `recognizer.location(in: recognizer.view)`** — view ที่ SwiftUI แปะไว้เป็น host ก้อนใหญ่ ghost จะลงต่ำกว่านิ้วหนึ่งแถว
+  hit-test เลิกใช้ `gridSize` ก้อนเดียว → `monthFrames: [String: CGRect]` ระดับเดือน (12 รายการ) · เดือนที่ `LazyVStack` ยังไม่ render = ปล่อยไม่ได้ (flyBack)
+- **สถานะ ghost/toast ย้ายออกจาก view แล้ว** อยู่ใน `CalendarDragController` (`@Observable`) ทุกอย่างที่มันต้องรู้ส่งเข้าไปเป็น `Environment` ตอนเรียก — สมาชิกของ `CalendarView` กลับเป็น `private` ครบแล้ว
+- ยังไม่ทำ: auto-scroll ตอนลากใกล้ขอบจอ (เฟส 2 ของ §5.2 — สเปคบอกตัดได้)
 
 **กฎเหล็ก:** เพิ่ม `@Model` ใหม่ → ต้องเพิ่มใน `Schema([...])` ด้วย ไม่งั้น crash ตอนรัน (Term/TermSubject/TermGradeSubject ทำแล้ว — ลบ TermSubject **และ** TermGradeSubject **ก่อน** Term เสมอ, และเคลียร์ `TermStore.activeTermKey` ออกจาก UserDefaults ด้วย)
 และต้องเพิ่มใน `SettingsView.resetAllData()` ด้วย (เคยลืมมาแล้วกับ Calendar 3 ตัว)

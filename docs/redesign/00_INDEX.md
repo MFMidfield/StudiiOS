@@ -29,8 +29,8 @@
 | 3 | `CalendarWeekRow` + `CalendarEventBar` วาดจาก layout | ✅ **`xcodebuild` เขียว 15 ส.ค.** — 🔴 **ยังไม่ได้ดูด้วยตา** |
 | 4 | `ScrollView` 12 เดือน + หัวเดือน/ปี + ปุ่มวันนี้ | ✅ **`xcodebuild` เขียว** — 🔴 ยังไม่ได้ดูด้วยตา |
 | 5 | `CalendarDaySheet` + การแตะ | ✅ **`xcodebuild` เขียว** — 🔴 ยังไม่ได้ดูด้วยตา |
-| 6 | ghost drag → `CalendarDragController` (เฟส 1) | ⬜ |
-| 7 | ลบ `eventsCard` · `fabButton` | ⬜ |
+| 6 | ghost drag → `CalendarDragController` (เฟส 1) | ✅ **`xcodebuild` เขียว** — 🔴 ยังไม่ได้ลากด้วยนิ้วหลังย้าย |
+| 7 | ลบ `eventsCard` · `fabButton` | ✅ grep ยืนยันไม่เหลือ + อัปเดต `PROJECT_MAP` §Calendar แล้ว |
 | 8 | auto-scroll เฟส 2 (ตัดได้) | ⬜ |
 
 **ขั้นที่ 1 ทำอะไรจริง** — `CalendarView.swift` 963 → 291 บรรทัด · ไฟล์ใหม่ 7 ไฟล์
@@ -97,7 +97,18 @@
 - ชั้นแถบเลิก `allowsHitTesting(false)` — ชิปเป็น `Button` แตะแล้วเปิด `EventFormSheet(event:)` / `AddTaskSheet(editing:)` ตรงๆ · `+N` เป็นปุ่มเปิด sheet รายวันของวันนั้น
 - **เปิด sheet ทับ sheet ไม่ได้** — แตะแถวใน sheet รายวันต้องปิดตัวเดิมก่อน ใช้ `pendingSheet` + `onDismiss` (แบบเดียวกับที่ก้อน A ทำใน `QuickAddSheet`)
 
-> 📌 **หนี้เอกสาร:** `PROJECT_MAP.md` §Calendar (บรรทัด 184–185 · 541–550) ยังเขียนว่า `CalendarView` 963 บรรทัดไฟล์เดียว · ghost ใช้ `LongPressGesture` ของ SwiftUI · ค่าคงที่ 27/16 — **ผิดหมดแล้ว** ต้องเขียนใหม่ตอนปิดก้อน G
+**ขั้นที่ 6–7 ทำอะไรจริง**
+
+- `CalendarDragController` เป็น `@Observable` class จริงแล้ว ไม่ใช่ `extension CalendarView` — ถือสถานะ ghost + toast + `monthFrames` เอง
+  ทุกอย่างที่มันต้องรู้ (ปฏิทิน · เดือน · `itemsByID` · `weekLayout` · `ModelContext` · callback) ส่งเข้าไปเป็น `CalendarDragController.Environment` ตอนเรียกแต่ละครั้ง
+- **สมาชิกของ `CalendarView` กลับเป็น `private` ครบแล้ว** (หนี้ที่ขั้นที่ 1 ทิ้งไว้ ปิดแล้ว)
+- ghost overlay / toast แยกเป็น `CalendarGhostOverlay` · `CalendarMoveToast`
+- `eventsCard` · `fabButton` · `dayPills` · `advanceMonth` · `monthGrid` · `calendarCard` — grep ยืนยันไม่เหลือในแอป
+- เก็บ hardcode ที่ยกมาจากโค้ดเดิมตอนขั้นที่ 1: `CalendarItemRowContent` + `CalendarSearchView` ใช้ `Theme.Font`/`Theme.Spacing` แล้ว
+  เหลือที่ยอมได้ตามข้อยกเว้น: `.font(.system(size:))` บน SF Symbol · `Color(hex:)` ของสีที่ผู้ใช้เลือก · `stripeRadius` 2 (ขีดกว้าง 4pt เล็กกว่าทุก token ใน `Theme.Radius`)
+- ✅ `PROJECT_MAP.md` §Calendar เขียนใหม่แล้ว (โครงไฟล์ 9 ไฟล์ + กติกาที่ห้ามลืม 7 ข้อ)
+
+**เหลือขั้นเดียว:** ขั้นที่ 8 auto-scroll ตอนลากใกล้ขอบจอ — **สเปคเขียนเองว่าตัดได้** และเตือนว่าเป็นจุดพังง่ายที่สุดของโมดูล
 
 **🔴 เจอของเสียที่ไม่เกี่ยวกับก้อน G:** `GPAXCalculatorTests/achievedWhenRequiredIsZeroOrBelow()` **แดงอยู่ก่อนแล้ว**
 (stash โค้ดก้อน G ออกแล้วรันบน HEAD เดิม ก็ยังแดง) — เทสต์คาด `.achieved` เมื่อ 1 เทอม GPA 4.00 เป้า 3.00

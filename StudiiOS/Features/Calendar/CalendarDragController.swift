@@ -2,9 +2,12 @@
 //  CalendarDragController.swift
 //  ลากย้ายวัน (ghost) + hit-test + toast เลิกทำ
 //
-//  ก้อน G ขั้นที่ 1: ยกโค้ดเดิมออกมาจาก CalendarView.swift ทั้งก้อน
-//  **ยังเป็น extension ของ CalendarView อยู่** เพราะขั้นนี้ห้ามเปลี่ยนพฤติกรรม —
-//  ขั้นที่ 6 ค่อยแปลงเป็นตัวควบคุมของตัวเองพร้อม hit-test แบบใหม่ (08_Calendar §5)
+//  ขั้นที่ 6 ของ 08_Calendar §8 — ย้ายออกจาก `CalendarView` มาเป็นตัวควบคุม
+//  ของตัวเองแล้ว สถานะ ghost/toast ไม่กระจายอยู่ใน view อีก และ `CalendarView`
+//  ปิดสมาชิกกลับเป็น private ได้ตามเดิม
+//
+//  ตัวควบคุมไม่ถือ query ของตัวเอง — ทุกอย่างที่ต้องรู้ (เดือน · รายการ ·
+//  ผลจัดเลน · ModelContext) ส่งเข้ามาเป็น `Environment` ตอนเรียกแต่ละครั้ง
 //
 
 import SwiftUI
@@ -17,22 +20,59 @@ enum CalendarGhostPayload {
     case existingTask(Assignment)
 }
 
-extension CalendarView {
+@Observable
+@MainActor
+final class CalendarDragController {
 
-    // ── Hit-test ─────────────────────────────────────────
+    /// ทุกอย่างที่ตัวควบคุมต้องรู้จาก `CalendarView` ในจังหวะนั้น
+    struct Environment {
+        let calendar: Calendar
+        let months: [CalendarMonthInfo]
+        let itemsByID: [String: CalendarItem]
+        let weekLayout: (Date) -> WeekLayout
+        let modelContext: ModelContext
+        let subjectColor: (Assignment) -> Color
+        /// ลากไปวางบนช่องว่าง → สร้างกิจกรรมแล้วเปิดฟอร์มให้แก้ทันที
+        let onCreatedEvent: (CalendarEvent) -> Void
+        let onSelectDate: (Date) -> Void
+    }
+
+    // ── สถานะ ghost ───────────────────────────────────────
+
+    private(set) var payload: CalendarGhostPayload?
+    private(set) var origin: CGPoint = .zero
+    private(set) var position: CGPoint = .zero
+    private(set) var scale: CGFloat = 1.0
+
+    /// id เดือน → frame ในระบบพิกัดสายเลื่อน · 12 รายการ ไม่ใช่ 365 (§5.1)
+    var monthFrames: [String: CGRect] = [:]
+
+    private var lastHapticDay: Date?
+    private var lastHapticTime: Date = .distantPast
+
+    // ── สถานะ toast ───────────────────────────────────────
+
+    private(set) var toastMessage: String?
+    private var toastUndo: (() -> Void)?
+    private var toastDismissTask: Task<Void, Never>?
+
+    var isDragging: Bool { payload != nil }
 
     func isBeingDragged(_ item: CalendarItem) -> Bool {
-        switch ghostPayload {
+        switch payload {
         case .existingEvent(let e): return item.sourceEvent === e
         case .existingTask(let t): return item.sourceTask === t
         default: return false
         }
     }
 
-    /// ผลของการหาว่านิ้วอยู่ตรงไหนของสายเลื่อน
-    struct CalendarHit {
+    // ══════════════════════════════════════════════════════
+    // MARK: - Hit-test
+    // ══════════════════════════════════════════════════════
+
+    struct Hit {
         let day: CalendarDay
-        /// จุดกึ่งกลางช่องวันนั้น ในระบบพิกัดสายเลื่อน — ใช้ให้ ghost ไปหยุดตรงกลางช่อง
+        /// จุดกึ่งกลางช่องวันนั้นในระบบพิกัดสายเลื่อน — ให้ ghost ไปหยุดตรงกลางช่อง
         let center: CGPoint
         let weekStart: Date
         let column: Int
@@ -40,13 +80,11 @@ extension CalendarView {
         let localY: CGFloat
     }
 
-    /// เลขคณิตอย่างเดียว ไม่ใช้ GeometryReader ต่อช่อง — อ่าน frame แค่ระดับเดือน
-    /// (12 รายการ ไม่ใช่ 365 ตาม 08_Calendar §5.1) แล้วหารเอาเอง
-    ///
-    /// เดือนที่ `LazyVStack` ยังไม่ render จะไม่มี frame → ปล่อยตรงนั้นไม่ได้ = flyBack
-    func hit(at point: CGPoint) -> CalendarHit? {
+    /// เลขคณิตล้วน ไม่ใช้ GeometryReader ต่อช่อง — อ่าน frame แค่ระดับเดือน
+    /// เดือนที่ `LazyVStack` ยังไม่ render จะไม่มี frame → ปล่อยตรงนั้นไม่ได้
+    func hit(at point: CGPoint, env: Environment) -> Hit? {
         guard let entry = monthFrames.first(where: { $0.value.contains(point) }),
-              let month = months.first(where: { $0.id == entry.key })
+              let month = env.months.first(where: { $0.id == entry.key })
         else { return nil }
 
         let frame = entry.value
@@ -68,7 +106,7 @@ extension CalendarView {
                 + CalendarGeometry.rowHeight * (CGFloat(row) + 0.5)
         )
 
-        return CalendarHit(
+        return Hit(
             day: month.days[index],
             center: center,
             weekStart: month.days[row * 7].date,
@@ -78,64 +116,54 @@ extension CalendarView {
     }
 
     /// ตำแหน่งนิ้ว → แถบไหน · คิดจาก `WeekLayout` ชุดเดียวกับที่วาด
-    /// ขั้นที่ 6 จะย้ายมาคิดจาก frame ของแถบตรงๆ
-    func hitTestItem(_ hit: CalendarHit) -> CalendarItem? {
+    func item(at hit: Hit, env: Environment) -> CalendarItem? {
         guard hit.localY >= CalendarGeometry.laneTop else { return nil }
 
         let laneStride = CalendarGeometry.laneHeight + CalendarGeometry.laneSpacing
         let lane = Int((hit.localY - CalendarGeometry.laneTop) / laneStride)
         guard lane >= 0, lane < CalendarGeometry.maxLanes else { return nil }
 
-        let bar = weekLayout(weekStart: hit.weekStart).bars.first {
+        let bar = env.weekLayout(hit.weekStart).bars.first {
             $0.lane == lane
                 && hit.column >= $0.startColumn
                 && hit.column < $0.startColumn + $0.columnSpan
         }
         guard let bar else { return nil }
-        return itemsByID[bar.itemID]
+        return env.itemsByID[bar.itemID]
     }
 
-    // ── Gesture ──────────────────────────────────────────
+    // ══════════════════════════════════════════════════════
+    // MARK: - วงจรการลาก
+    // ══════════════════════════════════════════════════════
 
-    /// ชื่อระบบพิกัดของตารางเดือน — `CalendarView` ประกาศไว้บน `CalendarMonthSection`
-    static let gridSpaceName = "monthGrid"
+    func begin(at point: CGPoint, env: Environment) {
+        guard let hit = hit(at: point, env: env) else { return }
 
-    var ghostGesture: some UIGestureRecognizerRepresentable {
-        CalendarPressDragGesture(
-            space: .named(Self.gridSpaceName),
-            onBegan: { beginGhost(at: $0) },
-            onChanged: { moveGhost(to: $0) },
-            onEnded: { endGhost(at: $0) }
-        )
-    }
-
-    func beginGhost(at point: CGPoint) {
-        guard let hit = hit(at: point) else { return }
-        if let item = hitTestItem(hit) {
+        if let item = item(at: hit, env: env) {
             if let event = item.sourceEvent {
-                ghostPayload = .existingEvent(event)
+                payload = .existingEvent(event)
             } else if let task = item.sourceTask {
-                ghostPayload = .existingTask(task)
+                payload = .existingTask(task)
             } else {
                 return
             }
         } else {
-            ghostPayload = .newEvent
+            payload = .newEvent
         }
 
-        ghostOrigin = point
-        ghostCurrentPosition = point
-        ghostScale = 1.0
+        origin = point
+        position = point
+        scale = 1.0
         lastHapticDay = hit.day.date
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(.spring(response: 0.25, dampingFraction: 0.70)) {
-            ghostScale = 1.08
+            scale = 1.08
         }
     }
 
-    func moveGhost(to point: CGPoint) {
-        ghostCurrentPosition = point
-        guard let hit = hit(at: point), hit.day.date != lastHapticDay else { return }
+    func move(to point: CGPoint, env: Environment) {
+        position = point
+        guard let hit = hit(at: point, env: env), hit.day.date != lastHapticDay else { return }
         lastHapticDay = hit.day.date
         let now = Date()
         guard now.timeIntervalSince(lastHapticTime) >= 0.06 else { return }
@@ -143,62 +171,66 @@ extension CalendarView {
         UISelectionFeedbackGenerator().selectionChanged()
     }
 
-    func endGhost(at point: CGPoint?) {
-        guard ghostPayload != nil else { return }
-        guard let point, let hit = hit(at: point) else {
+    func end(at point: CGPoint?, env: Environment) {
+        guard payload != nil else { return }
+        guard let point, let hit = hit(at: point, env: env) else {
             flyBack()
             return
         }
-        let targetDay = hit.day
-        let targetCenter = hit.center
+
+        let cal = env.calendar
+        let targetDate = hit.day.date
 
         func settle(_ commit: @escaping () -> Void) {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                ghostCurrentPosition = targetCenter
-                ghostScale = 1.0
+                position = hit.center
+                scale = 1.0
             } completion: {
                 commit()
-                resetGhostState()
+                self.reset()
             }
         }
 
-        switch ghostPayload {
+        switch payload {
         case .newEvent:
-            settle { createEvent(on: targetDay.date) }
+            settle { self.createEvent(on: targetDate, env: env) }
         case .existingEvent(let event):
-            if cal.isDate(event.startDate, inSameDayAs: targetDay.date) {
+            if cal.isDate(event.startDate, inSameDayAs: targetDate) {
                 flyBack()
             } else {
-                settle { moveEvent(event, to: targetDay.date) }
+                settle { self.moveEvent(event, to: targetDate, env: env) }
             }
         case .existingTask(let task):
-            if let due = task.resolvedDueDate, cal.isDate(due, inSameDayAs: targetDay.date) {
+            if let due = task.resolvedDueDate, cal.isDate(due, inSameDayAs: targetDate) {
                 flyBack()
             } else {
-                settle { moveTask(task, to: targetDay.date) }
+                settle { self.moveTask(task, to: targetDate, env: env) }
             }
         case nil:
             break
         }
     }
 
-    func flyBack() {
+    private func flyBack() {
         withAnimation(.spring(response: 0.45, dampingFraction: 0.80)) {
-            ghostCurrentPosition = ghostOrigin
-            ghostScale = 1.0
+            position = origin
+            scale = 1.0
         } completion: {
-            resetGhostState()
+            self.reset()
         }
     }
 
-    func resetGhostState() {
-        ghostPayload = nil
+    private func reset() {
+        payload = nil
         lastHapticDay = nil
     }
 
-    // ── บันทึกการย้าย ─────────────────────────────────────
+    // ══════════════════════════════════════════════════════
+    // MARK: - บันทึกการย้าย
+    // ══════════════════════════════════════════════════════
 
-    func createEvent(on date: Date) {
+    private func createEvent(on date: Date, env: Environment) {
+        let cal = env.calendar
         let dayStart = cal.startOfDay(for: date)
         let newEvent = CalendarEvent(
             title: "กิจกรรมใหม่",
@@ -206,13 +238,16 @@ extension CalendarView {
             endDate: cal.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart,
             isAllDay: true
         )
-        modelContext.insert(newEvent)
-        try? modelContext.save()
-        selectedDate = date
-        activeSheet = .editNewGhost(newEvent)
+        env.modelContext.insert(newEvent)
+        try? env.modelContext.save()
+        env.onSelectDate(date)
+        env.onCreatedEvent(newEvent)
     }
 
-    func moveEvent(_ event: CalendarEvent, to date: Date) {
+    /// ย้ายทั้งก้อนโดยคงจำนวนวันเท่าเดิม (§5.3) — เวลาในวันของกิจกรรมที่ไม่ใช่
+    /// ทั้งวันต้องคงไว้ด้วย ไม่งั้นนัดบ่ายกลายเป็นเที่ยงคืน
+    private func moveEvent(_ event: CalendarEvent, to date: Date, env: Environment) {
+        let cal = env.calendar
         let originalStart = event.startDate
         let originalEnd = event.endDate
         let duration = originalEnd.timeIntervalSince(originalStart)
@@ -230,20 +265,21 @@ extension CalendarView {
         event.startDate = newStart
         event.endDate = newStart.addingTimeInterval(duration)
         event.updatedAt = .now
-        try? modelContext.save()
+        try? env.modelContext.save()
         Task { await NotificationManager.shared.schedule(for: event) }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
 
-        showMoveToast(dateLabel: newStart.thaiShortNoYearString) {
+        showToast(dateLabel: newStart.thaiShortNoYearString) {
             event.startDate = originalStart
             event.endDate = originalEnd
             event.updatedAt = .now
-            try? modelContext.save()
+            try? env.modelContext.save()
             Task { await NotificationManager.shared.schedule(for: event) }
         }
     }
 
-    func moveTask(_ task: Assignment, to date: Date) {
+    private func moveTask(_ task: Assignment, to date: Date, env: Environment) {
+        let cal = env.calendar
         guard let originalDue = task.resolvedDueDate else { return }
         var comps = cal.dateComponents([.year, .month, .day], from: date)
         let time = cal.dateComponents([.hour, .minute, .second], from: originalDue)
@@ -251,58 +287,29 @@ extension CalendarView {
         let newDue = cal.date(from: comps) ?? originalDue
 
         task.dueDate = newDue
-        try? modelContext.save()
+        try? env.modelContext.save()
         Task { await NotificationManager.shared.schedule(for: task) }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
 
-        showMoveToast(dateLabel: newDue.thaiShortNoYearString) {
+        showToast(dateLabel: newDue.thaiShortNoYearString) {
             task.dueDate = originalDue
-            try? modelContext.save()
+            try? env.modelContext.save()
             Task { await NotificationManager.shared.schedule(for: task) }
         }
     }
 
-    // ── Ghost overlay ────────────────────────────────────
+    // ══════════════════════════════════════════════════════
+    // MARK: - Toast "ย้ายไป... เลิกทำ"
+    // ══════════════════════════════════════════════════════
 
-    @ViewBuilder
-    var ghostOverlay: some View {
-        if let payload = ghostPayload {
-            GhostPillView(
-                label: ghostLabel(for: payload),
-                color: ghostColor(for: payload),
-                scale: ghostScale,
-                position: ghostCurrentPosition
-            )
-        }
-    }
-
-    func ghostLabel(for payload: CalendarGhostPayload) -> String {
-        switch payload {
-        case .newEvent: return "กิจกรรมใหม่"
-        case .existingEvent(let e): return e.subjectName.isEmpty ? e.title : e.subjectName
-        case .existingTask(let t): return t.subjectName.isEmpty ? t.title : t.subjectName
-        }
-    }
-
-    func ghostColor(for payload: CalendarGhostPayload) -> Color {
-        switch payload {
-        case .newEvent: return Theme.Colors.primary
-        case .existingEvent(let e): return e.color
-        case .existingTask(let t): return subjectColor(for: t)
-        }
-    }
-
-    // ── Move toast ("ย้ายไป... เลิกทำ") ────────────────────
-
-    func showMoveToast(dateLabel: String, undo: @escaping () -> Void) {
+    private func showToast(dateLabel: String, undo: @escaping () -> Void) {
         toastDismissTask?.cancel()
         withAnimation { toastMessage = "ย้ายไป \(dateLabel) แล้ว" }
         toastUndo = undo
-        toastDismissTask = Task {
+        toastDismissTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(4))
             guard !Task.isCancelled else { return }
-            withAnimation { toastMessage = nil }
-            toastUndo = nil
+            self?.dismissToast(runUndo: false)
         }
     }
 
@@ -313,24 +320,68 @@ extension CalendarView {
         toastUndo = nil
     }
 
-    @ViewBuilder
-    var moveToast: some View {
-        if let message = toastMessage {
+    // ── ป้ายบน ghost ──────────────────────────────────────
+
+    func ghostLabel(env: Environment) -> String {
+        switch payload {
+        case .newEvent: return "กิจกรรมใหม่"
+        case .existingEvent(let e): return e.subjectName.isEmpty ? e.title : e.subjectName
+        case .existingTask(let t): return t.subjectName.isEmpty ? t.title : t.subjectName
+        case nil: return ""
+        }
+    }
+
+    func ghostColor(env: Environment) -> Color {
+        switch payload {
+        case .newEvent: return Theme.Colors.primary
+        case .existingEvent(let e): return e.color
+        case .existingTask(let t): return env.subjectColor(t)
+        case nil: return Theme.Colors.primary
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MARK: - ชั้นที่วาดของตัวควบคุม
+// ══════════════════════════════════════════════════════════════
+
+struct CalendarGhostOverlay: View {
+    let controller: CalendarDragController
+    let env: CalendarDragController.Environment
+
+    var body: some View {
+        if controller.isDragging {
+            GhostPillView(
+                label: controller.ghostLabel(env: env),
+                color: controller.ghostColor(env: env),
+                scale: controller.scale,
+                position: controller.position
+            )
+        }
+    }
+}
+
+struct CalendarMoveToast: View {
+    let controller: CalendarDragController
+
+    var body: some View {
+        if let message = controller.toastMessage {
             HStack {
                 Text(message)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(Theme.Font.body)
                     .foregroundStyle(Theme.Colors.textPrimary)
                 Spacer()
-                Button("เลิกทำ") { dismissToast(runUndo: true) }
-                    .font(.system(size: 14, weight: .semibold))
+                Button("เลิกทำ") { controller.dismissToast(runUndo: true) }
+                    .font(Theme.Font.body)
+                    .fontWeight(.semibold)
                     .foregroundStyle(Theme.Colors.primaryDeep)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.md)
             .background(Theme.Colors.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control))
             .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Theme.Spacing.lg)
             .padding(.bottom, 90)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }

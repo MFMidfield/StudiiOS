@@ -69,11 +69,12 @@ struct CalendarSearchView: View {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(groupedResults, id: \.month) { group in
                         Text(group.month)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(Theme.Font.label)
+                            .fontWeight(.semibold)
                             .foregroundStyle(Theme.Colors.textSecondary)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
-                            .padding(.bottom, 6)
+                            .padding(.horizontal, Theme.Spacing.lg)
+                            .padding(.top, Theme.Spacing.lg)
+                            .padding(.bottom, Theme.Spacing.xs)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
                         VStack(spacing: 0) {
