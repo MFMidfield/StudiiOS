@@ -25,7 +25,7 @@
 | ขั้น | งาน | สถานะ |
 |---|---|---|
 | 1 | แตกไฟล์ตาม §6 ย้ายโค้ดเดิมเข้าไปโดยไม่เปลี่ยนพฤติกรรม | ✅ **`xcodebuild` เขียว 15 ส.ค.** — ยังไม่ได้ลองด้วยตา |
-| 2 | `MonthLayoutEngine` + เทสต์ | ⬜ |
+| 2 | `MonthLayoutEngine` + เทสต์ | ✅ **เทสต์ผ่าน 10/10 บน simulator 15 ส.ค.** |
 | 3 | `CalendarWeekRow` + `CalendarEventBar` วาดจาก layout | ⬜ |
 | 4 | `ScrollView` 12 เดือน + หัวเดือน/ปี + ปุ่มวันนี้ | ⬜ |
 | 5 | `CalendarDaySheet` + การแตะ | ⬜ |
@@ -43,6 +43,22 @@
 - `CalendarDragController.swift` ยังเป็น **`extension CalendarView`** ไม่ใช่คลาสของตัวเอง — ขั้นนี้ห้ามเปลี่ยนพฤติกรรม · **ขั้นที่ 6 ค่อยแปลง**
   ผลข้างเคียง: สถานะ ghost/toast + `cal` + `itemsFor` + `subjectColor` + `CalendarSheet` เปลี่ยนจาก `private` เป็น `internal` (มีคอมเมนต์กำกับไว้ในโค้ดแล้ว) ขั้นที่ 6 ปิดกลับ
 - ค่า hardcode (`.font(.system(size:))` · `cornerRadius: 16` · `.padding(16)`) **ยังอยู่ครบตามของเดิม** — ขั้น 3–5 ค่อยเปลี่ยนเป็น `Theme` ตอนเขียน UI ใหม่ ยังไม่ต้องรันสคริปต์ตรวจ hardcode กับโมดูลนี้
+
+**ขั้นที่ 2 ทำอะไรจริง** — `Core/Calendar/MonthLayoutEngine.swift` (161) + `StudiiOSTests/MonthLayoutEngineTests.swift` (144)
+เทสต์ 5 ข้อที่สเปคสั่ง + เคสขอบอีก 5 (นอกสัปดาห์ · ลำดับ input ไม่มีผล · เวลาในวันไม่มีผล · ช่วงกลับหัว · `maxLanes` 1) **ผ่านครบ 10**
+
+> ⚠️ **เบี่ยงจากสเปค §4: `layout(items:)` รับ `[MonthLayoutItem]` ไม่ใช่ `[CalendarItem]`**
+> `CalendarItem` ถือ `Color` (SwiftUI) + `sourceEvent`/`sourceTask` (SwiftData) — รับตรงๆ จะขัดข้อบังคับ "ฟังก์ชันบริสุทธิ์ ไม่ import SwiftUI" ของสเปคเอง
+> `MonthLayoutItem` มีแค่ `id` · `startDay` · `endDay` · `sortRank` · `createdAt` (Foundation ล้วน)
+>
+> **ขั้นที่ 3 ต้องทำต่อ:** เขียนตัวแปลงใน `CalendarItemBuilder`
+> — `CalendarItem` **ไม่มีวันสิ้นสุด** (มีแค่ `date`) แถบหลายวันจึงต้องอ่าน `CalendarEvent.endDate` ตรงๆ ตอนสร้าง `MonthLayoutItem`
+> — กิจกรรมทั้งวันเก็บ `endDate` แบบ**ไม่รวมปลาย** (เที่ยงคืนวันถัดไป) ต้อง −1 วันก่อนส่งเข้า engine ไม่งั้นแถบยาวเกินไปหนึ่งช่อง
+> — `CalendarWeekRow` รับ `WeekLayout` + ตาราง `[id: CalendarItem]` คู่กัน ไม่ต้องแตะ `CalendarItem.swift` ตาม §6
+
+**🔴 เจอของเสียที่ไม่เกี่ยวกับก้อน G:** `GPAXCalculatorTests/achievedWhenRequiredIsZeroOrBelow()` **แดงอยู่ก่อนแล้ว**
+(stash โค้ดก้อน G ออกแล้วรันบน HEAD เดิม ก็ยังแดง) — เทสต์คาด `.achieved` เมื่อ 1 เทอม GPA 4.00 เป้า 3.00
+ยังไม่แตะเพราะ `GPAXCalculator` อยู่ในลิสต์ห้ามแก้ logic · **ต้องให้ Few ตัดสินว่าเทสต์ผิดหรือสูตรผิด**
 
 ### การตัดสินของ Few — 15 ส.ค. 2569
 
