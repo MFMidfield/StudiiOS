@@ -30,30 +30,10 @@ struct OnboardingFlowView: View {
                 }
         }
         .tint(Theme.Colors.primaryDeep)
-        .overlay(alignment: .topTrailing) { debugCloseButton }
         .onAppear(perform: restoreSavedStep)
         .onChange(of: current) { _, step in
             OnboardingGate.save(step: step)
         }
-    }
-
-    /// Only while replaying from Settings — the real flow has no way out on purpose.
-    @ViewBuilder
-    private var debugCloseButton: some View {
-        #if DEBUG
-        if OnboardingGate.isReplaying {
-            Button {
-                OnboardingGate.endReplay()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-                    .padding(8)
-                    .background(.ultraThinMaterial, in: Circle())
-            }
-            .padding(.trailing, Theme.Spacing.md)
-        }
-        #endif
     }
 
     // MARK: - Routing

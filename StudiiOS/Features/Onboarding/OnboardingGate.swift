@@ -122,8 +122,8 @@ enum OnboardingGate {
     /// on the real path or it tests the wrapper instead.
     static let replayKey = "com.studentos.onboarding.debugReplay"
 
-    static var isReplaying: Bool { UserDefaults.standard.bool(forKey: replayKey) }
-
+    /// อ่านผ่าน `@AppStorage(OnboardingGate.replayKey)` ใน RootContainerView —
+    /// จบ flow เมื่อไรถึงจะออก ไม่มีปุ่มปิดกลางทาง (Few ตัดออก 15 ส.ค.)
     static func startReplay() { UserDefaults.standard.set(true, forKey: replayKey) }
 
     static func endReplay() { UserDefaults.standard.removeObject(forKey: replayKey) }

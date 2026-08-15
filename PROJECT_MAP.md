@@ -340,6 +340,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                              (เรียกใน `.task` = ผู้ใช้เดิมเห็น onboarding แว้บนึง) — เครื่องที่เคยจบ
     │   │                              `hasCompletedSetupSummary` ถือว่าจบเลย แล้วลบ key เก่าทั้ง 5 ทิ้ง
     │   │                              `#if DEBUG` มีธง replay (`startReplay/endReplay`) ให้ Settings เรียก
+    │   │                              — **ไม่มีปุ่มปิดกลางทาง** ต้องเดินจนจบ flow ถึงจะออก (Few ตัดออก 15 ส.ค.)
     │   ├── OnboardingFlowView.swift   `NavigationStack(path: [OnboardingStep])` · จำขั้นที่ค้างไว้ตอน force-quit
     │   │                              · ม.4 เทอม 1 = **ข้ามหน้า grades ตั้งแต่ตอนกดถัดไปที่หน้า schedule**
     │   │                              (ไม่ใช่เข้าไปแล้วเด้งออก — เด้งออกเองแปลว่าปัดย้อนกลับไม่ได้อีก)
