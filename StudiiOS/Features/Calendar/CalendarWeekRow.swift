@@ -144,10 +144,10 @@ struct CalendarDayCell: View {
 
         VStack(spacing: 0) {
             ZStack {
+                // วงกลมมีเฉพาะ "วันนี้" — วันที่เลือกใช้แค่สีตัวเลข
+                // (วงกลมของวันที่เลือกเด้งตามนิ้วทุกครั้งที่แตะ Few ว่ารก)
                 if todayFlag {
                     Circle().fill(Theme.Colors.primaryDeep).frame(width: 26, height: 26)
-                } else if selectedFlag {
-                    Circle().fill(Theme.Colors.primary.opacity(0.12)).frame(width: 26, height: 26)
                 }
                 Text("\(calendar.component(.day, from: day.date))")
                     .font(Theme.Font.label)

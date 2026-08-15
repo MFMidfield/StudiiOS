@@ -77,11 +77,23 @@ struct EventFormSheet: View {
         _subjectName      = State(initialValue: event.subjectName)
         _isAllDay         = State(initialValue: event.isAllDay)
         _startDate        = State(initialValue: event.startDate)
-        _endDate          = State(initialValue: event.endDate)
+        // กิจกรรมทั้งวันเก็บ `endDate` แบบ**ไม่รวมปลาย** (กิจกรรมวันที่ 4 เก็บ
+        // เที่ยงคืนของวันที่ 5) แต่ `save()` บวก +1 วันให้อีกรอบเสมอ —
+        // เอาค่าดิบมาโชว์ = กิจกรรมยาวขึ้นวันหนึ่งทุกครั้งที่กดบันทึก
+        _endDate          = State(initialValue: Self.displayEndDate(of: event))
         _selectedColorHex = State(initialValue: event.colorHex)
         _alert            = State(initialValue: event.alert)
         _customAlertMinutes = State(initialValue: event.customAlertMinutes)
         _selectedTagNames = State(initialValue: Set(event.tags.map { $0.name }))
+    }
+
+    /// วันสิ้นสุดแบบที่ผู้ใช้เข้าใจ (รวมปลาย) — คู่กับการบวก +1 วันใน `save()`
+    private static func displayEndDate(of event: CalendarEvent) -> Date {
+        guard event.isAllDay else { return event.endDate }
+        let cal = Calendar(identifier: .gregorian)
+        let inclusive = cal.date(byAdding: .day, value: -1, to: cal.startOfDay(for: event.endDate))
+            ?? event.startDate
+        return max(inclusive, cal.startOfDay(for: event.startDate))
     }
 
     private var isEditing: Bool { existingEvent != nil }

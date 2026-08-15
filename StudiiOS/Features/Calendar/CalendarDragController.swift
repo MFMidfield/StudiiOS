@@ -100,10 +100,13 @@ final class CalendarDragController {
         let index = row * 7 + column
         guard index >= 0, index < month.days.count else { return nil }
 
+        // จุดที่ ghost ไปหยุด = ตำแหน่งของ **แถบเลนบนสุด** ในช่องนั้น
+        // ไม่ใช่กลางช่อง — ปล่อยนิ้วแล้วจะเลื่อนไปเข้าแถวใต้เลขวันพอดี ไม่เด้งลอย
         let center = CGPoint(
             x: frame.minX + colWidth * (CGFloat(column) + 0.5),
             y: frame.minY + CalendarGeometry.monthLabelHeight
-                + CalendarGeometry.rowHeight * (CGFloat(row) + 0.5)
+                + CalendarGeometry.rowHeight * CGFloat(row)
+                + CalendarGeometry.laneTop + CalendarGeometry.laneHeight / 2
         )
 
         return Hit(

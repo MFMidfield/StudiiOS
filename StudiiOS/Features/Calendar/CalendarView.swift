@@ -283,7 +283,8 @@ struct CalendarView: View {
                 onSelect: openItem,
                 onAddEvent: { present(.add($0)) }
             )
-            .presentationDetents([.medium, .large])
+            // เต็มจอไปเลย — Few ว่าเปิดครึ่งจอแล้วต้องลากขึ้นเองมันเกินจำเป็น
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         case .search:
             CalendarSearchSheet(
