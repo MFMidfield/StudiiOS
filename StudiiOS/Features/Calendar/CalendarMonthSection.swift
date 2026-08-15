@@ -87,7 +87,10 @@ struct CalendarMonthSection: View {
     let days: [CalendarDay]
     let selectedDate: Date
     let calendar: Calendar
-    let itemsFor: (Date) -> [CalendarItem]
+    let itemsByID: [String: CalendarItem]
+    /// เลขแถว → ผลจัดเลนของสัปดาห์นั้น (คำนวณที่ `CalendarView` เพื่อให้ ghost drag
+    /// ใช้ผลชุดเดียวกันตอน hit-test)
+    let weekLayout: (Int) -> WeekLayout
     let isBeingDragged: (CalendarItem) -> Bool
     let onSelectDay: (Date) -> Void
 
@@ -99,7 +102,8 @@ struct CalendarMonthSection: View {
                     days: Array(days[(row * 7)..<(row * 7 + 7)]),
                     selectedDate: selectedDate,
                     calendar: calendar,
-                    itemsFor: itemsFor,
+                    layout: weekLayout(row),
+                    itemsByID: itemsByID,
                     isBeingDragged: isBeingDragged,
                     onSelectDay: onSelectDay
                 )

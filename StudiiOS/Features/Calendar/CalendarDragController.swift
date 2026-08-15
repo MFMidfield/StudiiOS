@@ -55,25 +55,28 @@ extension CalendarView {
         return CGPoint(x: size.width * (CGFloat(col) + 0.5), y: size.height * (CGFloat(row) + 0.5))
     }
 
-    /// ตำแหน่งนิ้วในช่อง → pill ไหน ต้องตรงกับ layout จริงใน `CalendarDayCell`
-    /// (เลขวันสูง 24 + spacing 3 = 27, แต่ละ pill สูง 14 + spacing 2 = 16)
+    /// ตำแหน่งนิ้ว → แถบไหน · คิดจาก `WeekLayout` ชุดเดียวกับที่วาด ไม่ใช่จากลำดับ
+    /// pill ในช่องอีกแล้ว (08_Calendar §5.1) — ขั้นที่ 6 จะย้ายมาคิดจาก frame ของแถบตรงๆ
     func hitTestItem(at point: CGPoint, cellIndex idx: Int) -> CalendarItem? {
-        let days = calendarDays
-        guard idx < days.count, days[idx].inMonth else { return nil }
-        let items = itemsFor(days[idx].date)
-        guard !items.isEmpty else { return nil }
-
         let size = cellSize
         guard size.height > 0 else { return nil }
+
         let row = idx / 7
+        let column = idx % 7
         let localY = point.y - CGFloat(row) * size.height
-        let numberRowHeight: CGFloat = 27
-        let pillRowHeight: CGFloat = 16
-        guard localY >= numberRowHeight else { return nil }
-        let pillIndex = Int((localY - numberRowHeight) / pillRowHeight)
-        let visibleCount = min(items.count, 2)
-        guard pillIndex >= 0, pillIndex < visibleCount else { return nil }
-        return items[pillIndex]
+        guard localY >= CalendarGeometry.laneTop else { return nil }
+
+        let laneStride = CalendarGeometry.laneHeight + CalendarGeometry.laneSpacing
+        let lane = Int((localY - CalendarGeometry.laneTop) / laneStride)
+        guard lane >= 0, lane < CalendarGeometry.maxLanes else { return nil }
+
+        let bar = weekLayout(row: row).bars.first {
+            $0.lane == lane
+                && column >= $0.startColumn
+                && column < $0.startColumn + $0.columnSpan
+        }
+        guard let bar else { return nil }
+        return itemsByID[bar.itemID]
     }
 
     // ── Gesture ──────────────────────────────────────────

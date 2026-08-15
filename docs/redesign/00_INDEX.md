@@ -26,7 +26,7 @@
 |---|---|---|
 | 1 | แตกไฟล์ตาม §6 ย้ายโค้ดเดิมเข้าไปโดยไม่เปลี่ยนพฤติกรรม | ✅ **`xcodebuild` เขียว 15 ส.ค.** — ยังไม่ได้ลองด้วยตา |
 | 2 | `MonthLayoutEngine` + เทสต์ | ✅ **เทสต์ผ่าน 10/10 บน simulator 15 ส.ค.** |
-| 3 | `CalendarWeekRow` + `CalendarEventBar` วาดจาก layout | ⬜ |
+| 3 | `CalendarWeekRow` + `CalendarEventBar` วาดจาก layout | ✅ **`xcodebuild` เขียว 15 ส.ค.** — 🔴 **ยังไม่ได้ดูด้วยตา** |
 | 4 | `ScrollView` 12 เดือน + หัวเดือน/ปี + ปุ่มวันนี้ | ⬜ |
 | 5 | `CalendarDaySheet` + การแตะ | ⬜ |
 | 6 | ghost drag → `CalendarDragController` (เฟส 1) | ⬜ |
@@ -55,6 +55,19 @@
 > — `CalendarItem` **ไม่มีวันสิ้นสุด** (มีแค่ `date`) แถบหลายวันจึงต้องอ่าน `CalendarEvent.endDate` ตรงๆ ตอนสร้าง `MonthLayoutItem`
 > — กิจกรรมทั้งวันเก็บ `endDate` แบบ**ไม่รวมปลาย** (เที่ยงคืนวันถัดไป) ต้อง −1 วันก่อนส่งเข้า engine ไม่งั้นแถบยาวเกินไปหนึ่งช่อง
 > — `CalendarWeekRow` รับ `WeekLayout` + ตาราง `[id: CalendarItem]` คู่กัน ไม่ต้องแตะ `CalendarItem.swift` ตาม §6
+
+**ขั้นที่ 3 ทำอะไรจริง** — แถวสัปดาห์วาดจาก `WeekLayout` แล้ว (`ZStack` + `.offset` ตาม §4.1)
+
+- `CalendarGeometry` (ใน `CalendarWeekRow.swift`) เป็น**จุดเดียว**ที่รู้ขนาดแถว — 4 เลน · แถบสูง 17 · ห่าง 3 · แถวสูง 132
+  ของเดิมแถวสูง 76 โชว์ 2 ชิป · **หนึ่งเดือนสูงกว่าหนึ่งจอแล้ว ต้องเลื่อน** (Few รับทราบไว้ใน §3.1)
+- `CalendarEventBar` เป็นชิป 3 แบบตาม §3.3 · ข้อความ = **ชื่อเต็ม** ไม่ใช่ชื่อวิชาแบบเดิม · ท่อนต่อเติม " (ต่อ)"
+- ช่องวันไม่วาดชิปของตัวเองแล้ว เหลือแค่เลขวัน + พื้นที่แตะ · เสาร์/อาทิตย์จางลงตาม §3.2
+- `+N` วางต่อท้ายเลนที่ 4 **เฉพาะคอลัมน์ที่มีของซ่อนจริง**
+- `MonthLayoutEngine` ถูกเรียกที่ `CalendarView.weekLayout(row:)` **จุดเดียว** แล้วส่งผลชุดเดียวกันให้ทั้งการวาดและ ghost drag
+- `hitTestItem` เลิกเดาจากลำดับ pill ในช่อง เปลี่ยนเป็นหาแถบจาก `(lane, column)` ใน `WeekLayout`
+- **ชั้นแถบยัง `.allowsHitTesting(false)`** — แตะชิปเปิดฟอร์มเป็นงานขั้นที่ 5 ตอนนี้แตะตรงไหนก็เลือกวันเหมือนเดิม
+- `barRadius` 5 (§3.1) เป็นค่าประจำโมดูล **ไม่มี token ขนาดนี้ใน `Theme.Radius`** — ถ้า Few อยากได้เป็น token ต้องเพิ่มใน `Theme.swift` เอง (agent ห้ามแตะ `Core/DesignSystem/`)
+- วัดเวลา type-check ทั้งโมดูลแล้ว ไม่มีไฟล์ไหนเกิน 400ms (`PortfolioItemSheet.body` 1401ms เป็นหนี้เก่าของก้อน F)
 
 **🔴 เจอของเสียที่ไม่เกี่ยวกับก้อน G:** `GPAXCalculatorTests/achievedWhenRequiredIsZeroOrBelow()` **แดงอยู่ก่อนแล้ว**
 (stash โค้ดก้อน G ออกแล้วรันบน HEAD เดิม ก็ยังแดง) — เทสต์คาด `.achieved` เมื่อ 1 เทอม GPA 4.00 เป้า 3.00

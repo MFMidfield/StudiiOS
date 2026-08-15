@@ -85,14 +85,34 @@ struct CalendarView: View {
         CalendarMonthBuilder.days(of: currentMonth, calendar: cal)
     }
 
-    /// ทุก `CalendarEvent`/`Assignment` (ที่มีวันครบกำหนด) แปลงเป็น `CalendarItem`
-    /// ครั้งเดียวแล้ว index ตาม `startOfDay`
-    private var itemsByDay: [Date: [CalendarItem]] {
-        CalendarItemBuilder.itemsByDay(
+    /// ทุก `CalendarEvent`/`Assignment` (ที่มีวันครบกำหนด) แปลงเป็น `CalendarItem` ชุดเดียว
+    /// แล้วแตกเป็นตาราง 3 แบบให้ส่วนที่ต้องใช้ต่างกัน
+    private var allItems: [CalendarItem] {
+        CalendarItemBuilder.items(
             events: allEvents,
             tasks: allAssignments.inTerm(activeTerm),
-            calendar: cal,
             color: subjectColor
+        )
+    }
+
+    private var itemsByDay: [Date: [CalendarItem]] {
+        CalendarItemBuilder.itemsByDay(allItems, calendar: cal)
+    }
+
+    var itemsByID: [String: CalendarItem] {
+        CalendarItemBuilder.byID(allItems)
+    }
+
+    /// ผลจัดเลนของแถวที่ `row` — ใช้ทั้งตอนวาดและตอน hit-test ของ ghost drag
+    func weekLayout(row: Int) -> WeekLayout {
+        let days = calendarDays
+        let index = row * 7
+        guard index < days.count else { return .empty }
+        return MonthLayoutEngine.layout(
+            items: CalendarItemBuilder.layoutItems(allItems, calendar: cal),
+            weekStart: days[index].date,
+            maxLanes: CalendarGeometry.maxLanes,
+            calendar: cal
         )
     }
 
@@ -220,7 +240,8 @@ struct CalendarView: View {
                 days: calendarDays,
                 selectedDate: selectedDate,
                 calendar: cal,
-                itemsFor: itemsFor,
+                itemsByID: itemsByID,
+                weekLayout: weekLayout(row:),
                 isBeingDragged: isBeingDragged,
                 onSelectDay: { selectedDate = $0 }
             )
