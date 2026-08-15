@@ -382,6 +382,7 @@ struct SettingsView: View {
         deleteAll(ExamEvent.self)
         deleteAll(ScheduleEntry.self)
         deleteAll(FocusSession.self)
+        deleteAll(FocusTag.self)
         deleteAll(PortfolioItem.self)
         deleteAll(PortfolioImage.self)
         PortfolioImageStore.deleteAll()

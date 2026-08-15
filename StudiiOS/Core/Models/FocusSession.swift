@@ -51,6 +51,12 @@ final class FocusSession {
     /// (ชื่อ `wasLocked` คงไว้ตามเดิม เปลี่ยนชื่อ property = เปลี่ยน schema = crash)
     var wasLocked: Bool = false
 
+    /// สำเนาแท็ก ณ ตอนที่ทำรอบนี้ — ไม่ใช่ relation (ดูเหตุผลใน FocusTag.swift)
+    /// ว่างทั้ง 3 ตัว = รอบนี้ไม่ได้เลือกแท็ก
+    var tagID: String = ""
+    var tagName: String = ""
+    var tagColorHex: String = ""
+
     var phase: PomodoroPhase {
         get { PomodoroPhase(rawValue: kindRaw) ?? .focus }
         set { kindRaw = newValue.rawValue }
@@ -62,7 +68,8 @@ final class FocusSession {
         completed: Bool = true,
         phase: PomodoroPhase = .focus,
         endedAt: Date? = nil,
-        wasLocked: Bool = false
+        wasLocked: Bool = false,
+        tag: FocusTagSnapshot? = nil
     ) {
         self.startedAt = startedAt
         self.durationSeconds = durationSeconds
@@ -70,5 +77,8 @@ final class FocusSession {
         self.kindRaw = phase.rawValue
         self.endedAt = endedAt
         self.wasLocked = wasLocked
+        self.tagID = tag?.id ?? ""
+        self.tagName = tag?.name ?? ""
+        self.tagColorHex = tag?.colorHex ?? ""
     }
 }

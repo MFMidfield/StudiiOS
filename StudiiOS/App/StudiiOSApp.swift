@@ -20,6 +20,7 @@ struct StudiiOSApp: App {
             ExamEvent.self,
             ScheduleEntry.self,
             FocusSession.self,
+            FocusTag.self,
             PortfolioItem.self,
             PortfolioImage.self,
             CareerInterestResult.self,

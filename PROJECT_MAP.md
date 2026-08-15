@@ -1,7 +1,18 @@
 # PROJECT_MAP — Student OS (StudiiOS)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-15 — **ยกเครื่อง onboarding ทั้งชุด (ก้อน 0–6)** Few ยืนยันด้วยตาแล้วว่าใช้ได้จริง
+> **อัปเดตล่าสุด:** 2026-08-15 — **ยกเครื่องโหมดโฟกัสทั้งโมดูล** (ยังไม่ได้คอมไพล์ รอ Few ยืนยัน)
+>
+> ### โหมดโฟกัสรอบใหม่ (อ่านก่อนแตะอะไรใน `Features/FocusMode/`)
+> 1. **หน้าเดียวจบ** — `FocusModeView` สลับ `FocusHomeView` ↔ `FocusRunningView` · หน้ากำลังโฟกัส
+>    ไม่มีปุ่มควบคุมเลย หยุดโดย**กดค้างที่ไหนก็ได้ 5 วินาที** เท่านั้น
+> 2. **เลือกเวลาด้วยไม้บรรทัดเลื่อนซ้ายขวา** 1–180 นาที ทีละ 1 · ซ้ายสุด = **∞ นับขึ้น หยุดเองที่ 180 นาที**
+>    (`focusMinutes == 0` คือ ∞ — ตัวเลข 0 นี้คือสัญญาณ ห้ามตีความว่า "ยังไม่ตั้งค่า")
+> 3. **พักคงที่ 5 นาที ถามทุกครั้ง** ไม่มีพักยาว ไม่มีการนับรอบ ไม่มี auto-continue ไม่มีหน้าตั้งค่า Pomodoro
+> 4. **แท็ก** `FocusTag` (@Model ใหม่ — อยู่ใน Schema แล้ว) · `FocusSession` เก็บ**สำเนา** ไม่ใช่ relation
+> 5. **สถิติเก็บไว้** ย้ายไปอยู่ใน sheet (ปุ่มกราฟซ้ายบน) · การ์ด "โฟกัสวันนี้" ใน Dashboard ยังทำงานเหมือนเดิม
+>
+> ก่อนหน้านั้น 2026-08-15 — **ยกเครื่อง onboarding ทั้งชุด (ก้อน 0–6)** Few ยืนยันด้วยตาแล้วว่าใช้ได้จริง
 >
 > ### สิ่งที่เปลี่ยนทั้งแอปจากรอบนี้ (อ่านก่อนแตะอะไรที่เกี่ยวกับเทอม/วิชา/โปรไฟล์)
 > 1. **แอปรับแค่ ม.4–ม.6** — `GPAXSettings.currentGradeLevel` รับ 4-6 · `TermStore.allSlots` เหลือ 6 ช่อง ·
@@ -112,7 +123,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
 │   │                                    ของตัวเองไว้เป็น "ping" แม้ไม่ได้อ่านค่าตรงๆ — ไม่งั้น SwiftUI ไม่รู้ว่า UserDefaults
 │   │                                    เปลี่ยน (ดูตัวอย่างที่ GradeCenterView/DashboardView/SettingsView)
 │   ├── Logging/AppLog.swift             print-based console log (🔵🟠🔴)
-│   ├── Models/                          (15 ไฟล์ — ดูตาราง §3, รวม Term.swift + TermSubject.swift)
+│   ├── Models/                          (21 ไฟล์ — ดูตาราง §3, รวม Term.swift + TermSubject.swift + FocusTag.swift)
 │   ├── Career/                          RIASEC screening inventory v2 (PLAN_RIASEC.md) — logic ล้วน ไม่มี View
 │   │   ├── RIASECDimension.swift        enum R/I/A/S/E/C (CaseIterable — **ลำดับ declaration คือลำดับ tie-break หลัก**) + thaiName/groupName/color/symbolName
 │   │   ├── RIASECItem.swift             18 ข้อ (`.all`) + Likert label 1-5 — น้ำหนัก secondary balance ทุกมิติรวม 1.0 (RIASECScorerTests คุ้ม invariant นี้)
@@ -260,21 +271,30 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                                    รูปแบบเดียวกับ `AssignmentListView.toggleDone`) ประกาศ `EmptyRow` (ใช้ร่วม
     │                                    ในโมดูล Dashboard เท่านั้น) แถวมีขีดสีวิชา (lookup จากชื่อวิชา — `Assignment`
     │                                    เก็บวิชาเป็น String ไม่ใช่ relation) + ป้ายวันเป็น `PillLabel`
-    ├── FocusMode/   โหมดโฟกัส/Pomodoro — ย้ายออกจาก Portfolio แล้ว
+    ├── FocusMode/   โหมดโฟกัส — **ยกเครื่องทั้งโมดูล 15 ส.ค. 2569** (สเปคจาก Few 30 ข้อ)
     │                ⚠️ **ไม่มีหน้าจอล็อกในแอปแล้ว** — `FocusLockOverlay.swift` ถูกลบตามคำสั่ง Few
     │                  (2026-08-09) เหลือการบล็อกแอปอื่นผ่าน Screen Time API อย่างเดียว
     │                  ห้ามใส่กลับโดยไม่ถามก่อน · โค้ดเดิมอยู่ใน commit `4626607`
-    │   ├── PomodoroSettings.swift   (70)  **จุดเดียวที่รู้จัก UserDefaults key ของ Pomodoro**
-    │   │                                  ห้ามเขียน key ตรงๆ ที่อื่น · duration(for:) แปลง phase → วินาที
-    │   ├── PomodoroEngine.swift     (328) `@Observable @MainActor` singleton — **หัวใจของโหมดโฟกัส**
-    │   │                                  ⚠️ **นับจาก `deadline: Date` ไม่ใช่นับ tick** ห้ามกลับไปใช้
+    │                ⚠️ **ไม่มีหน้า "ตั้งค่า Pomodoro" แล้ว** (โละทิ้ง) · ไม่มีพักยาว · ไม่มีการนับรอบ
+    │                  · ไม่มีปุ่มหยุดชั่วคราว · ไม่มีปุ่มปลดบล็อกฉุกเฉิน — ห้ามใส่กลับโดยไม่ถาม
+    │   ├── PomodoroSettings.swift   (68)  **จุดเดียวที่รู้จัก UserDefaults key ของโหมดโฟกัส**
+    │   │                                  เหลือ 3 key: `focusMinutes` (**`0` = โหมด ∞**) ·
+    │   │                                  `blockAppsEnabled` · `selectedTagID`
+    │   │                                  พักคงที่ `breakMinutes = 5` ผู้ใช้เปลี่ยนไม่ได้ ·
+    │   │                                  `countUpSuccessSeconds = 600` (∞ ที่ทำได้ ≥10 นาที = สำเร็จ)
+    │   ├── PomodoroEngine.swift     (330) `@Observable @MainActor` singleton — **หัวใจของโหมดโฟกัส**
+    │   │                                  ⚠️ **นับจาก Date ไม่ใช่นับ tick** ห้ามกลับไปใช้
     │   │                                    `secondsRemaining -= 1` เด็ดขาด (ของเดิมพังเพราะข้อนี้ —
     │   │                                    Timer หยุดตอนแอปเข้า background → เวลาค้าง)
     │   │                                  Timer 0.5 วิ ใช้แค่กระตุ้นให้ View วาดใหม่ (`tickToken`)
+    │   │                                  `Mode.countUp` = ∞ นับขึ้นจาก 0 หยุดเองที่ 180 นาที
+    │   │                                    (มี `deadline` เหมือนกัน คือเพดาน ไม่ใช่เส้นชัย)
+    │   │                                  `isAskingForBreak` = จบรอบโฟกัสแล้วรอผู้ใช้ตอบว่าพักไหม —
+    │   │                                    **ไม่มี auto-continue อีกแล้ว** ถามทุกครั้ง
+    │   │                                    กลับมาช้ากว่า 5 นาทีหลังหมดเวลา = ไม่ถาม (จบรอบเงียบๆ)
+    │   │                                  `activeTag: FocusTagSnapshot?` ติดไปกับ FocusSession ตอนบันทึก
     │   │                                  สถานะทั้งหมด mirror ลง UserDefaults (`pomodoroState*`) เพื่อกู้
     │   │                                    หลัง force-quit — **จำเป็น** เพราะการบล็อกแอปเป็นค่าระดับระบบ
-    │   │                                  `syncToNow()` ไล่ช่วงที่หมดเวลาไปแล้ว · กลับมาช้ากว่า 5 นาที =
-    │   │                                    เลิกรอบ ไม่ไล่ต่อ (กันสร้าง FocusSession ปลอมสิบกว่าอัน)
     │   ├── AppBlockManager.swift    (~200) `@Observable @MainActor` singleton — Screen Time API จริง
     │   │                                  FamilyControls (ขออนุญาต) + ManagedSettings (shield) +
     │   │                                    DeviceActivity (ตาข่ายกันพลาด)
@@ -283,9 +303,30 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                    ไม่ต้องรอ Apple — ที่ต้องขออนุมัติคือตอนขึ้น App Store)
     │   │                                  ทุก method ออกแบบให้ล้มเหลวแบบเงียบ ไม่ crash
     │   │                                  `reconcile()` เรียกจาก RootContainerView ตอน .active —
-    │   │                                    **ห้ามลบ** ไม่งั้นแอปอื่นถูกบล็อกค้างถาวร
-    │   └── FocusModeView.swift      (~430) UI ล้วน ไม่เก็บเวลาเอง · body แบ่ง 2 ชั้น (mainContent
-    │                                      + presentation) จงใจ กัน type-check timeout
+    │   │                                    **ห้ามลบ** ไม่งั้นแอปอื่นถูกบล็อกค้างถาวร (นี่คือเหตุผลที่
+    │   │                                    ลบปุ่มปลดฉุกเฉินทิ้งได้)
+    │   ├── FocusModeView.swift       (68) root — สลับ `FocusHomeView` ↔ `FocusRunningView` ตาม
+    │   │                                  `engine.isRunning` + overlay `FocusBreakPrompt`
+    │   │                                  ซ่อน nav bar ทั้งหน้า (`.toolbar(.hidden)`) → ปุ่มย้อนกลับ
+    │   │                                  วาดเอง + `.interactiveSwipeBack()` คืน edge swipe
+    │   ├── FocusHomeView.swift      (158) หน้าเริ่มต้น: ปุ่ม back/สถิติ (ซ้ายบน) · บล็อกแอป (ขวาบน)
+    │   │                                  · ตัวเลขนาที (แตะ = กางไม้บรรทัด) · แถบแท็ก · ปุ่มเริ่ม
+    │   │                                  ประกาศ `FocusGlassButton` (ปุ่มกลม Liquid Glass ใช้ร่วม 2 หน้า)
+    │   ├── FocusDurationRuler.swift (114) ไม้บรรทัดเลื่อนซ้ายขวา `0`(∞)–180 ทีละ 1 นาที
+    │   │                                  ใช้ `scrollPosition(id:)` + `.viewAligned` ให้ระบบ snap ให้
+    │   │                                  **ห้ามกลับไปคำนวณ offset เอง** · ขีดยาวทุก 5 · เลขทุก 15
+    │   ├── FocusTagBar.swift         (67) แถบชิปแท็ก — แตะซ้ำ = ยกเลิกเลือก (ไม่บังคับเลือกแท็ก)
+    │   ├── FocusTagEditorSheet.swift (190) เพิ่ม/แก้ชื่อ/แก้สี/ลบแท็ก + `FocusTagRenameSheet`
+    │   │                                  สี 8 ตัวจาก `Theme.Colors.subjectPaletteHex` (ชุดเดียวกับสีวิชา)
+    │   ├── FocusRunningView.swift   (128) หน้ากำลังโฟกัส พื้น `focusBackdrop` (มืดทั้งสองธีม)
+    │   │                                  ⚠️ ลำดับ ZStack สำคัญ: พื้นหลัง → เนื้อหา (ปิด hit-test) →
+    │   │                                    ตัวรับกดค้างเต็มจอ → ปุ่มย้อนกลับ · สลับแล้วพังอย่างใดอย่างหนึ่ง
+    │   │                                  ปุ่มย้อนกลับ = ออกจากหน้าเฉยๆ **นาฬิกาไม่หยุด**
+    │   ├── FocusHoldToStopBar.swift  (43) แถบกดค้าง 5 วิเพื่อหยุด — ไม่บอกจำนวนวินาทีโดยตั้งใจ
+    │   ├── FocusBreakPrompt.swift    (58) ถาม "พัก 5 นาทีไหม" — ไม่มีปุ่มปิด ต้องเลือกอย่างใดอย่างหนึ่ง
+    │   ├── FocusStatsSheet.swift    (167) สถิติ: วันนี้/สัปดาห์นี้/รอบสำเร็จ · แยกตามแท็ก (group ด้วย
+    │   │                                  `tagID`) · รอบที่หยุดกลางคัน · ประกาศ `FocusStatBlock`
+    │   └── FocusBlockSheet.swift     (92) สวิตช์บล็อกแอป + familyActivityPicker (เปลี่ยนได้เฉพาะตอน idle)
     ├── GradeCenter/  หน้าเกรดและ GPAX — **ยกเครื่องรอบ W2 ก้อน C** (`claude plan/docs/redesign/04_GradeCenter.md`)
     │   │            🟡 build เขียวแล้วแต่ **Few บอกว่าหน้าตายังไม่ผ่าน รอเก็บตกละเอียด** — อย่ารื้อเองก่อนถาม
     │   ├── GradeCenterView.swift        (79)  หัวข้อหน้าใช้ `GPAXSettings.currentSortKey` (เทอมจริง)
@@ -630,7 +671,8 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
 | Term | Core/Models/Term.swift — ระดับชั้น (**4-6 เท่านั้นตั้งแต่ 15 ส.ค.** แถวเก่าที่เก็บ 1-3 ยังอ่านได้ แค่ไม่มี picker ไหนเสนอ) + เทอม (1-2), ไม่มีปี พ.ศ. (D3) · สร้างแบบ lazy เท่านั้น (D4) — ห้ามมี `@Relationship` array ชี้ลง children, จัดการทั้งหมดผ่าน `TermStore` เท่านั้น<br>`gpa: Double?` / `totalCredits: Double?` (default `nil` ทั้งคู่, additive migration) — ใช้โดย `GPAXCalculator` เท่านั้น เขียนได้จาก `TermGradeEditView` ผ่าน `TermStore.findOrCreate` เท่านั้น (ไม่ว่าโหมดง่ายหรือละเอียด)<br>`usesDetailedGrades: Bool = false` (additive) — true = เทอมนี้กรอกเกรดรายวิชาผ่าน `TermGradeSubject` แทนกรอก gpa ตรงๆ |
 | TermSubject | Core/Models/TermSubject.swift — join `Term` ↔ `Subject`, มี `creditHours`/`gradePoint` รอรอบ GPA (§9 ใน PLAN_TermSystem) · sync อัตโนมัติผ่าน `TermStore.syncTermSubjects` ทุกครั้งที่ ScheduleEntry ถูกบันทึกเข้าเทอม · **ไม่ใช่** ตัวเดียวกับ `TermGradeSubject` ด้านล่าง |
 | TermGradeSubject | Core/Models/TermGradeSubject.swift — เพิ่ม 2026-08-10 (PLAN_2026-08-10_Fixes Task 5) วิชา+เกรดรายวิชาของโหมด "กรอกละเอียด" ต่อเทอม แยกจาก `TermSubject` โดยตั้งใจ (กันข้อมูลเกรดหายเงียบๆ ถ้าคาบถูกลบจากตาราง) `name`/`code`/`creditHours`/`gradePoint`/`sortOrder` — seed จาก `ScheduleEntry` ของเทอมนั้นครั้งแรกที่เปิดโหมดละเอียด แก้ไข/ลบผ่าน `TermGradeEditView` เท่านั้น |
-| FocusSession | Core/Models/FocusSession.swift — `kindRaw` (โฟกัส/พักสั้น/พักยาว, อ่านผ่าน `phase`) · `endedAt: Date?` · `wasLocked` (3 ตัวนี้มี default ครบ → migrate ของเดิมได้)<br>⚠️ **ช่วงพักถูกบันทึกเป็น FocusSession ด้วย** — สถิติ "นาทีโฟกัส" ต้องกรอง `phase == .focus` เสมอ (Dashboard + FocusModeView ทำแล้ว)<br>ไฟล์นี้ยังเป็นที่ประกาศ `enum PomodoroPhase` ด้วย |
+| FocusSession | Core/Models/FocusSession.swift — `kindRaw` (โฟกัส/พักสั้น/พักยาว, อ่านผ่าน `phase`) · `endedAt: Date?` · `wasLocked` · **ใหม่ 15 ส.ค.** `tagID`/`tagName`/`tagColorHex` (String default `""` = สำเนาแท็ก **ไม่ใช่ relation** → migrate ได้ ไม่ต้องลบแอป)<br>⚠️ **ช่วงพักถูกบันทึกเป็น FocusSession ด้วย** — สถิติ "นาทีโฟกัส" ต้องกรอง `phase == .focus` เสมอ (Dashboard + FocusStatsSheet ทำแล้ว)<br>สถิติจัดกลุ่มด้วย `tagID` ห้ามใช้ `tagName` (ผู้ใช้เปลี่ยนชื่อแท็กได้)<br>ไฟล์นี้ยังเป็นที่ประกาศ `enum PomodoroPhase` ด้วย (case `longBreak` ยังอยู่เพื่อไม่ให้ข้อมูลเก่าอ่านไม่ออก แต่ไม่มีที่ไหนสร้างใหม่แล้ว) |
+| FocusTag | Core/Models/FocusTag.swift — **ใหม่ 15 ส.ค. 2569** แท็กโฟกัส (`id: String` · `name` · `colorHex` · `order`) + `FocusTagSnapshot` (struct Codable ส่งเข้า `PomodoroEngine`)<br>seed 3 ตัว (เรียน/ทำงาน/อื่นๆ) ครั้งแรกที่เปิดหน้าโฟกัส ผ่าน `seedDefaultsIfNeeded(in:colors:)` — สีถูกส่งเข้าจากฝั่ง View (ไฟล์ model ไม่ import SwiftUI) |
 | PortfolioItem | Core/Models/PortfolioItem.swift — `startDate`/`endDate: Date?` (rename จาก `date` เดิม — breaking, ต้องลบแอปก่อนติดตั้งรุ่นนี้) · `images: [PortfolioImage]` (cascade) · `coverImage` = ตัวแรกตาม `sortOrder` · `dateRangeText` ใช้ `Date+Thai.swift` · `PortfolioCategory.color` = **computed** (ไม่ใช่ stored → แก้ได้โดยไม่กระทบ schema) ชุด W2 ก้อน F: เกียรติบัตร=`primary` · กิจกรรม=`subjectPalette[1]` · จิตอาสา=`[4]` · แข่งขัน=`[3]` · โปรเจกต์=`[5]` — เลิกยืม `danger`/`warning` ที่ทำให้ป้าย "การแข่งขัน" แดงเท่าปุ่มลบ |
 | PortfolioImage | Core/Models/PortfolioImage.swift — เก็บแค่ `filename`/`sortOrder`/`createdAt` ตัวไฟล์จริงอยู่ `PortfolioImageStore` (Core/Portfolio/) |
 | CareerInterestResult | Core/Models/CareerInterestResult.swift — 5 field เดิม (`interestTags`/`recommendedCareer`/`recommendedFaculty`/`recommendedSkills`/`takenAt`) + field ใหม่จาก RIASEC v2 (additive, มี default ครบ): `scoreR..scoreC: Int`, `hollandCode: String`, `isInconclusive: Bool`, `answers: [Int]` (18 คำตอบ Likert เรียงตาม item id, ไว้ re-score ย้อนหลังได้โดยไม่ต้องให้ทำแบบสำรวจใหม่) · `riasecScores` computed property คืน `[RIASECDimension: Int]` |
@@ -728,6 +770,8 @@ Surfaces/text (adaptive light/dark ผ่าน Color(light:dark:) ใน Color+
                textPrimary 2A2320/F4EEE7 · textSecondary 8A7B6D/A79A8B · background FBF7F2/14110E
                cardBackground FFFFFF/1F1B17 · surfaceRaised F6F0E8/2A241E (การ์ดซ้อนบนการ์ด, unselected fill)
                breakBackground FDF3E0/2A2416 · separator EDE3D6/3A322A
+               focusBackdrop 17130F/0C0A08 (พื้นหน้ากำลังโฟกัส — **มืดทั้งสองธีมโดยตั้งใจ**)
+               onFocusBackdrop F4EEE7 · onFocusBackdropMuted 9A8E80 (ไม่ adaptive ใช้บนพื้นมืดเท่านั้น)
                cardStroke EDE3D6/3A322A (เส้นขอบบางบนการ์ด — แบก edge definition แทนเงาในโหมดมืด)
 subjectPalette / subjectPaletteHex — 8 สี warm muted [C96F4A,7D8F69,C25B4E,6B7FA3,8E6B9E,B08D57,5F8A8B,C2703C]
                ใช้ร่วมกันทั้งสีวิชา (Schedule) และสีกิจกรรม (Calendar event picker) — ตัวแรกคือ primary เอง
@@ -783,8 +827,8 @@ Gated: **ไม่มีหน้าไหน gate จริงเลยตอ�
 
 - ไม่มี `QuickLook` / `ShareLink` — ไฟล์ที่ SmartCapture copy ลง `Documents/SmartCapture/` เปิดดูจาก UI ไม่ได้
 - ~~`FocusModeView.swift` อยู่ใน `Features/Portfolio/`~~ **แก้แล้ว** — ย้ายมา `Features/FocusMode/` และเขียนใหม่ทั้งโมดูล
-- **ระบบบล็อกแอปยังไม่มี `DeviceActivityMonitor` extension** — ถ้าผู้ใช้บังคับปิด Student OS ทิ้ง แอปที่บล็อกไว้จะยังถูกบล็อกจนกว่าจะเปิด Student OS อีกครั้ง (`reconcile()` ปลดให้) มีปุ่มปลดฉุกเฉินใน ตั้งค่า Pomodoro เป็นทางออกสำรอง
-- **แจ้งเตือนจบ Pomodoro ยังไม่ใช่ `.timeSensitive`** — เด้งทะลุโหมดห้ามรบกวนไม่ได้ ต้องเพิ่ม capability "Time Sensitive Notifications" ก่อน
+- **ระบบบล็อกแอปยังไม่มี `DeviceActivityMonitor` extension** — ถ้าผู้ใช้บังคับปิด Student OS ทิ้ง แอปที่บล็อกไว้จะยังถูกบล็อกจนกว่าจะเปิด Student OS อีกครั้ง (`reconcile()` ปลดให้) **ปุ่มปลดฉุกเฉินถูกลบทิ้งแล้ว 15 ส.ค. 2569** (Few สั่ง) — ทางออกเดียวคือเปิดแอปแล้วให้ `reconcile()` ปลดให้
+- **แจ้งเตือนจบรอบโฟกัสยังไม่ใช่ `.timeSensitive`** — เด้งทะลุโหมดห้ามรบกวนไม่ได้ ต้องเพิ่ม capability "Time Sensitive Notifications" ก่อน
 - Calendar models ฝังใน `CalendarView.swift` แทนที่จะอยู่ `Core/Models/`
 - ~~ไม่มี unit test จริงเลย~~ **มีแล้วบางส่วน** — `StudiiOSTests/GPAXCalculatorTests.swift` (152 บรรทัด) ครอบ `GPAXCalculator`
   ทั้ง 6 state + fixture §3.3 ของ PLAN_GPA.md + cumulative mode · `StudiiOSTests/RIASECScorerTests.swift` ครอบ `RIASECScorer`

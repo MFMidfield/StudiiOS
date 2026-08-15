@@ -44,6 +44,12 @@ enum Theme {
         /// A step lighter than `cardBackground` — for a card nested on top of another card.
         static let surfaceRaised = Color(light: "F6F0E8", dark: "2A241E")
         static let breakBackground = Color(light: "FDF3E0", dark: "2A2416")
+        /// พื้นหลังหน้า "กำลังโฟกัส" — มืดทั้งสองธีมโดยตั้งใจ (โหมดสว่างก็ต้องมืด
+        /// ไม่งั้นจอสว่างจ้าค้างอยู่ตรงหน้าตลอดรอบ)
+        static let focusBackdrop = Color(light: "17130F", dark: "0C0A08")
+        /// ข้อความบนพื้น `focusBackdrop`
+        static let onFocusBackdrop = Color(hex: "F4EEE7")
+        static let onFocusBackdropMuted = Color(hex: "9A8E80")
         static let separator = Color(light: "EDE3D6", dark: "3A322A")
         /// Hairline border on cards — carries most of the card's edge definition
         /// in dark mode, where a black shadow on a dark background barely reads.
