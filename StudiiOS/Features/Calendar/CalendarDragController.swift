@@ -29,51 +29,67 @@ extension CalendarView {
         }
     }
 
-    /// เลขคณิตอย่างเดียว ไม่ใช้ GeometryReader ต่อช่อง (42 ช่องจะกิน CPU) —
-    /// วัดขนาดกริดครั้งเดียวผ่าน `.onGeometryChange` แล้วหารเอาเอง
-    var cellSize: CGSize {
-        let rowCount = max(calendarDays.count / 7, 1)
-        return CGSize(width: gridSize.width / 7, height: gridSize.height / CGFloat(rowCount))
+    /// ผลของการหาว่านิ้วอยู่ตรงไหนของสายเลื่อน
+    struct CalendarHit {
+        let day: CalendarDay
+        /// จุดกึ่งกลางช่องวันนั้น ในระบบพิกัดสายเลื่อน — ใช้ให้ ghost ไปหยุดตรงกลางช่อง
+        let center: CGPoint
+        let weekStart: Date
+        let column: Int
+        /// ระยะจากขอบบนของแถวสัปดาห์ ใช้หาว่าโดนเลนที่เท่าไหร่
+        let localY: CGFloat
     }
 
-    func cellIndex(at point: CGPoint) -> Int? {
-        let size = cellSize
-        guard size.width > 0, size.height > 0, point.x >= 0, point.y >= 0 else { return nil }
-        let days = calendarDays
-        let rowCount = days.count / 7
-        let col = Int(point.x / size.width)
-        let row = Int(point.y / size.height)
-        guard col >= 0, col < 7, row >= 0, row < rowCount else { return nil }
-        let idx = row * 7 + col
-        return idx < days.count ? idx : nil
+    /// เลขคณิตอย่างเดียว ไม่ใช้ GeometryReader ต่อช่อง — อ่าน frame แค่ระดับเดือน
+    /// (12 รายการ ไม่ใช่ 365 ตาม 08_Calendar §5.1) แล้วหารเอาเอง
+    ///
+    /// เดือนที่ `LazyVStack` ยังไม่ render จะไม่มี frame → ปล่อยตรงนั้นไม่ได้ = flyBack
+    func hit(at point: CGPoint) -> CalendarHit? {
+        guard let entry = monthFrames.first(where: { $0.value.contains(point) }),
+              let month = months.first(where: { $0.id == entry.key })
+        else { return nil }
+
+        let frame = entry.value
+        let colWidth = frame.width / 7
+        guard colWidth > 0 else { return nil }
+
+        let localX = point.x - frame.minX
+        let gridY = point.y - frame.minY - CalendarGeometry.monthLabelHeight
+        guard gridY >= 0 else { return nil }
+
+        let row = Int(gridY / CalendarGeometry.rowHeight)
+        let column = min(max(Int(localX / colWidth), 0), 6)
+        let index = row * 7 + column
+        guard index >= 0, index < month.days.count else { return nil }
+
+        let center = CGPoint(
+            x: frame.minX + colWidth * (CGFloat(column) + 0.5),
+            y: frame.minY + CalendarGeometry.monthLabelHeight
+                + CalendarGeometry.rowHeight * (CGFloat(row) + 0.5)
+        )
+
+        return CalendarHit(
+            day: month.days[index],
+            center: center,
+            weekStart: month.days[row * 7].date,
+            column: column,
+            localY: gridY - CGFloat(row) * CalendarGeometry.rowHeight
+        )
     }
 
-    func cellCenter(for index: Int) -> CGPoint {
-        let size = cellSize
-        let col = index % 7
-        let row = index / 7
-        return CGPoint(x: size.width * (CGFloat(col) + 0.5), y: size.height * (CGFloat(row) + 0.5))
-    }
-
-    /// ตำแหน่งนิ้ว → แถบไหน · คิดจาก `WeekLayout` ชุดเดียวกับที่วาด ไม่ใช่จากลำดับ
-    /// pill ในช่องอีกแล้ว (08_Calendar §5.1) — ขั้นที่ 6 จะย้ายมาคิดจาก frame ของแถบตรงๆ
-    func hitTestItem(at point: CGPoint, cellIndex idx: Int) -> CalendarItem? {
-        let size = cellSize
-        guard size.height > 0 else { return nil }
-
-        let row = idx / 7
-        let column = idx % 7
-        let localY = point.y - CGFloat(row) * size.height
-        guard localY >= CalendarGeometry.laneTop else { return nil }
+    /// ตำแหน่งนิ้ว → แถบไหน · คิดจาก `WeekLayout` ชุดเดียวกับที่วาด
+    /// ขั้นที่ 6 จะย้ายมาคิดจาก frame ของแถบตรงๆ
+    func hitTestItem(_ hit: CalendarHit) -> CalendarItem? {
+        guard hit.localY >= CalendarGeometry.laneTop else { return nil }
 
         let laneStride = CalendarGeometry.laneHeight + CalendarGeometry.laneSpacing
-        let lane = Int((localY - CalendarGeometry.laneTop) / laneStride)
+        let lane = Int((hit.localY - CalendarGeometry.laneTop) / laneStride)
         guard lane >= 0, lane < CalendarGeometry.maxLanes else { return nil }
 
-        let bar = weekLayout(row: row).bars.first {
+        let bar = weekLayout(weekStart: hit.weekStart).bars.first {
             $0.lane == lane
-                && column >= $0.startColumn
-                && column < $0.startColumn + $0.columnSpan
+                && hit.column >= $0.startColumn
+                && hit.column < $0.startColumn + $0.columnSpan
         }
         guard let bar else { return nil }
         return itemsByID[bar.itemID]
@@ -94,8 +110,8 @@ extension CalendarView {
     }
 
     func beginGhost(at point: CGPoint) {
-        guard let idx = cellIndex(at: point) else { return }
-        if let item = hitTestItem(at: point, cellIndex: idx) {
+        guard let hit = hit(at: point) else { return }
+        if let item = hitTestItem(hit) {
             if let event = item.sourceEvent {
                 ghostPayload = .existingEvent(event)
             } else if let task = item.sourceTask {
@@ -110,7 +126,7 @@ extension CalendarView {
         ghostOrigin = point
         ghostCurrentPosition = point
         ghostScale = 1.0
-        lastHapticCellIndex = idx
+        lastHapticDay = hit.day.date
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(.spring(response: 0.25, dampingFraction: 0.70)) {
             ghostScale = 1.08
@@ -119,8 +135,8 @@ extension CalendarView {
 
     func moveGhost(to point: CGPoint) {
         ghostCurrentPosition = point
-        guard let idx = cellIndex(at: point), idx != lastHapticCellIndex else { return }
-        lastHapticCellIndex = idx
+        guard let hit = hit(at: point), hit.day.date != lastHapticDay else { return }
+        lastHapticDay = hit.day.date
         let now = Date()
         guard now.timeIntervalSince(lastHapticTime) >= 0.06 else { return }
         lastHapticTime = now
@@ -129,12 +145,12 @@ extension CalendarView {
 
     func endGhost(at point: CGPoint?) {
         guard ghostPayload != nil else { return }
-        guard let point, let idx = cellIndex(at: point) else {
+        guard let point, let hit = hit(at: point) else {
             flyBack()
             return
         }
-        let targetDay = calendarDays[idx]
-        let targetCenter = cellCenter(for: idx)
+        let targetDay = hit.day
+        let targetCenter = hit.center
 
         func settle(_ commit: @escaping () -> Void) {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
@@ -177,7 +193,7 @@ extension CalendarView {
 
     func resetGhostState() {
         ghostPayload = nil
-        lastHapticCellIndex = nil
+        lastHapticDay = nil
     }
 
     // ── บันทึกการย้าย ─────────────────────────────────────

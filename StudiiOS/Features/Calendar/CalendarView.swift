@@ -1,13 +1,12 @@
 //
 //  CalendarView.swift
-//  ปฏิทิน — monthly calendar grid + daily event list.
+//  ปฏิทิน — สายเลื่อนแนวตั้ง 12 เดือนภายในปีเดียว
 //
-//  ก้อน G ขั้นที่ 1 (08_Calendar §8): แตกไฟล์ตาม §6 โดย **ไม่เปลี่ยนพฤติกรรม**
-//    · ตารางเดือน  → CalendarMonthSection / CalendarWeekRow / CalendarEventBar
-//    · การ์ดรายวัน → CalendarDaySheet
-//    · ผลค้นหา    → CalendarSearchView
-//    · ghost drag → CalendarDragController (ยังเป็น extension ของหน้านี้อยู่)
-//  ที่เหลือของหน้า (สถานะ · query · routing) อยู่ในไฟล์นี้
+//  ก้อน G (08_Calendar §8) — ขั้นที่ 1 แตกไฟล์ · 2 MonthLayoutEngine
+//  · 3 แถบพาดข้ามช่อง · 4 สายเลื่อน 12 เดือน + หัวเดือน/ปีในหน้า
+//  ไฟล์ที่แยกออกไป: CalendarMonthSection · CalendarWeekRow · CalendarEventBar
+//  · CalendarDaySheet · CalendarSearchView · CalendarDragController
+//  · CalendarItemBuilder · CalendarPressDragGesture
 //
 
 import SwiftUI
@@ -26,6 +25,8 @@ enum CalendarSheet: Identifiable {
     /// deletes it back out if the user cancels instead of leaving a stub.
     case editNewGhost(CalendarEvent)
     case editTask(Assignment)
+    case day(Date)
+    case search
 
     var id: String {
         switch self {
@@ -33,6 +34,8 @@ enum CalendarSheet: Identifiable {
         case .edit(let e): return "edit_\(e.id)"
         case .editNewGhost(let e): return "editNewGhost_\(e.id)"
         case .editTask(let a): return "task_\(a.persistentModelID)"
+        case .day(let d): return "day_\(d.timeIntervalSince1970)"
+        case .search: return "search"
         }
     }
 }
@@ -55,17 +58,19 @@ struct CalendarView: View {
     private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
 
     @State var selectedDate = Date()
-    @State private var currentMonth = Date()
     @State var activeSheet: CalendarSheet?
-    @State private var searchText = ""
+    @State private var displayedYear = Calendar(identifier: .gregorian).component(.year, from: .now)
+    /// id ของเดือนที่อยู่บนสุดของจอ — ผูกกับ `scrollPosition` หัวเดือนอ่านจากตัวนี้
+    @State private var visibleMonthID: String?
 
     // Ghost Event drag state — kept at CalendarView level per §4.3, not per-cell.
     @State var ghostPayload: CalendarGhostPayload?
     @State var ghostOrigin: CGPoint = .zero
     @State var ghostCurrentPosition: CGPoint = .zero
     @State var ghostScale: CGFloat = 1.0
-    @State var gridSize: CGSize = .zero
-    @State var lastHapticCellIndex: Int?
+    /// id เดือน → frame ในระบบพิกัดสายเลื่อน · 12 รายการ ไม่ใช่ 365 (§5.1)
+    @State var monthFrames: [String: CGRect] = [:]
+    @State var lastHapticDay: Date?
     @State var lastHapticTime: Date = .distantPast
     @State var toastMessage: String?
     @State var toastUndo: (() -> Void)?
@@ -75,18 +80,30 @@ struct CalendarView: View {
 
     // ── Derived ───────────────────────────────────────────
 
-    private var monthTitle: String {
-        let m = cal.component(.month, from: currentMonth) - 1
-        let y = cal.component(.year, from: currentMonth) + 543
-        return "\(CalendarStrings.thaiMonths[m]) \(y)"
+    var months: [CalendarMonthInfo] {
+        CalendarMonthBuilder.months(inYear: displayedYear, calendar: cal)
     }
 
-    var calendarDays: [CalendarDay] {
-        CalendarMonthBuilder.days(of: currentMonth, calendar: cal)
+    private var currentMonthTitle: String {
+        guard let id = visibleMonthID, let month = months.first(where: { $0.id == id }) else {
+            return months.first?.title ?? ""
+        }
+        return month.title
+    }
+
+    /// ปีปัจจุบัน −1 ถึง +2 (§3.2)
+    private var selectableYears: [Int] {
+        let thisYear = cal.component(.year, from: .now)
+        return Array((thisYear - 1)...(thisYear + 2))
+    }
+
+    private var isOnTodayAlready: Bool {
+        displayedYear == cal.component(.year, from: .now)
+            && visibleMonthID == CalendarMonthBuilder.key(for: .now, calendar: cal)
+            && cal.isDateInToday(selectedDate)
     }
 
     /// ทุก `CalendarEvent`/`Assignment` (ที่มีวันครบกำหนด) แปลงเป็น `CalendarItem` ชุดเดียว
-    /// แล้วแตกเป็นตาราง 3 แบบให้ส่วนที่ต้องใช้ต่างกัน
     private var allItems: [CalendarItem] {
         CalendarItemBuilder.items(
             events: allEvents,
@@ -103,14 +120,11 @@ struct CalendarView: View {
         CalendarItemBuilder.byID(allItems)
     }
 
-    /// ผลจัดเลนของแถวที่ `row` — ใช้ทั้งตอนวาดและตอน hit-test ของ ghost drag
-    func weekLayout(row: Int) -> WeekLayout {
-        let days = calendarDays
-        let index = row * 7
-        guard index < days.count else { return .empty }
-        return MonthLayoutEngine.layout(
+    /// ผลจัดเลนของสัปดาห์ที่ขึ้นต้นด้วย `weekStart` — ใช้ทั้งตอนวาดและตอน hit-test
+    func weekLayout(weekStart: Date) -> WeekLayout {
+        MonthLayoutEngine.layout(
             items: CalendarItemBuilder.layoutItems(allItems, calendar: cal),
-            weekStart: days[index].date,
+            weekStart: weekStart,
             maxLanes: CalendarGeometry.maxLanes,
             calendar: cal
         )
@@ -127,79 +141,110 @@ struct CalendarView: View {
         return subject.color
     }
 
-    private var itemsForSelectedDate: [CalendarItem] {
-        itemsFor(selectedDate)
-    }
-
-    private var selectedDayTitle: String {
-        let c = cal.dateComponents([.day, .month, .year], from: selectedDate)
+    private func dayTitle(_ date: Date) -> String {
+        let c = cal.dateComponents([.day, .month, .year], from: date)
         return "\(c.day!) \(CalendarStrings.thaiMonths[(c.month ?? 1) - 1]) \(c.year! + 543)"
-    }
-
-    private var isOnCurrentMonthAndToday: Bool {
-        cal.isDate(currentMonth, equalTo: .now, toGranularity: .month) && cal.isDateInToday(selectedDate)
     }
 
     // ── Body ─────────────────────────────────────────────
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            mainContent
-            if searchText.isEmpty { fabButton }
+        VStack(spacing: 0) {
+            header
+            CalendarDayHeaderRow()
+            monthScroll
         }
         .overlay(alignment: .bottom) { moveToast }
         .background(Theme.Colors.background)
-        .navigationTitle(monthTitle)
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar { calendarToolbar }
-        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "ค้นหากิจกรรม การบ้าน วิชา")
+        // หัวเดือนอยู่ในหน้าแล้ว nav bar จึงเหลือไว้แค่ปุ่มย้อนกลับ
+        // (ห้าม `.navigationBarHidden(true)` — ปุ่มย้อนกลับจะหายไปด้วย เข้ามาแล้วออกไม่ได้)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $activeSheet) { sheet in
             sheetContent(sheet)
         }
-    }
-
-    @ViewBuilder
-    private var mainContent: some View {
-        if searchText.isEmpty {
-            ScrollView {
-                VStack(spacing: 0) {
-                    calendarCard
-                    CalendarDayItemsCard(
-                        title: selectedDayTitle,
-                        isToday: cal.isDateInToday(selectedDate),
-                        items: itemsForSelectedDate,
-                        onSelect: openItem
-                    )
-                }
+        .onAppear {
+            if visibleMonthID == nil {
+                visibleMonthID = CalendarMonthBuilder.key(for: .now, calendar: cal)
             }
-            .scrollDisabled(ghostPayload != nil)
-        } else {
-            CalendarSearchView(
-                searchText: searchText,
-                results: searchResults,
-                calendar: cal,
-                onSelect: jumpToSearchResult
-            )
         }
     }
 
-    @ToolbarContentBuilder
-    private var calendarToolbar: some ToolbarContent {
-        ToolbarItem(placement: .navigationBarLeading) {
-            HStack(spacing: 4) {
-                Button { advanceMonth(by: -1) } label: {
-                    Image(systemName: "chevron.left").frame(width: 44, height: 44)
-                }
-                Button { advanceMonth(by: 1) } label: {
-                    Image(systemName: "chevron.right").frame(width: 44, height: 44)
+    // ── หัวเดือน / ปี (§3.2) ───────────────────────────────
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(currentMonthTitle)
+                    .font(Theme.Font.title)
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .contentTransition(.numericText())
+
+                Menu {
+                    ForEach(selectableYears, id: \.self) { year in
+                        Button("\(year + 543)") { jumpToYear(year) }
+                    }
+                } label: {
+                    HStack(spacing: 2) {
+                        Text("\(displayedYear + 543)")
+                        Image(systemName: "chevron.down")
+                            .font(Theme.Font.caption)
+                    }
+                    .font(Theme.Font.label)
+                    .foregroundStyle(Theme.Colors.primaryDeep)
                 }
             }
-        }
-        ToolbarItem(placement: .navigationBarTrailing) {
+
+            Spacer()
+
             Button("วันนี้", action: jumpToToday)
-                .disabled(isOnCurrentMonthAndToday)
+                .font(Theme.Font.label)
+                .foregroundStyle(Theme.Colors.primaryDeep)
+                .disabled(isOnTodayAlready)
+
+            Button {
+                activeSheet = .search
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(Theme.Colors.primaryDeep)
+                    .frame(width: 32, height: 32)
+            }
         }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.top, Theme.Spacing.sm)
+        .padding(.bottom, Theme.Spacing.xs)
     }
+
+    // ── สายเลื่อน 12 เดือน ─────────────────────────────────
+
+    private var monthScroll: some View {
+        ScrollView {
+            LazyVStack(spacing: Theme.Spacing.lg) {
+                ForEach(months) { month in
+                    CalendarMonthSection(
+                        month: month,
+                        selectedDate: selectedDate,
+                        calendar: cal,
+                        itemsByID: itemsByID,
+                        weekLayout: weekLayout(weekStart:),
+                        isBeingDragged: isBeingDragged,
+                        onSelectDay: selectDay,
+                        onFrameChange: { monthFrames[month.id] = $0 }
+                    )
+                    .id(month.id)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .coordinateSpace(.named(Self.gridSpaceName))
+        .scrollPosition(id: $visibleMonthID, anchor: .top)
+        .scrollDisabled(ghostPayload != nil)
+        .gesture(ghostGesture)
+        .overlay(ghostOverlay)
+    }
+
+    // ── Sheet ────────────────────────────────────────────
 
     @ViewBuilder
     private func sheetContent(_ sheet: CalendarSheet) -> some View {
@@ -212,6 +257,21 @@ struct CalendarView: View {
             EventFormSheet(event: event, deleteOnCancel: true)
         case .editTask(let task):
             AddTaskSheet(editing: task)
+        case .day(let date):
+            CalendarDayItemsCard(
+                title: dayTitle(date),
+                isToday: cal.isDateInToday(date),
+                items: itemsFor(date),
+                onSelect: openItem
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        case .search:
+            CalendarSearchSheet(
+                calendar: cal,
+                results: searchResults(for:),
+                onSelect: jumpToSearchResult
+            )
         }
     }
 
@@ -223,51 +283,33 @@ struct CalendarView: View {
         }
     }
 
+    // ── การเลื่อน ─────────────────────────────────────────
+
+    private func selectDay(_ date: Date) {
+        selectedDate = date
+        activeSheet = .day(date)
+    }
+
     private func jumpToToday() {
+        displayedYear = cal.component(.year, from: .now)
+        selectedDate = .now
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            currentMonth = .now
-            selectedDate = .now
+            visibleMonthID = CalendarMonthBuilder.key(for: .now, calendar: cal)
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
-    // ── Calendar Card ─────────────────────────────────────
-
-    private var calendarCard: some View {
-        VStack(spacing: 0) {
-            CalendarDayHeaderRow()
-            CalendarMonthSection(
-                days: calendarDays,
-                selectedDate: selectedDate,
-                calendar: cal,
-                itemsByID: itemsByID,
-                weekLayout: weekLayout(row:),
-                isBeingDragged: isBeingDragged,
-                onSelectDay: { selectedDate = $0 }
-            )
-            .coordinateSpace(.named(Self.gridSpaceName))
-            .onGeometryChange(for: CGSize.self, of: { $0.size }) { gridSize = $0 }
-            .gesture(ghostGesture)
-            .overlay(ghostOverlay)
-            .padding(.horizontal, 6)
-            .padding(.bottom, 10)
-        }
-        .background(Theme.Colors.cardBackground)
-        .shadow(color: .black.opacity(0.07), radius: 6, y: 3)
-    }
-
-    private func advanceMonth(by delta: Int) {
-        guard let d = cal.date(byAdding: .month, value: delta, to: currentMonth) else { return }
-        withAnimation(.spring(response: 0.40, dampingFraction: 0.85)) {
-            currentMonth = d
-        }
+    private func jumpToYear(_ year: Int) {
+        guard year != displayedYear else { return }
+        displayedYear = year
+        visibleMonthID = String(format: "%04d-01", year)
     }
 
     // ── Search ───────────────────────────────────────────
 
-    private var searchResults: [CalendarItem] {
+    private func searchResults(for query: String) -> [CalendarItem] {
         CalendarItemBuilder.searchResults(
-            query: searchText,
+            query: query,
             events: allEvents,
             tasks: allAssignments.inTerm(activeTerm),
             color: subjectColor
@@ -275,27 +317,9 @@ struct CalendarView: View {
     }
 
     private func jumpToSearchResult(_ item: CalendarItem) {
-        searchText = ""
-        currentMonth = item.date
+        displayedYear = cal.component(.year, from: item.date)
         selectedDate = item.date
-    }
-
-    // ── FAB ──────────────────────────────────────────────
-
-    private var fabButton: some View {
-        Button {
-            activeSheet = .add(selectedDate)
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(Theme.Colors.onPrimary)
-                .frame(width: 56, height: 56)
-                .background(Theme.Colors.primaryDeep)
-                .clipShape(Circle())
-                .shadow(color: Theme.Colors.primaryDeep.opacity(0.4), radius: 10, y: 4)
-        }
-        .padding(.trailing, 20)
-        .padding(.bottom, 24)
+        visibleMonthID = CalendarMonthBuilder.key(for: item.date, calendar: cal)
     }
 }
 

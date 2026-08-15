@@ -8,6 +8,40 @@
 
 import SwiftUI
 
+/// หน้าค้นหาแบบ sheet — หัวเดือน/ปีย้ายมาอยู่ในหน้าแล้ว (§3.2) จึงไม่มี
+/// navigation bar ให้แปะ `.searchable` เหมือนเดิม ต้องเปิดเป็น sheet ของตัวเอง
+struct CalendarSearchSheet: View {
+    let calendar: Calendar
+    let results: (String) -> [CalendarItem]
+    let onSelect: (CalendarItem) -> Void
+
+    @State private var query = ""
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            CalendarSearchView(
+                searchText: query,
+                results: results(query),
+                calendar: calendar,
+                onSelect: { item in
+                    onSelect(item)
+                    dismiss()
+                }
+            )
+            .background(Theme.Colors.background)
+            .navigationTitle("ค้นหา")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "ค้นหากิจกรรม การบ้าน วิชา")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("ปิด") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
 struct CalendarSearchView: View {
     let searchText: String
     let results: [CalendarItem]

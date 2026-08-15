@@ -27,7 +27,7 @@
 | 1 | แตกไฟล์ตาม §6 ย้ายโค้ดเดิมเข้าไปโดยไม่เปลี่ยนพฤติกรรม | ✅ **`xcodebuild` เขียว 15 ส.ค.** — ยังไม่ได้ลองด้วยตา |
 | 2 | `MonthLayoutEngine` + เทสต์ | ✅ **เทสต์ผ่าน 10/10 บน simulator 15 ส.ค.** |
 | 3 | `CalendarWeekRow` + `CalendarEventBar` วาดจาก layout | ✅ **`xcodebuild` เขียว 15 ส.ค.** — 🔴 **ยังไม่ได้ดูด้วยตา** |
-| 4 | `ScrollView` 12 เดือน + หัวเดือน/ปี + ปุ่มวันนี้ | ⬜ |
+| 4 | `ScrollView` 12 เดือน + หัวเดือน/ปี + ปุ่มวันนี้ | ✅ **`xcodebuild` เขียว** — 🔴 ยังไม่ได้ดูด้วยตา |
 | 5 | `CalendarDaySheet` + การแตะ | ⬜ |
 | 6 | ghost drag → `CalendarDragController` (เฟส 1) | ⬜ |
 | 7 | ลบ `eventsCard` · `fabButton` | ⬜ |
@@ -68,6 +68,29 @@
 - **ชั้นแถบยัง `.allowsHitTesting(false)`** — แตะชิปเปิดฟอร์มเป็นงานขั้นที่ 5 ตอนนี้แตะตรงไหนก็เลือกวันเหมือนเดิม
 - `barRadius` 5 (§3.1) เป็นค่าประจำโมดูล **ไม่มี token ขนาดนี้ใน `Theme.Radius`** — ถ้า Few อยากได้เป็น token ต้องเพิ่มใน `Theme.swift` เอง (agent ห้ามแตะ `Core/DesignSystem/`)
 - วัดเวลา type-check ทั้งโมดูลแล้ว ไม่มีไฟล์ไหนเกิน 400ms (`PortfolioItemSheet.body` 1401ms เป็นหนี้เก่าของก้อน F)
+
+**บัคที่แก้ระหว่างทาง (ก่อนขั้นที่ 4)** — เลื่อนหน้าบนตารางไม่ได้
+`LongPressGesture.sequenced(before: DragGesture)` ของ SwiftUI จับนิ้วตั้งแต่แตะแรก ScrollView เลย pan ไม่ได้ (บัคมีมาก่อน ขั้นที่ 3 ทำให้ตารางเต็มจอจึงโผล่ชัด)
+→ ไฟล์ใหม่ `CalendarPressDragGesture.swift` ห่อ `UILongPressGestureRecognizer` ผ่าน `UIGestureRecognizerRepresentable`
+→ **ห้ามใช้ `recognizer.location(in: recognizer.view)`** — view ที่ SwiftUI แปะไว้เป็น host ก้อนใหญ่ ghost จะลงต่ำกว่านิ้วหนึ่งแถว ต้องใช้ `context.converter.location(in:)` กับ coordinate space ที่ตั้งชื่อไว้
+✅ Few ยืนยันแล้ว: ลากตรง · เลื่อนได้
+
+**ขั้นที่ 4 ทำอะไรจริง**
+
+- `CalendarView` เป็น `VStack`: header ในหน้า → แถวชื่อวันปักหมุด → `ScrollView` + `LazyVStack` 12 เดือน
+  `.scrollPosition(id:anchor:.top)` ทำให้หัวเดือนเปลี่ยนตามที่เลื่อน **ไม่ได้ใช้ `GeometryReader` ต่อแถว** ตามที่ §3.2 ห้าม
+- ปี = `Menu` ปีปัจจุบัน −1…+2 (พ.ศ.) · เปลี่ยนปีแล้วเด้งไปมกราคม · ปุ่ม "วันนี้" สลับปีให้ด้วย
+- **`.navigationTitle("")` + `.inline`** ห้ามใช้ `.navigationBarHidden(true)` — ปุ่มย้อนกลับจะหาย เข้าปฏิทินแล้วออกไม่ได้
+- ค้นหาเป็น **sheet ของตัวเอง** (`CalendarSearchSheet`) เพราะไม่มี nav bar ให้แปะ `.searchable` แล้ว
+- ghost drag เลิกใช้ `gridSize` ก้อนเดียว เปลี่ยนเป็น `monthFrames: [String: CGRect]` (12 รายการ ตาม §5.1)
+  `hit(at:)` หาเดือนที่ครอบจุดนั้นก่อน แล้วค่อยหารเป็นแถว/คอลัมน์ · `CalendarGeometry.monthLabelHeight` ต้องตรงกับป้ายชื่อเดือนจริง
+- เดือนที่ `LazyVStack` ยังไม่ render จะไม่มี frame → ลากไปปล่อยตรงนั้นไม่ได้ (flyBack) ตามที่สเปคเตือน
+
+> ⚠️ **สลับลำดับกับสเปคหนึ่งข้อ:** `CalendarDayItemsCard` (การ์ดรายการใต้ตาราง) ย้ายไปเป็น **sheet ตอนแตะวัน** แล้วในขั้นนี้
+> เพราะสายเลื่อน 12 เดือนกินทั้งจอ ถ้าไม่ย้ายตอนนี้ แตะวันแล้วจะไม่มีอะไรเกิดขึ้นเลยจนถึงขั้นที่ 5
+> **ขั้นที่ 5 ยังต้องทำต่อ:** หัว sheet เป็น "พฤหัสบดี 13 สิงหาคม" (ต้องเพิ่ม `thaiWeekdayFull` ใน `Date+Thai.swift`) · "N รายการ" · ปุ่ม "เพิ่มกิจกรรมวันนี้" · แตะชิปในตารางเปิดฟอร์มตรงๆ (ตอนนี้ชั้นแถบยัง `allowsHitTesting(false)`)
+
+> 📌 **หนี้เอกสาร:** `PROJECT_MAP.md` §Calendar (บรรทัด 184–185 · 541–550) ยังเขียนว่า `CalendarView` 963 บรรทัดไฟล์เดียว · ghost ใช้ `LongPressGesture` ของ SwiftUI · ค่าคงที่ 27/16 — **ผิดหมดแล้ว** ต้องเขียนใหม่ตอนปิดก้อน G
 
 **🔴 เจอของเสียที่ไม่เกี่ยวกับก้อน G:** `GPAXCalculatorTests/achievedWhenRequiredIsZeroOrBelow()` **แดงอยู่ก่อนแล้ว**
 (stash โค้ดก้อน G ออกแล้วรันบน HEAD เดิม ก็ยังแดง) — เทสต์คาด `.achieved` เมื่อ 1 เทอม GPA 4.00 เป้า 3.00
