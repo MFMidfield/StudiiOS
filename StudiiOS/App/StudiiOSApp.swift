@@ -47,6 +47,9 @@ struct StudiiOSApp: App {
     }()
 
     init() {
+        // Before any view renders: a device that finished the old five-screen
+        // wizard must not see a frame of the new flow.
+        OnboardingGate.migrateLegacyIfNeeded()
         _ = NotificationManager.shared
         StudiiOSApp.seedBuiltInSubjects(in: sharedModelContainer.mainContext)
     }
@@ -84,13 +87,17 @@ struct StudiiOSApp: App {
     }
 }
 
-/// Switches between the first-launch WelcomeView and the main RootTabView.
+/// Switches between the first-launch setup flow and the main RootTabView.
 private struct RootContainerView: View {
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @AppStorage("hasCompletedProfileSetup") private var hasCompletedProfileSetup = false
-    @AppStorage("hasCompletedScheduleSetup") private var hasCompletedScheduleSetup = false
-    @AppStorage("hasCompletedGradeSetup") private var hasCompletedGradeSetup = false
-    @AppStorage("hasCompletedSetupSummary") private var hasCompletedSetupSummary = false
+    /// The one flag that decides. Written only by `OnboardingGate` —
+    /// see that file for the migration from the old five-boolean wizard.
+    @AppStorage(OnboardingGate.Key.completed) private var hasCompletedSetup = false
+
+    #if DEBUG
+    /// Debug-only replay switch, flipped from Settings. Declared as @AppStorage so
+    /// the swap happens the moment it changes.
+    @AppStorage(OnboardingGate.replayKey) private var isReplayingSetup = false
+    #endif
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
@@ -104,18 +111,24 @@ private struct RootContainerView: View {
     /// which hands the decision back to iOS.
     @AppStorage(AppTheme.storageKey) private var appTheme: AppTheme = .system
 
+    private var showsSetupFlow: Bool {
+        #if DEBUG
+        return !hasCompletedSetup || isReplayingSetup
+        #else
+        return !hasCompletedSetup
+        #endif
+    }
+
+    private func finishSetup() {
+        #if DEBUG
+        OnboardingGate.endReplay()
+        #endif
+    }
+
     var body: some View {
         Group {
-            if !hasCompletedOnboarding {
-                WelcomeView()
-            } else if !hasCompletedProfileSetup {
-                ProfileSetupView()
-            } else if !hasCompletedScheduleSetup {
-                NavigationStack { ScheduleSetupView() }
-            } else if !hasCompletedGradeSetup {
-                NavigationStack { GradeReportSetupView() }
-            } else if !hasCompletedSetupSummary {
-                SetupSummaryView()
+            if showsSetupFlow {
+                OnboardingFlowView(onFinished: finishSetup)
             } else {
                 RootTabView()
             }

@@ -9,9 +9,13 @@ import SwiftUI
 import UIKit
 
 struct ProfileImagePicker: UIViewControllerRepresentable {
-    enum Source {
+    /// Identifiable so callers can drive `.fullScreenCover(item:)` with it —
+    /// AddScheduleEntrySheet and the setup screens all rely on this.
+    enum Source: Identifiable {
         case camera
         case photoLibrary
+
+        var id: Self { self }
     }
 
     let source: Source

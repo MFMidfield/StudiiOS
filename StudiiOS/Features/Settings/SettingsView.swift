@@ -19,19 +19,11 @@ struct SettingsView: View {
     @State private var entitlements = EntitlementStore.shared
     @State private var profile = StudentProfileStore.shared
     @State private var notifications = NotificationManager.shared
-    @State private var isPresentingWelcome = false
     @State private var isConfirmingReset = false
-    @State private var isPresentingSetupTest = false
+    @State private var isPresentingIntro = false
     @State private var isPresentingEditProfile = false
     @State private var showTestNotificationHint = false
-    @State private var savedSetupFlags: (profile: Bool, schedule: Bool, grade: Bool, summary: Bool)?
     @Environment(\.modelContext) private var context
-
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @AppStorage("hasCompletedProfileSetup") private var hasCompletedProfileSetup = false
-    @AppStorage("hasCompletedScheduleSetup") private var hasCompletedScheduleSetup = false
-    @AppStorage("hasCompletedGradeSetup") private var hasCompletedGradeSetup = false
-    @AppStorage("hasCompletedSetupSummary") private var hasCompletedSetupSummary = false
 
     // "scheduleShowsPersonalTasks" is gone: ScheduleTodayTasksSection was its
     // only reader and that card was deleted, leaving a switch wired to nothing.
@@ -109,8 +101,12 @@ struct SettingsView: View {
         } message: {
             Text("จะเด้งใน 5 วินาที ลองสลับออกจากแอปดูก็ได้")
         }
-        .fullScreenCover(isPresented: $isPresentingWelcome) {
-            WelcomeView()
+        .fullScreenCover(isPresented: $isPresentingIntro) {
+            // NavigationStack ของตัวเอง: OnboardingScaffold ซ่อน nav bar
+            // และเปิด edge swipe กลับ ซึ่งต้องมี stack ครอบถึงจะไม่พัง
+            NavigationStack {
+                OnboardingIntroView(actionTitle: "ปิด") { isPresentingIntro = false }
+            }
         }
         .sheet(isPresented: $isPresentingEditProfile) {
             EditProfileView()
@@ -253,7 +249,7 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         Section("เกี่ยวกับแอป") {
-            Button("ดูหน้าแนะนำแอปอีกครั้ง") { isPresentingWelcome = true }
+            Button("ดูหน้าแนะนำแอปอีกครั้ง") { isPresentingIntro = true }
 
             LabeledContent("เวอร์ชัน", value: "1.0.0 (Prototype)")
                 .contentShape(Rectangle())
@@ -322,11 +318,6 @@ struct SettingsView: View {
             } footer: {
                 Text("กล่องนี้ไม่ขึ้นในเวอร์ชันจริง และซ่อนใหม่ทุกครั้งที่เปิดแอป")
                     .font(Theme.Font.caption)
-            }
-            // Attached here, not to `body`: SetupFlowTestContainer only exists
-            // in a DEBUG build, so the reference has to live inside the #if too.
-            .fullScreenCover(isPresented: $isPresentingSetupTest, onDismiss: restoreSetupFlags) {
-                SetupFlowTestContainer()
             }
         }
         #endif
@@ -425,11 +416,9 @@ struct SettingsView: View {
 
         StudiiOSApp.seedBuiltInSubjects(in: context)
 
-        hasCompletedOnboarding = false
-        hasCompletedProfileSetup = false
-        hasCompletedScheduleSetup = false
-        hasCompletedGradeSetup = false
-        hasCompletedSetupSummary = false
+        // ล้างข้อมูลแล้วต้องกลับไปตั้งค่าใหม่ ไม่งั้นแอปเปิดมาที่ Dashboard เปล่าๆ
+        // โดยไม่มีทางบอกได้อีกว่าตอนนี้อยู่ ม.อะไร เทอมไหน
+        OnboardingGate.reset()
     }
 
     private func deleteAll<T: PersistentModel>(_ type: T.Type) {
@@ -437,26 +426,13 @@ struct SettingsView: View {
         items.forEach { context.delete($0) }
     }
 
-    /// Debug-only: temporarily marks every setup phase incomplete so the
-    /// real Setup wizard (Profile → Schedule → Grade → Summary) can be
-    /// clicked through again, without touching any SwiftData or profile
-    /// data. The original flags are restored once the preview is dismissed.
+    /// Debug-only: shows the setup flow again as the app's root — the same place a
+    /// new student meets it, not inside a cover presented from here. The "setup is
+    /// done" flag is untouched; the flow's own ✕ (DEBUG only) puts things back.
     private func startSetupTest() {
-        savedSetupFlags = (hasCompletedProfileSetup, hasCompletedScheduleSetup, hasCompletedGradeSetup, hasCompletedSetupSummary)
-        hasCompletedProfileSetup = false
-        hasCompletedScheduleSetup = false
-        hasCompletedGradeSetup = false
-        hasCompletedSetupSummary = false
-        isPresentingSetupTest = true
-    }
-
-    private func restoreSetupFlags() {
-        guard let saved = savedSetupFlags else { return }
-        hasCompletedProfileSetup = saved.profile
-        hasCompletedScheduleSetup = saved.schedule
-        hasCompletedGradeSetup = saved.grade
-        hasCompletedSetupSummary = saved.summary
-        savedSetupFlags = nil
+        #if DEBUG
+        OnboardingGate.startReplay()
+        #endif
     }
 }
 

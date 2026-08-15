@@ -18,8 +18,7 @@ struct EditProfileView: View {
     @State private var lastName: String = ""
     @State private var nickname: String = ""
     @State private var school: String = ""
-    @State private var room: String = ""
-    @State private var program: String = ""
+    @State private var program: StudyProgram = .unspecified
     @State private var profileImage: UIImage?
     @State private var imageRemoved = false
     @State private var showImageSourcePicker = false
@@ -66,12 +65,13 @@ struct EditProfileView: View {
 
                 Section {
                     TextField("โรงเรียน", text: $school)
-                    TextField("ห้อง เช่น 5/2", text: $room)
-                    TextField("แผนการเรียน เช่น วิทย์-คณิต", text: $program)
+                    Picker("แผนการเรียน", selection: $program) {
+                        ForEach(StudyProgram.selectable) { Text($0.label).tag($0) }
+                    }
                 } header: {
                     Text("โรงเรียน")
                 } footer: {
-                    Text("ไม่กรอกก็ได้ — ใช้แสดงบนโปรไฟล์อย่างเดียว")
+                    Text("ไม่กรอกก็ได้ — ใช้แสดงบนโปรไฟล์อย่างเดียว · ระดับชั้นกับเทอมอยู่ที่ปุ่ม “ขึ้นชั้นแล้ว”")
                 }
             }
             .navigationTitle("แก้ไขโปรไฟล์")
@@ -90,7 +90,6 @@ struct EditProfileView: View {
                 lastName = profile.lastName
                 nickname = profile.nickname
                 school = profile.school
-                room = profile.room
                 program = profile.program
                 profileImage = profile.cachedProfileImage
             }
@@ -142,8 +141,7 @@ struct EditProfileView: View {
         profile.lastName  = lastName.trimmingCharacters(in: .whitespaces)
         profile.nickname  = nickname.trimmingCharacters(in: .whitespaces)
         profile.school    = school.trimmingCharacters(in: .whitespaces)
-        profile.room      = room.trimmingCharacters(in: .whitespaces)
-        profile.program   = program.trimmingCharacters(in: .whitespaces)
+        profile.program   = program
         if let img = profileImage {
             profile.saveProfileImage(img)
         } else if imageRemoved {

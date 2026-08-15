@@ -1,11 +1,15 @@
 //
 //  Term.swift
-//  One school term: a grade level (ม.1–ม.6) plus a term number (1 or 2).
+//  One school term: a grade level (ม.4–ม.6) plus a term number (1 or 2).
 //  Every timetable, task and score sheet hangs off exactly one of these.
 //
 //  There is no academic-year field on purpose: a student passes through each
-//  of the 12 slots exactly once, so gradeLevel + termNumber is already unique
+//  of the 6 slots exactly once, so gradeLevel + termNumber is already unique
 //  for one student. Terms are created lazily — see TermStore.findOrCreate.
+//
+//  ม.ต้นถูกตัดออกจากแอปแล้ว — the app only serves ม.ปลาย, because GPAX for TCAS
+//  counts nothing else. Rows already stored with gradeLevel 1–3 still load fine;
+//  they simply never appear in a picker again.
 //
 //  Trap: do not add @Relationship arrays (e.g. var entries: [ScheduleEntry])
 //  here. Children point up to the term (var term: Term?) and deletion is
@@ -37,7 +41,7 @@ final class Term {
     /// UserDefaults, so we carry our own UUID.
     var id: UUID = UUID()
 
-    /// 1...6 → ม.1 ... ม.6
+    /// 4...6 → ม.4 ... ม.6 (rows created by older builds may hold 1...3)
     var gradeLevel: Int = 4
     /// 1 or 2
     var termNumber: Int = 1

@@ -56,8 +56,12 @@ enum ScheduleConstants {
     /// AddSubjectSheet's "เป็นช่วงพัก" toggle or through the import path, never
     /// by typing a name into the period form.
     ///
+    /// `strand` is for callers who picked the subject from `ThaiCourseCatalog` and
+    /// therefore already know its learning area — a catalog pick carries no code,
+    /// so without this the colour would fall back to the generic one.
+    ///
     /// Returns nil for a blank name.
-    static func resolveSubject(named: String, code: String, in context: ModelContext) -> Subject? {
+    static func resolveSubject(named: String, code: String, strand: ThaiSubjectStrand? = nil, in context: ModelContext) -> Subject? {
         let name = named.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return nil }
         let code = code.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -74,8 +78,8 @@ enum ScheduleConstants {
             return match
         }
 
-        let strand = ThaiSubjectCatalog.parse(code)?.strand
-        let look = ThaiSubjectCatalog.appearance(strand: strand, name: name)
+        let resolvedStrand = strand ?? ThaiSubjectCatalog.parse(code)?.strand
+        let look = ThaiSubjectCatalog.appearance(strand: resolvedStrand, name: name)
         let subject = Subject(name: name, code: code, colorHex: look.colorHex, iconName: look.iconName)
         context.insert(subject)
         AppLog.action("Subject", "สร้างวิชาจากฟอร์มคาบ: \(name) (\(code))")

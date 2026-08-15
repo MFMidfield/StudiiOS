@@ -16,7 +16,6 @@ final class StudentProfileStore {
     private let lastNameKey  = "com.studentos.profile.lastName"
     private let nicknameKey  = "com.studentos.profile.nickname"
     private let schoolKey    = "com.studentos.profile.school"
-    private let roomKey      = "com.studentos.profile.room"
     private let programKey   = "com.studentos.profile.program"
 
     var firstName: String {
@@ -34,14 +33,13 @@ final class StudentProfileStore {
     var school: String {
         didSet { UserDefaults.standard.set(school, forKey: schoolKey) }
     }
-    /// เช่น "5/2"
-    var room: String {
-        didSet { UserDefaults.standard.set(room, forKey: roomKey) }
-    }
-    /// เช่น "วิทย์-คณิต" — free text, not a picker: Thai study programmes vary
-    /// far too much between schools to hardcode a list.
-    var program: String {
-        didSet { UserDefaults.standard.set(program, forKey: programKey) }
+    /// A fixed choice now (see StudyProgram). Devices that stored the old free
+    /// text land on `.unspecified` unless the text happens to match a rawValue —
+    /// the student re-picks it in one tap, nothing else depends on the value.
+    ///
+    /// ห้อง (เช่น "5/2") ถูกตัดทิ้งแล้ว: ไม่มีอะไรในแอปใช้ และไม่ได้ถามใน onboarding
+    var program: StudyProgram {
+        didSet { UserDefaults.standard.set(program.rawValue, forKey: programKey) }
     }
 
     // Cached in-memory so @Observable views react automatically when changed.
@@ -52,8 +50,7 @@ final class StudentProfileStore {
         lastName  = UserDefaults.standard.string(forKey: lastNameKey)  ?? ""
         nickname  = UserDefaults.standard.string(forKey: nicknameKey)  ?? ""
         school    = UserDefaults.standard.string(forKey: schoolKey)    ?? ""
-        room      = UserDefaults.standard.string(forKey: roomKey)      ?? ""
-        program   = UserDefaults.standard.string(forKey: programKey)   ?? ""
+        program   = StudyProgram(rawValue: UserDefaults.standard.string(forKey: programKey) ?? "") ?? .unspecified
         cachedProfileImage = Self.readImageFromDisk()
     }
 
@@ -87,8 +84,7 @@ final class StudentProfileStore {
         lastName  = ""
         nickname  = ""
         school    = ""
-        room      = ""
-        program   = ""
+        program   = .unspecified
         try? FileManager.default.removeItem(at: profileImageURL)
         cachedProfileImage = nil
     }

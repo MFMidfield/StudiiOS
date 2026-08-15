@@ -97,33 +97,10 @@ nonisolated enum ThaiSubjectStrand: String, CaseIterable, Identifiable {
 
     /// Suggestions for the review sheet's name dropdown. A convenience list,
     /// never a constraint — the name field is always editable and always wins.
-    var commonSubjects: [String] {
-        switch self {
-        case .thai:
-            return ["หลักภาษาไทย", "วรรณคดีและวรรณกรรม", "การอ่านและการเขียน", "การเขียนเชิงสร้างสรรค์"]
-        case .math:
-            return ["คณิตศาสตร์พื้นฐาน", "คณิตศาสตร์เพิ่มเติม", "สถิติ", "แคลคูลัสเบื้องต้น"]
-        case .science:
-            return [
-                "ฟิสิกส์", "เคมี", "ชีววิทยา", "วิทยาศาสตร์กายภาพ", "วิทยาศาสตร์ชีวภาพ",
-                "โลก ดาราศาสตร์ และอวกาศ", "วิทยาการคำนวณ", "การออกแบบและเทคโนโลยี",
-            ]
-        case .social:
-            return ["สังคมศึกษา", "ประวัติศาสตร์", "พระพุทธศาสนา", "หน้าที่พลเมือง", "เศรษฐศาสตร์", "ภูมิศาสตร์"]
-        case .health:
-            return ["สุขศึกษา", "พลศึกษา"]
-        case .arts:
-            return ["ทัศนศิลป์", "ดนตรี", "นาฏศิลป์"]
-        case .career:
-            return ["การงานอาชีพ", "คหกรรม", "งานช่าง", "งานเกษตร", "ธุรกิจและการเป็นผู้ประกอบการ"]
-        case .activity:
-            return ["แนะแนว", "ชุมนุม", "กิจกรรมในเครื่องแบบ", "ลูกเสือ-เนตรนารี", "ยุวกาชาด", "บำเพ็ญประโยชน์"]
-        case .english:
-            return ["ภาษาอังกฤษพื้นฐาน", "ภาษาอังกฤษเพิ่มเติม", "ภาษาอังกฤษฟัง-พูด", "ภาษาอังกฤษอ่าน-เขียน"]
-        case .chinese, .japanese, .french, .german:
-            return [displayName]
-        }
-    }
+    ///
+    /// The names themselves live in `ThaiCourseCatalog`, which the onboarding
+    /// pickers read as well. One list, two entry points.
+    var commonSubjects: [String] { ThaiCourseCatalog.courses(for: self) }
 }
 
 /// A code that passed the grammar check and belongs to a strand we know.

@@ -27,9 +27,11 @@ enum GPAXSettings {
 
     // MARK: - เทอมจริงของนักเรียน (D7)
 
+    /// ม.4–ม.6 เท่านั้น — แอปเลิกรับ ม.ต้นแล้ว (GPAX ของ TCAS นับเฉพาะ ม.ปลายอยู่แล้ว)
+    /// เครื่องที่เคยตั้ง ม.1–ม.3 ไว้จะได้ nil = "ยังไม่ตั้งเทอมจริง" แล้วถูกถามใหม่
     static var currentGradeLevel: Int? {
         let stored = UserDefaults.standard.integer(forKey: Key.currentGradeLevel)
-        return (1...6).contains(stored) ? stored : nil
+        return SchoolBand.upper.gradeLevels.contains(stored) ? stored : nil
     }
 
     static var currentTermNumber: Int? {

@@ -13,10 +13,11 @@ enum TermStore {
     /// Views read it with `@AppStorage(TermStore.activeTermKey)`.
     static let activeTermKey = "com.studentos.activeTermID"
 
-    /// All 12 slots the picker can offer, in chronological order.
+    /// All 6 slots the picker can offer, in chronological order.
+    /// ม.ปลายเท่านั้น — the app dropped ม.ต้น, see GPAXSettings.currentGradeLevel.
     /// These are NOT database rows (decision D4) — just the menu.
     static let allSlots: [(gradeLevel: Int, termNumber: Int)] =
-        (1...6).flatMap { level in [1, 2].map { (level, $0) } }
+        SchoolBand.upper.gradeLevels.flatMap { level in [1, 2].map { (level, $0) } }
 
     /// The slot a brand-new install starts on.
     static let defaultSlot = (gradeLevel: 4, termNumber: 1)
@@ -113,6 +114,33 @@ enum TermStore {
             guard !linkedIDs.contains(subject.persistentModelID) else { continue }
             context.insert(TermSubject(term: term, subject: subject))
             linkedIDs.insert(subject.persistentModelID)
+        }
+    }
+
+    /// True when nothing at all hangs off this term — no timetable, no tasks, no
+    /// grades, no marks entered by hand. Used to clear away the placeholder term
+    /// `bootstrap()` creates before the student has said what year they are in.
+    static func isEmpty(_ term: Term, in context: ModelContext) -> Bool {
+        guard term.gpa == nil, term.totalCredits == nil, !term.usesDetailedGrades else { return false }
+        let id = term.id
+        let hasEntries = ((try? context.fetch(FetchDescriptor<ScheduleEntry>())) ?? [])
+            .contains { $0.term?.id == id }
+        let hasAssignments = ((try? context.fetch(FetchDescriptor<Assignment>())) ?? [])
+            .contains { $0.term?.id == id }
+        let hasComponents = ((try? context.fetch(FetchDescriptor<GradeComponent>())) ?? [])
+            .contains { $0.term?.id == id }
+        let hasGradeSubjects = ((try? context.fetch(FetchDescriptor<TermGradeSubject>())) ?? [])
+            .contains { $0.term?.id == id }
+        return !hasEntries && !hasAssignments && !hasComponents && !hasGradeSubjects
+    }
+
+    /// Removes every empty term except `keep`. Called when the student picks their
+    /// year during setup: without it, choosing ม.6 leaves the ม.4 เทอม 1 placeholder
+    /// sitting in "จัดการเทอม" forever, looking like a term they forgot to fill in.
+    static func pruneEmptyTerms(except keep: Term, in context: ModelContext) {
+        for term in (try? context.fetch(FetchDescriptor<Term>())) ?? []
+        where term.id != keep.id && isEmpty(term, in: context) {
+            delete(term, in: context)
         }
     }
 

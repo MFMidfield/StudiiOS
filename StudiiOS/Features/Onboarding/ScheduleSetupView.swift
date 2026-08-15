@@ -1,286 +1,289 @@
 //
 //  ScheduleSetupView.swift
-//  Setup wizard, phase 2 of N: build the weekly class schedule either by
-//  hand or by photographing a printed timetable and letting on-device OCR
-//  (ScheduleOCRParser) draft the entries. Shown once — gated by
-//  AppStorage("hasCompletedScheduleSetup") in RootContainerView.
+//  หน้า 3 ของ setup — ตารางเรียนของเทอมที่เลือกไว้หน้า 2
+//
+//  ทางถ่ายรูปใช้เส้นเดียวกับ `AddScheduleEntrySheet` ทุกขั้น:
+//    ScheduleOCRParser → ScheduleImportBuilder → ScheduleImportReviewSheet → ScheduleImportCommitter
+//  ของเดิม onboarding มี OCR เส้นของตัวเองที่ไม่มีหน้าตรวจเลย — คาบที่อ่านผิดจึงลงฐานข้อมูล
+//  ไปเงียบๆ เส้นนั้นถูกลบทิ้งแล้ว
+//
+//  presentation ทั้งชุด (alert → dialog → picker → review) แขวนจาก view นี้ตัวเดียว
+//  ห้ามย้ายไปไว้ใน child — sheet ซ้อน sheet คือจุดที่หน้าต่างหายเงียบๆ
+//
+//  ข้ามได้ แต่ต้องเตือนก่อน (สเปค): ไม่มีตาราง = หน้าเกรดละเอียดไม่มีวิชาให้ seed
+//  และการ์ด "คาบเรียนถัดไป" บน Dashboard จะว่าง
 //
 
 import SwiftUI
 import SwiftData
 import UIKit
 
-private enum ScheduleSetupMode: String, CaseIterable, Identifiable {
-    case manual = "กรอกเอง"
-    case photo = "ถ่ายภาพ"
-
-    var id: String { rawValue }
-}
-
 struct ScheduleSetupView: View {
-    @AppStorage("hasCompletedScheduleSetup") private var hasCompletedScheduleSetup = false
-    @Environment(\.modelContext) private var context
+    let onBack: () -> Void
+    let onNext: () -> Void
 
-    @State private var mode: ScheduleSetupMode = .manual
-    @State private var draftEntries: [ScheduleDraftEntry] = []
-    @State private var isPresentingManualEntrySheet = false
-    @State private var isShowingPhotoSourceMenu = false
+    @Environment(\.modelContext) private var context
+    @Query private var allEntries: [ScheduleEntry]
+    @Query private var terms: [Term]
+    @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
+
+    private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+    private var entries: [ScheduleEntry] { allEntries.inTerm(activeTerm) }
+
+    /// หนึ่ง `.sheet` ต่อหนึ่ง view เท่านั้น — แขวนสองตัวไว้ที่เดียวกันแล้วตัวที่เปิดทีหลัง
+    /// จะปิดตัวเองทันที (บั๊ก "กดกรอกเองแล้ว sheet เด้งแล้วหายเอง")
+    private enum ActiveSheet: Identifiable {
+        case addPeriod(Term)
+        case review(ImportReviewPayload)
+
+        var id: String {
+            switch self {
+            case .addPeriod: return "addPeriod"
+            case .review(let payload): return "review-\(payload.id)"
+            }
+        }
+    }
+
+    @State private var activeSheet: ActiveSheet?
+    @State private var isConfirmingSkip = false
+
+    // Photo import
+    @State private var isShowingScanWarning = false
+    @State private var isShowingPhotoSource = false
     @State private var activePickerSource: ProfileImagePicker.Source?
     @State private var isAnalyzingPhoto = false
-    @State private var ocrFoundNothing = false
+    @State private var scanError: String?
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(spacing: 0) {
-                VStack(spacing: 8) {
-                    Text("ตารางเรียน")
-                        .font(.title2.bold())
-                        .foregroundStyle(Theme.Colors.textPrimary)
-                    Text("ขั้นตอน 2")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        OnboardingScaffold(
+            step: .schedule,
+            onBack: onBack,
+            primaryTitle: entries.isEmpty ? "ยังไม่เพิ่ม ข้ามไปก่อน" : "ถัดไป",
+            onPrimary: { entries.isEmpty ? isConfirmingSkip = true : onNext() }
+        ) {
+            VStack(spacing: Theme.Spacing.xl) {
+                importCard
+                manualCard
+                if !entries.isEmpty {
+                    entryList
                 }
-                .padding(.top, 24)
-                .padding(.bottom, 12)
-
-                Picker("", selection: $mode) {
-                    ForEach(ScheduleSetupMode.allCases) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 12)
-
-                switch mode {
-                case .manual: manualSection
-                case .photo: photoSection
-                }
-
-                Button {
-                    saveAndContinue()
-                } label: {
-                    Text("ถัดไป")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.Colors.primary)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
-            }
-            .background(Theme.Colors.background)
-
-            Button("ข้าม") {
-                hasCompletedScheduleSetup = true
-            }
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .padding(.top, 16)
-            .padding(.trailing, 30)
-        }
-        .sheet(isPresented: $isPresentingManualEntrySheet) {
-            ManualScheduleEntrySheet { entry in
-                draftEntries.append(entry)
             }
         }
-        .confirmationDialog("เลือกรูปตารางเรียน", isPresented: $isShowingPhotoSourceMenu, titleVisibility: .visible) {
+        .alert("ยังไม่มีตารางเรียน", isPresented: $isConfirmingSkip) {
+            Button("กลับไปเพิ่ม", role: .cancel) {}
+            Button("ข้ามไปก่อน") { onNext() }
+        } message: {
+            Text("ข้ามได้ แต่หน้าแรกจะยังไม่บอกคาบเรียนถัดไป และตอนกรอกเกรดจะไม่มีรายชื่อวิชามาให้เลือกอัตโนมัติ เพิ่มทีหลังได้ที่แท็บตารางเรียน")
+        }
+        .fullScreenCover(item: $activePickerSource) { source in
+            ProfileImagePicker(source: source, allowsEditing: false) { analyze($0) }
+                .ignoresSafeArea()
+        }
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .addPeriod(let term):
+                OnboardingPeriodSheet(term: term, defaultStartMinute: nextStartMinute)
+            case .review(let payload):
+                ScheduleImportReviewSheet(payload: payload) { confirmed in
+                    commitImport(confirmed)
+                }
+                .presentationDetents([.large])
+                .interactiveDismissDisabled(true)
+            }
+        }
+    }
+
+    // MARK: - Cards
+
+    private var importCard: some View {
+        Button {
+            isShowingScanWarning = true
+        } label: {
+            CardContainer {
+                HStack(spacing: Theme.Spacing.lg) {
+                    IconTile(systemName: "camera.viewfinder", size: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("ถ่ายรูปตารางเรียน")
+                            .font(Theme.Font.plex(15, .semibold))
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                        Text("อ่านทั้งใบให้อัตโนมัติ แล้วให้คุณตรวจก่อนบันทึก")
+                            .font(Theme.Font.label)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                    if isAnalyzingPhoto { ProgressView() }
+                }
+            }
+        }
+        .buttonStyle(PressScaleButtonStyle())
+        .disabled(isAnalyzingPhoto)
+        .overlay(alignment: .bottom) { scanErrorText }
+        // แขวนที่ปุ่ม ไม่ใช่ที่หน้าทั้งหน้า: บน iPad กับ Mac ตัว dialog เป็น popover
+        // ที่ชี้ไปยัง view ที่มันเกาะอยู่ — เกาะทั้งหน้าแล้วลูกศรไปโผล่มุมซ้ายบน
+        .alert("ระบบอาจอ่านผิด", isPresented: $isShowingScanWarning) {
+            Button("ยกเลิก", role: .cancel) {}
+            Button("เข้าใจแล้ว") { chooseImageSource() }
+        } message: {
+            Text("การอ่านตารางจากรูปอาจอ่านผิด โดยเฉพาะรหัสวิชาและเวลา จะมีหน้าให้ตรวจทุกคาบก่อนบันทึกจริง")
+        }
+        .confirmationDialog("เลือกรูปตารางเรียน", isPresented: $isShowingPhotoSource, titleVisibility: .visible) {
             if UIImagePickerController.isSourceTypeAvailable(.camera) {
                 Button("ถ่ายรูป") { activePickerSource = .camera }
             }
             Button("เลือกจากคลังภาพ") { activePickerSource = .photoLibrary }
             Button("ยกเลิก", role: .cancel) {}
         }
-        .fullScreenCover(item: $activePickerSource) { source in
-            ProfileImagePicker(source: source, allowsEditing: false) { image in
-                analyze(image)
-            }
-            .ignoresSafeArea()
+    }
+
+    @ViewBuilder
+    private var scanErrorText: some View {
+        if let scanError {
+            Text(scanError)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.Colors.warning)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Theme.Spacing.lg)
+                .offset(y: 26)
         }
     }
 
-    private var manualSection: some View {
-        List {
-            ForEach(ScheduleConstants.visibleDays, id: \.self) { day in
-                let entries = draftEntries.filter { $0.dayOfWeek == day }.sorted { $0.startMinute < $1.startMinute }
-                if !entries.isEmpty {
-                    Section(ScheduleConstants.dayLabels[day] ?? "") {
-                        ForEach(entries) { entry in
-                            entryRow(entry)
-                        }
+    private var manualCard: some View {
+        Button {
+            // เทอมถูกหยิบมา ณ ตอนกด ไม่ใช่ตอนวาด sheet — เนื้อ sheet ที่ว่าง
+            // (activeTerm เป็น nil ชั่วขณะ) คือสาเหตุที่ SwiftUI ปิดมันเองทันที
+            guard let activeTerm else { return }
+            activeSheet = .addPeriod(activeTerm)
+        } label: {
+            CardContainer {
+                HStack(spacing: Theme.Spacing.lg) {
+                    IconTile(systemName: "square.and.pencil", size: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("กรอกเอง")
+                            .font(Theme.Font.plex(15, .semibold))
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                        Text("เลือกวิชาจากรายการ แล้วใส่วันกับเวลา")
+                            .font(Theme.Font.label)
+                            .foregroundStyle(Theme.Colors.textSecondary)
                     }
+                    Spacer(minLength: 0)
                 }
             }
         }
-        .overlay {
-            if draftEntries.isEmpty {
-                ContentUnavailableView("ยังไม่มีคาบเรียน", systemImage: "calendar.badge.plus", description: Text("แตะ + เพื่อเพิ่มคาบเรียน"))
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { isPresentingManualEntrySheet = true } label: { Image(systemName: "plus") }
-            }
-        }
+        .buttonStyle(PressScaleButtonStyle())
+        .disabled(activeTerm == nil)
     }
 
-    private var photoSection: some View {
-        VStack(spacing: 16) {
-            if isAnalyzingPhoto {
-                ProgressView("กำลังอ่านตารางเรียน...")
-                    .padding(.top, 40)
-            } else {
-                Button {
-                    isShowingPhotoSourceMenu = true
-                } label: {
-                    Label("ถ่ายภาพตารางเรียน", systemImage: "camera.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                }
-                .buttonStyle(.bordered)
-                .tint(Theme.Colors.primary)
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
+    // MARK: - List
 
-                if ocrFoundNothing {
-                    Text("อ่านตารางจากรูปนี้ไม่สำเร็จ ลองถ่ายให้เห็นหัวคอลัมน์วันและเวลาชัดๆ หรือสลับไปกรอกเองแทน")
-                        .font(.caption)
-                        .foregroundStyle(Theme.Colors.warning)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
-
-                Text("ผลลัพธ์จาก AI เป็นแค่ร่าง — ตรวจสอบและแก้ไขได้ก่อนบันทึกจริง")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-
-            List {
+    private var entryList: some View {
+        OnboardingSection(title: "เพิ่มแล้ว \(entries.count) คาบ") {
+            VStack(spacing: Theme.Spacing.sm) {
                 ForEach(ScheduleConstants.visibleDays, id: \.self) { day in
-                    let entries = draftEntries.filter { $0.dayOfWeek == day }.sorted { $0.startMinute < $1.startMinute }
-                    if !entries.isEmpty {
-                        Section(ScheduleConstants.dayLabels[day] ?? "") {
-                            ForEach(entries) { entry in
-                                entryRow(entry)
-                            }
-                        }
+                    let dayEntries = entries
+                        .filter { $0.dayOfWeek == day }
+                        .sorted { $0.startMinute < $1.startMinute }
+                    if !dayEntries.isEmpty {
+                        dayBlock(day: day, entries: dayEntries)
                     }
                 }
             }
         }
     }
 
-    private func entryRow(_ entry: ScheduleDraftEntry) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.subjectName).font(.system(size: 14, weight: .medium))
-                Text("\(entry.startMinute.asClockString) - \(entry.endMinute.asClockString)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+    private func dayBlock(day: Int, entries dayEntries: [ScheduleEntry]) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text(ScheduleConstants.dayLabelsFull[day] ?? "")
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.Colors.textSecondary)
+            ForEach(dayEntries) { entry in
+                periodRow(entry)
             }
-            Spacer()
         }
-        .swipeActions {
-            Button(role: .destructive) {
-                draftEntries.removeAll { $0.id == entry.id }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func periodRow(_ entry: ScheduleEntry) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(entry.subject?.color ?? Theme.Colors.primary)
+                .frame(width: 3, height: 28)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(entry.subject?.name ?? entry.subjectName)
+                    .font(Theme.Font.plex(14, .medium))
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                Text("\(entry.startMinute.asClockString)–\(entry.endMinute.asClockString)")
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
+            Spacer(minLength: 0)
+            Button {
+                delete(entry)
             } label: {
-                Label("ลบ", systemImage: "trash")
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .frame(width: 28, height: 28)
+                    .background(Theme.Colors.surfaceRaised, in: Circle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("ลบคาบ \(entry.subject?.name ?? entry.subjectName)")
         }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm)
+        .background(Theme.Colors.cardBackground, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+    }
+
+    // MARK: - Actions
+
+    /// ไม่มีกล้อง (simulator ก็ไม่มี) = มีทางเดียว ไม่ต้องถาม — เมนูตัวเลือกเดียว
+    /// เปลืองการกดและเป็นอีกชั้นที่พังได้
+    private func chooseImageSource() {
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            isShowingPhotoSource = true
+        } else {
+            activePickerSource = .photoLibrary
+        }
+    }
+
+    /// วางคาบใหม่ต่อจากคาบสุดท้ายของวันนั้น เพื่อไม่ต้องเลื่อนเวลาเองทุกครั้ง
+    private var nextStartMinute: Int {
+        let today = ScheduleConstants.defaultEntryDay
+        let last = entries.filter { $0.dayOfWeek == today }.map(\.endMinute).max()
+        return last ?? 8 * 60
+    }
+
+    private func delete(_ entry: ScheduleEntry) {
+        context.delete(entry)
+        try? context.save()
     }
 
     private func analyze(_ image: UIImage) {
         isAnalyzingPhoto = true
-        ocrFoundNothing = false
-        ScheduleOCRParser.parseSchedule(from: image) { parsed in
+        scanError = nil
+        ScheduleOCRParser.parseScheduleDetailed(from: image, onRawBoxes: nil) { result in
             isAnalyzingPhoto = false
-            if parsed.isEmpty {
-                ocrFoundNothing = true
-            } else {
-                draftEntries.append(contentsOf: parsed)
+            let periods = ScheduleImportBuilder.build(from: result.entries)
+            guard !periods.isEmpty else {
+                scanError = result.problem?.message
+                    ?? "อ่านตารางจากรูปนี้ไม่สำเร็จ ลองถ่ายให้เห็นตารางทั้งใบและอย่าให้เอียง"
+                AppLog.warn("Onboarding", "OCR ไม่ได้คาบเลย · problem=\(String(describing: result.problem))")
+                return
             }
+            if let problem = result.problem { scanError = problem.message }
+            activeSheet = .review(ImportReviewPayload(image: image, periods: periods))
         }
     }
 
-    private func saveAndContinue() {
-        let subjectCountBefore = (try? context.fetch(FetchDescriptor<Subject>()))?.count ?? 0
-
-        let term = TermStore.findOrCreate(gradeLevel: TermStore.defaultSlot.gradeLevel,
-                                          termNumber: TermStore.defaultSlot.termNumber,
-                                          in: context)
-        TermStore.setActive(term)
-
-        for draft in draftEntries {
-            let subject = ScheduleConstants.findOrCreateSubject(named: draft.subjectName, in: context)
-            context.insert(
-                ScheduleEntry(
-                    dayOfWeek: draft.dayOfWeek,
-                    startMinute: draft.startMinute,
-                    endMinute: draft.endMinute,
-                    periodNumber: 0,
-                    subjectName: draft.subjectName,
-                    subject: subject,
-                    term: term
-                )
-            )
+    private func commitImport(_ periods: [ImportedPeriod]) {
+        guard let activeTerm else {
+            activeSheet = nil
+            scanError = "ไม่พบเทอมปัจจุบัน ลองย้อนกลับไปหน้าก่อนแล้วกดถัดไปใหม่"
+            AppLog.error("Onboarding", "commitImport ล้มเหลว: ไม่มี activeTerm")
+            return
         }
-
-        TermStore.syncTermSubjects(for: term, in: context)
-
-        let subjectCountAfter = (try? context.fetch(FetchDescriptor<Subject>()))?.count ?? subjectCountBefore
-        AppLog.action("Onboarding", "บันทึกตาราง \(draftEntries.count) คาบ · สร้างวิชาใหม่ \(subjectCountAfter - subjectCountBefore) รายการ")
-
-        hasCompletedScheduleSetup = true
+        let summary = ScheduleImportCommitter.commit(periods, into: activeTerm, in: context)
+        activeSheet = nil
+        AppLog.action("Onboarding", "นำเข้าตารางจากรูป \(summary.insertedEntries) คาบ")
     }
-}
-
-private struct ManualScheduleEntrySheet: View {
-    @Environment(\.dismiss) private var dismiss
-    let onAdd: (ScheduleDraftEntry) -> Void
-
-    @State private var dayOfWeek = ScheduleConstants.visibleDays.first ?? 1
-    @State private var subjectName = ""
-    @State private var startTime = Date.now
-    @State private var endTime = Date.now.addingTimeInterval(3000)
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Picker("วัน", selection: $dayOfWeek) {
-                    ForEach(ScheduleConstants.visibleDays, id: \.self) { Text(ScheduleConstants.dayLabels[$0] ?? "").tag($0) }
-                }
-                TextField("ชื่อวิชา", text: $subjectName)
-                DatePicker("เริ่ม", selection: $startTime, displayedComponents: .hourAndMinute)
-                DatePicker("สิ้นสุด", selection: $endTime, displayedComponents: .hourAndMinute)
-            }
-            .navigationTitle("เพิ่มคาบเรียน")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("ยกเลิก") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("เพิ่ม") {
-                        onAdd(ScheduleDraftEntry(
-                            dayOfWeek: dayOfWeek,
-                            startMinute: minutesFromMidnight(startTime),
-                            endMinute: minutesFromMidnight(endTime),
-                            subjectName: subjectName.trimmingCharacters(in: .whitespaces)
-                        ))
-                        dismiss()
-                    }
-                    .disabled(subjectName.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-            }
-        }
-    }
-
-    private func minutesFromMidnight(_ date: Date) -> Int {
-        let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
-        return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
-    }
-}
-
-#Preview {
-    ScheduleSetupView()
-        .modelContainer(for: [ScheduleEntry.self, Term.self, TermSubject.self], inMemory: true)
 }

@@ -18,12 +18,8 @@ struct GradeLevelSheet: View {
         _termNumber = State(initialValue: GPAXSettings.currentTermNumber ?? 1)
     }
 
-    private var band: SchoolBand { SchoolBand.containing(gradeLevel: gradeLevel) }
-
-    /// nil for ม.1–ม.3 — GPAX for TCAS only counts ม.ปลาย (D5), so the
-    /// passed/remaining count against the 6 upper-band slots is meaningless there.
-    private var progressText: String? {
-        guard band == .upper else { return nil }
+    /// The app only knows ม.ปลาย now, so this always has something to say.
+    private var progressText: String {
         let sortKey = gradeLevel * 10 + termNumber
         let passed = GPAXCalculator.upperBandSortKeys.filter { $0 < sortKey }.count
         let remaining = GPAXCalculator.upperBandSortKeys.filter { $0 >= sortKey }.count
@@ -34,26 +30,16 @@ struct GradeLevelSheet: View {
         NavigationStack {
             Form {
                 Section("ระดับชั้น") {
-                    chipRow(values: Array(1...6), selection: $gradeLevel) { "ม.\($0)" }
+                    chipRow(values: SchoolBand.upper.gradeLevels, selection: $gradeLevel) { "ม.\($0)" }
                 }
                 Section("เทอม") {
                     chipRow(values: [1, 2], selection: $termNumber) { "เทอม \($0)" }
                 }
 
-                if let progressText {
-                    Section {
-                        Text(progressText)
-                            .font(Theme.Font.body)
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                    }
-                }
-
-                if band == .lower {
-                    Section {
-                        Text("GPAX สำหรับ TCAS นับเฉพาะ ม.ปลาย (ม.4–ม.6) — ตั้งไว้ก่อนได้ ระบบจะเริ่มคำนวณตอนขึ้น ม.4")
-                            .font(Theme.Font.caption)
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                    }
+                Section {
+                    Text(progressText)
+                        .font(Theme.Font.body)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
             .navigationTitle("ระดับชั้นปัจจุบัน")

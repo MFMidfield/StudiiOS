@@ -23,6 +23,11 @@ struct TermGradeEditView: View {
     let gradeLevel: Int
     let termNumber: Int
 
+    /// วิชาสำรองสำหรับ seed เมื่อเทอมนี้เองไม่มีตารางเรียน — ใช้ตอน setup: เทอมย้อนหลัง
+    /// ไม่มีใครกรอกตารางไว้ แต่ตารางของเทอมปัจจุบันมักเป็นวิชาชุดเดียวกัน
+    /// nil = พฤติกรรมเดิมทุกอย่าง (หน้าเกรดปกติส่ง nil)
+    var seedFrom: Term?
+
     @Query private var allTerms: [Term]
     @Query private var allGradeSubjects: [TermGradeSubject]
     @Query private var allEntries: [ScheduleEntry]
@@ -30,14 +35,21 @@ struct TermGradeEditView: View {
     @State private var usesDetailed: Bool
     @State private var gpaText: String
     @State private var creditsText: String
-    @State private var showCumulativeSheet = false
+    /// หนึ่ง `.sheet` ต่อหนึ่ง view — สองตัวแขวนที่เดียวกันแล้วตัวหลังจะปิดตัวแรกทิ้ง
+    private enum ActiveSheet: String, Identifiable {
+        case cumulative, addSubject
+        var id: String { rawValue }
+    }
+
+    @State private var activeSheet: ActiveSheet?
 
     /// Thai 8-step grade point scale.
     static let gradeSteps: [Double] = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4]
 
-    init(gradeLevel: Int, termNumber: Int, existingTerm: Term?) {
+    init(gradeLevel: Int, termNumber: Int, existingTerm: Term?, seedFrom: Term? = nil) {
         self.gradeLevel = gradeLevel
         self.termNumber = termNumber
+        self.seedFrom = seedFrom
         _usesDetailed = State(initialValue: existingTerm?.usesDetailedGrades ?? false)
         // เทอมที่ยังไม่มีข้อมูลเลย prefill 2.00 ไว้เป็นคำตอบเริ่มต้น
         _gpaText = State(initialValue: existingTerm?.gpa.map { String(format: "%.2f", $0) } ?? "2.00")
@@ -57,10 +69,17 @@ struct TermGradeEditView: View {
             .sorted { $0.sortOrder < $1.sortOrder }
     }
 
-    private var termHasTimetable: Bool {
-        guard let term else { return false }
-        return allEntries.contains { $0.term?.id == term.id }
+    /// คาบที่จะใช้ seed: ของเทอมนี้ก่อน ไม่มีค่อยยืมของ `seedFrom`
+    private var seedEntries: [ScheduleEntry] {
+        if let term {
+            let own = allEntries.filter { $0.term?.id == term.id }
+            if !own.isEmpty { return own }
+        }
+        guard let seedFrom else { return [] }
+        return allEntries.filter { $0.term?.id == seedFrom.id }
     }
+
+    private var termHasTimetable: Bool { !seedEntries.isEmpty }
 
     private var summaryCredits: Double { subjects.reduce(0) { $0 + $1.creditHours } }
     private var summaryGPA: Double? {
@@ -106,8 +125,15 @@ struct TermGradeEditView: View {
         }
         .onChange(of: gpaText) { _, _ in saveSimpleGrade() }
         .onChange(of: creditsText) { _, _ in saveSimpleGrade() }
-        .sheet(isPresented: $showCumulativeSheet) {
-            CumulativeGPAXSheet(onDone: {})
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .cumulative:
+                CumulativeGPAXSheet(onDone: {})
+            case .addSubject:
+                SubjectPickerSheet(allowsCustomName: true) { name, _ in
+                    addSubject(named: name)
+                }
+            }
         }
     }
 
@@ -155,7 +181,7 @@ struct TermGradeEditView: View {
 
     private var cumulativeSection: some View {
         Section {
-            Button("จำเกรดเทอมนี้ไม่ได้") { showCumulativeSheet = true }
+            Button("จำเกรดเทอมนี้ไม่ได้") { activeSheet = .cumulative }
                 .font(Theme.Font.caption)
                 .foregroundStyle(Theme.Colors.textSecondary)
         }
@@ -179,7 +205,7 @@ struct TermGradeEditView: View {
             .onDelete(perform: deleteSubjects)
 
             Button {
-                addSubject()
+                activeSheet = .addSubject
             } label: {
                 Label("เพิ่มวิชา", systemImage: "plus.circle.fill")
             }
@@ -221,10 +247,15 @@ struct TermGradeEditView: View {
         }
     }
 
-    private func addSubject() {
+    /// ชื่อมาจาก `SubjectPickerSheet` เสมอ — เดิมแถวใหม่ชื่อ "วิชาใหม่" แล้วต้องมาพิมพ์ทับเอง
+    /// ซึ่งเป็นบ่อเกิดของชื่อวิชาที่สะกดไม่ตรงกับตารางเรียน
+    private func addSubject(named name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
         let term = ensureTerm()
+        guard !subjects.contains(where: { $0.name == trimmed }) else { return }
         let order = (subjects.map(\.sortOrder).max() ?? -1) + 1
-        context.insert(TermGradeSubject(term: term, name: "วิชาใหม่", sortOrder: order))
+        context.insert(TermGradeSubject(term: term, name: trimmed, sortOrder: order))
         try? context.save()
         recomputeDetailedTotals()
     }
@@ -238,7 +269,7 @@ struct TermGradeEditView: View {
     /// วิชาที่ยังไม่มีในลิสต์เท่านั้นที่ถูกเพิ่ม — ไม่เคยลบของเดิม แม้คาบนั้นจะ
     /// ถูกลบออกจากตารางเรียนไปแล้วก็ตาม (เกรดที่กรอกไว้ต้องไม่หายเงียบๆ)
     private func seedSubjectsFromTimetable(term: Term) {
-        let entries = allEntries.filter { $0.term?.id == term.id }
+        let entries = seedEntries
         var existingNames = Set(subjects.map(\.name))
         var order = (subjects.map(\.sortOrder).max() ?? -1) + 1
 
