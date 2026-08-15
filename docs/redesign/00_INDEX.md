@@ -20,6 +20,30 @@
 
 **W2 เหลือ 1 ก้อน** — G `08_Calendar` (ทำท้ายสุดเป็นก้อนเดี่ยว งานใหญ่สุดในแผน)
 
+### 🔄 ก้อน G — ความคืบหน้ารายขั้น (`08_Calendar` §8)
+
+| ขั้น | งาน | สถานะ |
+|---|---|---|
+| 1 | แตกไฟล์ตาม §6 ย้ายโค้ดเดิมเข้าไปโดยไม่เปลี่ยนพฤติกรรม | ✅ **`xcodebuild` เขียว 15 ส.ค.** — ยังไม่ได้ลองด้วยตา |
+| 2 | `MonthLayoutEngine` + เทสต์ | ⬜ |
+| 3 | `CalendarWeekRow` + `CalendarEventBar` วาดจาก layout | ⬜ |
+| 4 | `ScrollView` 12 เดือน + หัวเดือน/ปี + ปุ่มวันนี้ | ⬜ |
+| 5 | `CalendarDaySheet` + การแตะ | ⬜ |
+| 6 | ghost drag → `CalendarDragController` (เฟส 1) | ⬜ |
+| 7 | ลบ `eventsCard` · `fabButton` | ⬜ |
+| 8 | auto-scroll เฟส 2 (ตัดได้) | ⬜ |
+
+**ขั้นที่ 1 ทำอะไรจริง** — `CalendarView.swift` 963 → 291 บรรทัด · ไฟล์ใหม่ 7 ไฟล์
+`CalendarMonthSection` (แถวชื่อวัน + ตาราง + `CalendarDay` + `CalendarStrings`) ·
+`CalendarWeekRow` (+ `CalendarDayCell`) · `CalendarEventBar` (ชิปเดิม `dayPill`) ·
+`CalendarDaySheet` (`CalendarDayItemsCard` + `CalendarItemRow` + `CalendarItemRowContent`) ·
+`CalendarSearchView` · `CalendarDragController` · `CalendarItemBuilder` (ไฟล์นอกตาราง §6)
+
+- `CalendarItemBuilder` เพิ่มมาเพราะโค้ดสร้าง `CalendarItem` เดิม**ซ้ำสองที่** (ตาราง + ค้นหา) และไม่ยกออกแล้ว root จะ 370 บรรทัด เกินแนว ~250 ของ `PLAN_Redesign` §5 ข้อ 5
+- `CalendarDragController.swift` ยังเป็น **`extension CalendarView`** ไม่ใช่คลาสของตัวเอง — ขั้นนี้ห้ามเปลี่ยนพฤติกรรม · **ขั้นที่ 6 ค่อยแปลง**
+  ผลข้างเคียง: สถานะ ghost/toast + `cal` + `itemsFor` + `subjectColor` + `CalendarSheet` เปลี่ยนจาก `private` เป็น `internal` (มีคอมเมนต์กำกับไว้ในโค้ดแล้ว) ขั้นที่ 6 ปิดกลับ
+- ค่า hardcode (`.font(.system(size:))` · `cornerRadius: 16` · `.padding(16)`) **ยังอยู่ครบตามของเดิม** — ขั้น 3–5 ค่อยเปลี่ยนเป็น `Theme` ตอนเขียน UI ใหม่ ยังไม่ต้องรันสคริปต์ตรวจ hardcode กับโมดูลนี้
+
 ### การตัดสินของ Few — 15 ส.ค. 2569
 
 - **ปุ่ม `＋` ขวาบนใช้ไอคอนเปล่า ไม่ใช่ปุ่มมีพื้น** — ล้มข้อ "ปุ่มมีพื้น `+ คณะ`" ใน `06_TCAS` §4.1
