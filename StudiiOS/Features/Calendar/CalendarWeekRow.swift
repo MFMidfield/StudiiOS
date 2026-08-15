@@ -57,6 +57,8 @@ struct CalendarWeekRow: View {
     let itemsByID: [String: CalendarItem]
     let isBeingDragged: (CalendarItem) -> Bool
     let onSelectDay: (Date) -> Void
+    /// แตะชิป → เปิดฟอร์มของรายการนั้นเลย (§3.4)
+    let onSelectItem: (CalendarItem) -> Void
 
     var body: some View {
         GeometryReader { geo in
@@ -73,12 +75,8 @@ struct CalendarWeekRow: View {
                     }
                 }
 
-                // ชั้นแถบ — ยังไม่รับการแตะในขั้นนี้ (แตะชิป = ขั้นที่ 5)
-                // ปล่อยให้ทะลุลงช่องวันข้างล่างเหมือนพฤติกรรมเดิม
                 barsLayer(colWidth: colWidth)
-                    .allowsHitTesting(false)
                 overflowLayer(colWidth: colWidth)
-                    .allowsHitTesting(false)
             }
         }
         .frame(height: CalendarGeometry.rowHeight)
@@ -87,11 +85,16 @@ struct CalendarWeekRow: View {
     private func barsLayer(colWidth: CGFloat) -> some View {
         ForEach(layout.bars, id: \.itemID) { bar in
             if let item = itemsByID[bar.itemID] {
-                CalendarEventBar(
-                    item: item,
-                    isContinuation: bar.isContinuation,
-                    isDragging: isBeingDragged(item)
-                )
+                Button {
+                    onSelectItem(item)
+                } label: {
+                    CalendarEventBar(
+                        item: item,
+                        isContinuation: bar.isContinuation,
+                        isDragging: isBeingDragged(item)
+                    )
+                }
+                .buttonStyle(.plain)
                 .frame(
                     width: max(colWidth * CGFloat(bar.columnSpan) - CalendarGeometry.barGap, 0),
                     height: CalendarGeometry.laneHeight
@@ -104,14 +107,21 @@ struct CalendarWeekRow: View {
         }
     }
 
+    /// แตะ `+N` = เปิด sheet รายวันของวันนั้น (§3.4)
     private func overflowLayer(colWidth: CGFloat) -> some View {
         ForEach(layout.overflowByColumn.keys.sorted(), id: \.self) { column in
-            Text("+\(layout.overflowByColumn[column] ?? 0)")
-                .font(Theme.Font.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .frame(width: colWidth, height: CalendarGeometry.overflowHeight, alignment: .leading)
-                .padding(.leading, Theme.Spacing.xs)
-                .offset(x: colWidth * CGFloat(column), y: CalendarGeometry.overflowTop)
+            Button {
+                if column < days.count { onSelectDay(days[column].date) }
+            } label: {
+                Text("+\(layout.overflowByColumn[column] ?? 0)")
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .padding(.leading, Theme.Spacing.xs)
+                    .frame(width: colWidth, height: CalendarGeometry.overflowHeight, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .offset(x: colWidth * CGFloat(column), y: CalendarGeometry.overflowTop)
         }
     }
 }

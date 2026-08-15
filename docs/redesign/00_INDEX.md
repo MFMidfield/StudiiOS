@@ -28,7 +28,7 @@
 | 2 | `MonthLayoutEngine` + เทสต์ | ✅ **เทสต์ผ่าน 10/10 บน simulator 15 ส.ค.** |
 | 3 | `CalendarWeekRow` + `CalendarEventBar` วาดจาก layout | ✅ **`xcodebuild` เขียว 15 ส.ค.** — 🔴 **ยังไม่ได้ดูด้วยตา** |
 | 4 | `ScrollView` 12 เดือน + หัวเดือน/ปี + ปุ่มวันนี้ | ✅ **`xcodebuild` เขียว** — 🔴 ยังไม่ได้ดูด้วยตา |
-| 5 | `CalendarDaySheet` + การแตะ | ⬜ |
+| 5 | `CalendarDaySheet` + การแตะ | ✅ **`xcodebuild` เขียว** — 🔴 ยังไม่ได้ดูด้วยตา |
 | 6 | ghost drag → `CalendarDragController` (เฟส 1) | ⬜ |
 | 7 | ลบ `eventsCard` · `fabButton` | ⬜ |
 | 8 | auto-scroll เฟส 2 (ตัดได้) | ⬜ |
@@ -89,6 +89,13 @@
 > ⚠️ **สลับลำดับกับสเปคหนึ่งข้อ:** `CalendarDayItemsCard` (การ์ดรายการใต้ตาราง) ย้ายไปเป็น **sheet ตอนแตะวัน** แล้วในขั้นนี้
 > เพราะสายเลื่อน 12 เดือนกินทั้งจอ ถ้าไม่ย้ายตอนนี้ แตะวันแล้วจะไม่มีอะไรเกิดขึ้นเลยจนถึงขั้นที่ 5
 > **ขั้นที่ 5 ยังต้องทำต่อ:** หัว sheet เป็น "พฤหัสบดี 13 สิงหาคม" (ต้องเพิ่ม `thaiWeekdayFull` ใน `Date+Thai.swift`) · "N รายการ" · ปุ่ม "เพิ่มกิจกรรมวันนี้" · แตะชิปในตารางเปิดฟอร์มตรงๆ (ตอนนี้ชั้นแถบยัง `allowsHitTesting(false)`)
+
+**ขั้นที่ 5 ทำอะไรจริง**
+
+- `CalendarDayItemsCard` → `CalendarDaySheet` — หัว "พฤหัสบดี 13 สิงหาคม" + ป้าย "วันนี้" + "N รายการ" ขวา · ปุ่ม "เพิ่มกิจกรรมวันนี้" ท้าย sheet
+- `Date+Thai.swift` เพิ่ม `thaiWeekdayFull` + `thaiWeekdayFullString` (สเปค §3.5 สั่งไว้ · `01_Tasks` เติม `thaiWeekdayShort` ไปแล้ว ไม่ทับกัน)
+- ชั้นแถบเลิก `allowsHitTesting(false)` — ชิปเป็น `Button` แตะแล้วเปิด `EventFormSheet(event:)` / `AddTaskSheet(editing:)` ตรงๆ · `+N` เป็นปุ่มเปิด sheet รายวันของวันนั้น
+- **เปิด sheet ทับ sheet ไม่ได้** — แตะแถวใน sheet รายวันต้องปิดตัวเดิมก่อน ใช้ `pendingSheet` + `onDismiss` (แบบเดียวกับที่ก้อน A ทำใน `QuickAddSheet`)
 
 > 📌 **หนี้เอกสาร:** `PROJECT_MAP.md` §Calendar (บรรทัด 184–185 · 541–550) ยังเขียนว่า `CalendarView` 963 บรรทัดไฟล์เดียว · ghost ใช้ `LongPressGesture` ของ SwiftUI · ค่าคงที่ 27/16 — **ผิดหมดแล้ว** ต้องเขียนใหม่ตอนปิดก้อน G
 

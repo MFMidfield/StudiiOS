@@ -65,6 +65,16 @@ extension DateFormatter {
         return f
     }()
 
+    /// Full weekday + day + month — "พฤหัสบดี 13 สิงหาคม" — for the calendar's
+    /// day sheet header. `thaiFull` adds "วัน"/"ที่"/the year, too long for it.
+    static let thaiWeekdayFull: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "th_TH")
+        f.dateFormat = "EEEE d MMMM"
+        f.calendar = Calendar(identifier: .buddhist)
+        return f
+    }()
+
     static let time24h: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
@@ -79,6 +89,7 @@ extension Date {
     var thaiDayMonthYearString: String { DateFormatter.thaiDayMonthYear.string(from: self) }
     var thaiDayOnlyString: String { DateFormatter.thaiDayOnly.string(from: self) }
     var thaiWeekdayDayMonthString: String { DateFormatter.thaiWeekdayDayMonth.string(from: self) }
+    var thaiWeekdayFullString: String { DateFormatter.thaiWeekdayFull.string(from: self) }
 
     /// Short human label for a deadline: "เลย 2 วัน" · "วันนี้" · "พรุ่งนี้" ·
     /// "ศ." for the rest of this week · "12 ก.ย." beyond that.

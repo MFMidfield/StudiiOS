@@ -118,6 +118,7 @@ struct CalendarMonthSection: View {
     let weekLayout: (Date) -> WeekLayout
     let isBeingDragged: (CalendarItem) -> Bool
     let onSelectDay: (Date) -> Void
+    let onSelectItem: (CalendarItem) -> Void
     /// frame ของเดือนนี้ในระบบพิกัดของสายเลื่อน — ghost drag ใช้หาว่านิ้วอยู่เดือนไหน
     let onFrameChange: (CGRect) -> Void
 
@@ -139,7 +140,8 @@ struct CalendarMonthSection: View {
                     layout: weekLayout(days[0].date),
                     itemsByID: itemsByID,
                     isBeingDragged: isBeingDragged,
-                    onSelectDay: onSelectDay
+                    onSelectDay: onSelectDay,
+                    onSelectItem: onSelectItem
                 )
             }
         }

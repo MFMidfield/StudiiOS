@@ -13,61 +13,84 @@ import SwiftUI
 // MARK: - การ์ดรายการของวันที่เลือก
 // ══════════════════════════════════════════════════════════════
 
-struct CalendarDayItemsCard: View {
-    let title: String
+struct CalendarDaySheet: View {
+    let date: Date
     let isToday: Bool
     let items: [CalendarItem]
     let onSelect: (CalendarItem) -> Void
+    /// ปุ่มท้าย sheet — เปิด `EventFormSheet(initialDate:)` ของวันนั้น
+    let onAddEvent: (Date) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.Colors.textPrimary)
-
-                if isToday {
-                    Text("วันนี้")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Theme.Colors.primaryDeep)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Theme.Colors.primary.opacity(0.1))
-                        .clipShape(Capsule())
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
+            header
 
             if items.isEmpty {
                 emptyState
             } else {
-                ForEach(items) { item in
-                    CalendarItemRow(item: item) { onSelect(item) }
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(items) { item in
+                            CalendarItemRow(item: item) { onSelect(item) }
+                        }
+                    }
                 }
             }
+
+            addButton
         }
-        .background(Theme.Colors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .padding(.top, 8)
+        .background(Theme.Colors.background)
+    }
+
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
+            Text(date.thaiWeekdayFullString)
+                .font(Theme.Font.heading)
+                .foregroundStyle(Theme.Colors.textPrimary)
+
+            if isToday {
+                PillLabel("วันนี้", tone: .accent)
+            }
+
+            Spacer()
+
+            Text("\(items.count) รายการ")
+                .font(Theme.Font.label)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .contentTransition(.numericText())
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.top, Theme.Spacing.lg)
+        .padding(.bottom, Theme.Spacing.md)
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Theme.Spacing.sm) {
             Image(systemName: "calendar.badge.plus")
                 .font(.system(size: 34))
                 .foregroundStyle(Theme.Colors.textSecondary.opacity(0.4))
-            Text("ไม่มีกิจกรรมในวันนี้")
-                .font(.system(size: 14))
+            Text("ยังไม่มีอะไรในวันนี้")
+                .font(Theme.Font.body)
                 .foregroundStyle(Theme.Colors.textSecondary)
-            Text("กดค้างที่วันหรือกดปุ่ม + เพื่อเพิ่ม")
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.Colors.textSecondary.opacity(0.6))
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, Theme.Spacing.xxl)
+    }
+
+    private var addButton: some View {
+        Button {
+            onAddEvent(date)
+        } label: {
+            Label("เพิ่มกิจกรรมวันนี้", systemImage: "plus")
+                .font(Theme.Font.body)
+                .foregroundStyle(Theme.Colors.onPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Theme.Spacing.md)
+                .background(Theme.Colors.primary)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control))
+        }
+        .buttonStyle(PressScaleButtonStyle())
+        .padding(Theme.Spacing.lg)
     }
 }
 

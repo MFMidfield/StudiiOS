@@ -59,6 +59,8 @@ struct CalendarView: View {
 
     @State var selectedDate = Date()
     @State var activeSheet: CalendarSheet?
+    /// sheet ที่รอเปิดต่อหลัง sheet ปัจจุบันปิด (แตะแถวใน sheet รายวัน)
+    @State private var pendingSheet: CalendarSheet?
     @State private var displayedYear = Calendar(identifier: .gregorian).component(.year, from: .now)
     /// id ของเดือนที่อยู่บนสุดของจอ — ผูกกับ `scrollPosition` หัวเดือนอ่านจากตัวนี้
     @State private var visibleMonthID: String?
@@ -141,11 +143,6 @@ struct CalendarView: View {
         return subject.color
     }
 
-    private func dayTitle(_ date: Date) -> String {
-        let c = cal.dateComponents([.day, .month, .year], from: date)
-        return "\(c.day!) \(CalendarStrings.thaiMonths[(c.month ?? 1) - 1]) \(c.year! + 543)"
-    }
-
     // ── Body ─────────────────────────────────────────────
 
     var body: some View {
@@ -160,7 +157,12 @@ struct CalendarView: View {
         // (ห้าม `.navigationBarHidden(true)` — ปุ่มย้อนกลับจะหายไปด้วย เข้ามาแล้วออกไม่ได้)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $activeSheet) { sheet in
+        .sheet(item: $activeSheet, onDismiss: {
+            if let next = pendingSheet {
+                pendingSheet = nil
+                activeSheet = next
+            }
+        }) { sheet in
             sheetContent(sheet)
         }
         .onAppear {
@@ -230,6 +232,7 @@ struct CalendarView: View {
                         weekLayout: weekLayout(weekStart:),
                         isBeingDragged: isBeingDragged,
                         onSelectDay: selectDay,
+                        onSelectItem: openItem,
                         onFrameChange: { monthFrames[month.id] = $0 }
                     )
                     .id(month.id)
@@ -258,11 +261,12 @@ struct CalendarView: View {
         case .editTask(let task):
             AddTaskSheet(editing: task)
         case .day(let date):
-            CalendarDayItemsCard(
-                title: dayTitle(date),
+            CalendarDaySheet(
+                date: date,
                 isToday: cal.isDateInToday(date),
                 items: itemsFor(date),
-                onSelect: openItem
+                onSelect: openItem,
+                onAddEvent: { present(.add($0)) }
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
@@ -277,9 +281,20 @@ struct CalendarView: View {
 
     private func openItem(_ item: CalendarItem) {
         if let event = item.sourceEvent {
-            activeSheet = .edit(event)
+            present(.edit(event))
         } else if let task = item.sourceTask {
-            activeSheet = .editTask(task)
+            present(.editTask(task))
+        }
+    }
+
+    /// เปิด sheet ใหม่ทับของเดิมไม่ได้ — ถ้ามี sheet ค้างอยู่ (เช่น sheet รายวัน)
+    /// ต้องปิดก่อนแล้วค่อยเปิดตัวใหม่ตอน `onDismiss`
+    private func present(_ sheet: CalendarSheet) {
+        if activeSheet == nil {
+            activeSheet = sheet
+        } else {
+            pendingSheet = sheet
+            activeSheet = nil
         }
     }
 
