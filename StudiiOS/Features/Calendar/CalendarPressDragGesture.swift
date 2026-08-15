@@ -13,6 +13,9 @@ import SwiftUI
 import UIKit
 
 struct CalendarPressDragGesture: UIGestureRecognizerRepresentable {
+    /// ระบบพิกัดที่ผู้เรียกอยากได้ตำแหน่งนิ้ว — ต้องเป็นชื่อเดียวกับที่ประกาศ
+    /// `.coordinateSpace(.named(...))` ไว้บน view ที่ใช้คำนวณช่องวัน
+    let space: NamedCoordinateSpace
     var minimumPressDuration: TimeInterval = 0.5
     /// ระยะที่ขยับได้ก่อนกดครบเวลา — เกินกว่านี้ถือว่าผู้ใช้ตั้งใจเลื่อนหน้า
     var allowableMovement: CGFloat = 12
@@ -30,9 +33,10 @@ struct CalendarPressDragGesture: UIGestureRecognizerRepresentable {
     }
 
     func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
-        // พิกัดเทียบกับ view ที่ gesture ถูกแปะไว้ = ตารางเดือน
-        // ตรงกับที่ `cellIndex(at:)` คาดไว้พอดี ไม่ต้องแปลงระบบพิกัด
-        let point = recognizer.location(in: recognizer.view)
+        // ห้ามใช้ `recognizer.location(in: recognizer.view)` — view ที่ SwiftUI
+        // แปะ recognizer ไว้เป็น host view ก้อนใหญ่ ไม่ใช่ตารางเดือน
+        // (เคยทำให้ ghost ลงต่ำกว่านิ้วหนึ่งแถวเต็มๆ) ต้องแปลงผ่าน converter
+        let point = context.converter.location(in: space)
 
         switch recognizer.state {
         case .began:

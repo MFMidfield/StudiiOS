@@ -81,8 +81,12 @@ extension CalendarView {
 
     // ── Gesture ──────────────────────────────────────────
 
+    /// ชื่อระบบพิกัดของตารางเดือน — `CalendarView` ประกาศไว้บน `CalendarMonthSection`
+    static let gridSpaceName = "monthGrid"
+
     var ghostGesture: some UIGestureRecognizerRepresentable {
         CalendarPressDragGesture(
+            space: .named(Self.gridSpaceName),
             onBegan: { beginGhost(at: $0) },
             onChanged: { moveGhost(to: $0) },
             onEnded: { endGhost(at: $0) }
