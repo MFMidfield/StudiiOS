@@ -162,6 +162,7 @@ struct CalendarView: View {
         // (ห้าม `.navigationBarHidden(true)` — ปุ่มย้อนกลับจะหายไปด้วย เข้ามาแล้วออกไม่ได้)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar { calendarToolbar }
         .sheet(item: $activeSheet, onDismiss: {
             if let next = pendingSheet {
                 pendingSheet = nil
@@ -203,24 +204,36 @@ struct CalendarView: View {
             }
 
             Spacer()
-
-            Button("วันนี้", action: jumpToToday)
-                .font(Theme.Font.label)
-                .foregroundStyle(Theme.Colors.primaryDeep)
-                .disabled(isOnTodayAlready)
-
-            Button {
-                activeSheet = .search
-            } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(Theme.Colors.primaryDeep)
-                    .frame(width: 32, height: 32)
-            }
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.top, Theme.Spacing.sm)
         .padding(.bottom, Theme.Spacing.xs)
+    }
+
+    /// แบบแผนของทั้งแอป (ก้อน B): ＋ ขวาบน = เพิ่มของในหน้านี้ · ไอคอนเปล่า ไม่ใช่ปุ่มมีพื้น
+    /// "วันนี้" ไปอยู่ซ้ายบนข้างปุ่มย้อนกลับ เพราะเป็นการเดินหน้าจอ ไม่ใช่การเพิ่มของ
+    @ToolbarContentBuilder
+    private var calendarToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button("วันนี้", action: jumpToToday)
+                .disabled(isOnTodayAlready)
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                activeSheet = .search
+            } label: {
+                Image(systemName: "magnifyingglass")
+            }
+            .accessibilityLabel("ค้นหา")
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                present(.add(selectedDate))
+            } label: {
+                Image(systemName: "plus")
+            }
+            .accessibilityLabel("เพิ่มกิจกรรม")
+        }
     }
 
     // ── สายเลื่อน 12 เดือน ─────────────────────────────────
