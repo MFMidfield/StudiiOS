@@ -22,9 +22,9 @@ enum CalendarGeometry {
     /// ยังไม่มี token ขนาดนี้ใน `Theme.Radius` → เก็บไว้ที่โมดูลนี้ก่อน
     static let barRadius: CGFloat = 5
 
-    /// ความสูงของป้ายชื่อเดือนใน `CalendarMonthSection` — ต้องคงที่
+    /// ความสูงของแถบเส้นแบ่งเดือน (มีตัวย่อเดือนนั่งอยู่บนเส้น) — ต้องคงที่
     /// เพราะ ghost drag ใช้ลบออกจากพิกัดก่อนหารเป็นแถว
-    static let monthLabelHeight: CGFloat = 40
+    static let monthLabelHeight: CGFloat = 28
 
     static let topPadding: CGFloat = 4
     static let dayNumberHeight: CGFloat = 26

@@ -72,12 +72,22 @@ final class CalendarDragController {
 
     struct Hit {
         let day: CalendarDay
-        /// จุดกึ่งกลางช่องวันนั้นในระบบพิกัดสายเลื่อน — ให้ ghost ไปหยุดตรงกลางช่อง
-        let center: CGPoint
+        /// กึ่งกลางคอลัมน์นั้นในแนวนอน (ระบบพิกัดสายเลื่อน)
+        let columnCenterX: CGFloat
+        /// ขอบบนของแถวสัปดาห์ในแนวตั้ง (ระบบพิกัดสายเลื่อน)
+        let rowTop: CGFloat
         let weekStart: Date
         let column: Int
         /// ระยะจากขอบบนของแถวสัปดาห์ ใช้หาว่าโดนเลนที่เท่าไหร่
         let localY: CGFloat
+
+        /// จุดที่ ghost ควรไปหยุด = กลางแถบของเลนที่ `lane`
+        func center(lane: Int) -> CGPoint {
+            CGPoint(
+                x: columnCenterX,
+                y: rowTop + CalendarGeometry.laneOffset(lane) + CalendarGeometry.laneHeight / 2
+            )
+        }
     }
 
     /// เลขคณิตล้วน ไม่ใช้ GeometryReader ต่อช่อง — อ่าน frame แค่ระดับเดือน
@@ -100,22 +110,40 @@ final class CalendarDragController {
         let index = row * 7 + column
         guard index >= 0, index < month.days.count else { return nil }
 
-        // จุดที่ ghost ไปหยุด = ตำแหน่งของ **แถบเลนบนสุด** ในช่องนั้น
-        // ไม่ใช่กลางช่อง — ปล่อยนิ้วแล้วจะเลื่อนไปเข้าแถวใต้เลขวันพอดี ไม่เด้งลอย
-        let center = CGPoint(
-            x: frame.minX + colWidth * (CGFloat(column) + 0.5),
-            y: frame.minY + CalendarGeometry.monthLabelHeight
-                + CalendarGeometry.rowHeight * CGFloat(row)
-                + CalendarGeometry.laneTop + CalendarGeometry.laneHeight / 2
-        )
-
         return Hit(
             day: month.days[index],
-            center: center,
+            columnCenterX: frame.minX + colWidth * (CGFloat(column) + 0.5),
+            rowTop: frame.minY + CalendarGeometry.monthLabelHeight
+                + CalendarGeometry.rowHeight * CGFloat(row),
             weekStart: month.days[row * 7].date,
             column: column,
             localY: gridY - CGFloat(row) * CalendarGeometry.rowHeight
         )
+    }
+
+    /// เลนที่ของชิ้นนี้จะไปลงจริงเมื่อปล่อยที่ช่องนั้น = เลนว่างเลนแรกของคอลัมน์
+    /// (ไม่นับตัวที่กำลังลากอยู่เอง — มันกำลังจะย้ายออกจากที่เดิม)
+    /// ghost จะได้เลื่อนไปต่อท้ายของที่มีอยู่ ไม่ไปทับแถวบนสุด
+    private func landingLane(for hit: Hit, env: Environment) -> Int {
+        let draggedID: String?
+        switch payload {
+        case .existingEvent(let e): draggedID = "event_\(e.id)"
+        case .existingTask(let t): draggedID = "task_\(t.persistentModelID)"
+        default: draggedID = nil
+        }
+
+        let occupied = Set(
+            env.weekLayout(hit.weekStart).bars
+                .filter { bar in
+                    bar.itemID != draggedID
+                        && hit.column >= bar.startColumn
+                        && hit.column < bar.startColumn + bar.columnSpan
+                }
+                .map(\.lane)
+        )
+
+        return (0..<CalendarGeometry.maxLanes).first { !occupied.contains($0) }
+            ?? (CalendarGeometry.maxLanes - 1)
     }
 
     /// ตำแหน่งนิ้ว → แถบไหน · คิดจาก `WeekLayout` ชุดเดียวกับที่วาด
@@ -183,10 +211,11 @@ final class CalendarDragController {
 
         let cal = env.calendar
         let targetDate = hit.day.date
+        let landing = hit.center(lane: landingLane(for: hit, env: env))
 
         func settle(_ commit: @escaping () -> Void) {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                position = hit.center
+                position = landing
                 scale = 1.0
             } completion: {
                 commit()

@@ -15,6 +15,11 @@ enum CalendarStrings {
         "พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม",
         "กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
     ]
+    static let thaiMonthsShort = [
+        "ม.ค.","ก.พ.","มี.ค.","เม.ย.",
+        "พ.ค.","มิ.ย.","ก.ค.","ส.ค.",
+        "ก.ย.","ต.ค.","พ.ย.","ธ.ค."
+    ]
     static let thaiDays = ["อา.","จ.","อ.","พ.","พฤ.","ศ.","ส."]
 }
 
@@ -32,7 +37,10 @@ struct CalendarMonthInfo: Identifiable, Equatable {
     /// "2026-08" — ใช้เป็น id ของ `scrollPosition` และคีย์ของตาราง frame
     let id: String
     let month: Date
+    /// ชื่อเต็ม — ใช้ที่หัวหน้าจอ ("สิงหาคม")
     let title: String
+    /// ตัวย่อ — ใช้บนเส้นแบ่งเดือนในสายเลื่อน ("ส.ค.")
+    let shortTitle: String
     let days: [CalendarDay]
 }
 
@@ -55,6 +63,7 @@ enum CalendarMonthBuilder {
                 id: key(for: first, calendar: cal),
                 month: first,
                 title: CalendarStrings.thaiMonths[month - 1],
+                shortTitle: CalendarStrings.thaiMonthsShort[month - 1],
                 days: days(of: first, calendar: cal)
             )
         }
@@ -125,11 +134,7 @@ struct CalendarMonthSection: View {
     var body: some View {
         let rowCount = month.days.count / 7
         VStack(alignment: .leading, spacing: 0) {
-            Text(month.title)
-                .font(Theme.Font.heading)
-                .foregroundStyle(Theme.Colors.textPrimary)
-                .padding(.horizontal, Theme.Spacing.md)
-                .frame(height: CalendarGeometry.monthLabelHeight, alignment: .bottomLeading)
+            monthDivider
 
             ForEach(0..<rowCount, id: \.self) { row in
                 let days = Array(month.days[(row * 7)..<(row * 7 + 7)])
@@ -150,5 +155,23 @@ struct CalendarMonthSection: View {
         } action: {
             onFrameChange($0)
         }
+    }
+
+    /// เส้นแบ่งเดือน โดยมีตัวย่อของเดือนนั่งคร่อมอยู่บนเส้น
+    private var monthDivider: some View {
+        ZStack(alignment: .leading) {
+            Rectangle()
+                .fill(Theme.Colors.separator)
+                .frame(height: 1)
+
+            Text(month.shortTitle)
+                .font(Theme.Font.label)
+                .fontWeight(.semibold)
+                .foregroundStyle(Theme.Colors.primaryDeep)
+                .padding(.horizontal, Theme.Spacing.sm)
+                .background(Theme.Colors.background)
+                .padding(.leading, Theme.Spacing.sm)
+        }
+        .frame(height: CalendarGeometry.monthLabelHeight)
     }
 }
