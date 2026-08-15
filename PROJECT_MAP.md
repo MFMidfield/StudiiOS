@@ -1,13 +1,17 @@
 # PROJECT_MAP — Student OS (StudiiOS)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-15 — **PLAN_Redesign.md Wave 2 ก้อน A–D** (branch `redesign`) build เขียวแล้ว:
-> หน้างาน · QuickAdd · ตารางเรียน · เกรด/GPAX · ตั้งค่า ยกเครื่องครบ (สเปครายหน้าอยู่ `docs/redesign/01–05`)
+> **อัปเดตล่าสุด:** 2026-08-15 — **PLAN_Redesign.md จบแล้วทั้งแผน** (branch `redesign` → merge เข้า `dev`)
+> W1 + W2 ครบทุกก้อน A–G · Few ยืนยันด้วยตาแล้วว่าทุกหน้าปกติ · **W3 ตัดทิ้ง**
+>
+> Wave 2 ก้อน A–D build เขียว: หน้างาน · QuickAdd · ตารางเรียน · เกรด/GPAX · ตั้งค่า ยกเครื่องครบ
+> (สเปครายหน้าอยู่ `claude plan/docs/redesign/01–05`)
 > **ก้อน E `06_TCAS` build เขียว** — Few ยืนยันบนเครื่องแล้วว่าการ์ดคณะขึ้นคะแนน · ปุ่ม ＋ โอเค ·
 > หน้ากรอกคะแนนใช้ได้ (ยังไม่ได้ลอง: sheet ตั้งเป้า · "มีผลกับคณะเป้าหมาย" · dark mode)
 > **ก้อน F `07_Portfolio` build เขียว** — หน้าผลงานยกเครื่อง (การ์ดสรุป · ค้นหา · เรียง · contextMenu ลบ) + ทาสีฟอร์ม
 > (ยังไม่ได้ลองด้วยตา: ลบจากกริด · เมนู "ดูรายละเอียด" · ค้นหา · dark mode)
-> **ก้อน G `08_Calendar` โค้ดครบ** — เหลือ Few ยืนยันด้วยตา · สถานะล่าสุดอยู่ที่ `docs/redesign/00_INDEX.md` เสมอ
+> **ก้อน G `08_Calendar` จบแล้ว** — Few ยืนยันด้วยตาว่าหน้าปฏิทินปกติ · สถานะรายก้อนอยู่ที่
+> `claude plan/docs/redesign/00_INDEX.md`
 > **PLAN_Redesign.md ปิดแล้ว 15 ส.ค. 2569** — W1 + W2 ทำครบ · **W3 ตัดทิ้ง** (custom navigation ต่อแท็บ ·
 > แตกไฟล์ `CalendarView.swift` · onboarding 5 หน้า) → tab bar คงที่ 5 ช่อง เปลี่ยนเองไม่ได้ ·
 > `CalendarView.swift` ยังเป็นไฟล์เดียว
@@ -27,8 +31,9 @@
 > + ติ๊กงานเสร็จตรงจากการ์ด + animation เข้าหน้า (ดู §5 Design tokens + Dashboard ใน §2) · ก่อนหน้านั้น
 > PLAN_TCASPlanner ครบทั้ง 4 รอบแล้ว — models ใหม่ → TCASScoreEngine/เทสต์ → ลิสต์คณะ/ตั้งน้ำหนัก/คะแนนของฉัน →
 > SOPEditorView/SOPGuideSheet · โมดูล TCAS Planner ถือว่าสมบูรณ์ตามแผน รอ Few verify build จริง
-> **ไฟล์แผนทั้งหมด (`PLAN_*.md` / `PROMPT_*.md`) ย้ายไปอยู่ใน `claude plan/` แล้ว** — ยกเว้น `PLAN_Redesign.md`
-> ที่ยังทำอยู่ (อยู่รากrepo) · สเปคหน้าจอ Wave 2 อยู่ใน `docs/redesign/`
+> **เอกสารแผนทั้งหมดอยู่ใน `claude plan/docs/` แล้ว** (ย้ายครั้งล่าสุด 15 ส.ค. 2569):
+> `claude plan/docs/PLAN_Redesign.md` (แผนที่เพิ่งปิด) · `claude plan/docs/redesign/00–08` (สเปครายหน้า W2) ·
+> `claude plan/docs/END OF PLAN/` (แผนเก่าที่จบแล้วทั้งหมด) — **ไม่มีไฟล์ `PLAN_*.md` ที่รากrepo อีกแล้ว**
 > **ตรวจสอบด้วย:** `find` + `grep` บนซอร์สจริง
 > ถ้าแก้โครงสร้าง (เพิ่ม/ลบไฟล์, เพิ่ม @Model, เปลี่ยน tab) → อัปเดตไฟล์นี้ในคอมมิตเดียวกัน
 
@@ -252,7 +257,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                    **ห้ามลบ** ไม่งั้นแอปอื่นถูกบล็อกค้างถาวร
     │   └── FocusModeView.swift      (~430) UI ล้วน ไม่เก็บเวลาเอง · body แบ่ง 2 ชั้น (mainContent
     │                                      + presentation) จงใจ กัน type-check timeout
-    ├── GradeCenter/  หน้าเกรดและ GPAX — **ยกเครื่องรอบ W2 ก้อน C** (`docs/redesign/04_GradeCenter.md`)
+    ├── GradeCenter/  หน้าเกรดและ GPAX — **ยกเครื่องรอบ W2 ก้อน C** (`claude plan/docs/redesign/04_GradeCenter.md`)
     │   │            🟡 build เขียวแล้วแต่ **Few บอกว่าหน้าตายังไม่ผ่าน รอเก็บตกละเอียด** — อย่ารื้อเองก่อนถาม
     │   ├── GradeCenterView.swift        (79)  หัวข้อหน้าใช้ `GPAXSettings.currentSortKey` (เทอมจริง)
     │   │                                     **เลิกใช้ `TermStore.activeTermKey` ในไฟล์นี้แล้ว** (เดิมหัวข้อบอกเทอมที่
@@ -292,7 +297,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   └── CumulativeGPAXSheet.swift    (87)  "จำเกรดไม่ได้" — ตัวเลือก 1 เขียน `GPAXSettings.setCumulative`
     │                                         + entryMode `.cumulative` · ตัวเลือก 3 สร้าง `CalendarEvent` เตือนขอ ปพ.1
     ├── Onboarding/  (6 ไฟล์: Welcome→Profile→Schedule→GradeReport→Summary + ProfileImagePicker)
-    ├── Portfolio/  ผลงาน — **ยกเครื่องรอบ W2 ก้อน F** (`docs/redesign/07_Portfolio.md`)
+    ├── Portfolio/  ผลงาน — **ยกเครื่องรอบ W2 ก้อน F** (`claude plan/docs/redesign/07_Portfolio.md`)
     │                PortfolioView.swift (216) หัวข้อ "ผลงาน" · `@Query` **ไม่มี sort** (เรียงใน `visibleItems`)
     │                  pipeline คงที่ `กรองหมวด → คำค้น → เรียง` ห้ามสลับลำดับ · chip มีตัวเลขทุกอัน (สไตล์เดียวกับ
     │                  `TaskFilterChips`) · `.searchable` ค้น `title`+`detail` · Menu เรียง 4 แบบท้ายแถว chip
@@ -312,7 +317,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                  สแกน/กล้อง เช็ค `.isSupported`/`.isSourceTypeAvailable(.camera)` ก่อนเปิดเสมอ — ไม่มี guard = crash บน simulator)
     │                + PortfolioDetailView.swift (gallery `TabView(.page)` โหลดรูปเต็ม + ตัวนับ "2 / 5" มุมขวาล่าง
     │                  + หัวข้อ "รายละเอียด" + แก้ไข/ลบ — ลบเรียก `PortfolioItemActions.delete` ไม่ได้ลบเอง)
-    ├── Schedule/  ตารางเรียน — **ยกเครื่องรอบ W2 ก้อน B** (`docs/redesign/02_Schedule.md`)
+    ├── Schedule/  ตารางเรียน — **ยกเครื่องรอบ W2 ก้อน B** (`claude plan/docs/redesign/02_Schedule.md`)
     │   ├── ScheduleView.swift          (232)  root · toolbar **⚙︎ ซ้าย + ＋ ขวา**
     │   │                                     ⚙︎ = Menu: ร่นคาบวันนี้ (เปิด PeriodShiftSheet ตรง) · เปลี่ยนเทอม
     │   │                                     (Picker ซ้อนใน Menu = เมนูย่อยติ๊กถูก) · จัดการเทอมทั้งหมด
@@ -351,7 +356,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   ❌ ลบแล้ว W2-B: `ScheduleTodayTasksSection.swift` (การ์ดงานวันนี้ — ซ้ำกับแท็บงานที่จัดกลุ่มตามวันแล้ว
     │                   และ taskRow เป็น Button ที่ action มีแค่ AppLog = ปุ่มหลอก)
     │                  `ScheduleSettingsSheet.swift` (ของข้างในเหลือ 3 อย่าง ยกขึ้น Menu ⚙︎ หมดแล้ว)
-    ├── QuickAdd/QuickAddSheet.swift       (124) **ยกเครื่อง W2-A** (`docs/redesign/03_QuickAdd.md`)
+    ├── QuickAdd/QuickAddSheet.swift       (124) **ยกเครื่อง W2-A** (`claude plan/docs/redesign/03_QuickAdd.md`)
     │                                     half-sheet เมนู "เพิ่มอะไรดี?" ที่เด้งตอนกดปุ่ม `+` กลาง tab bar
     │                                     **3 ทาง กริดแถวเดียว**: งาน (AddTaskSheet) · กิจกรรมปฏิทิน (EventFormSheet)
     │                                     · ผลงาน (PortfolioItemSheet) — ไม่มี "โน๊ต" (สร้างแล้วไม่มีที่ให้ดู)
@@ -365,7 +370,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                                        ห้ามสั่ง dismiss() สองชั้นใน update เดียวกัน — sheet จะค้าง
     │                                     ⚠️ `onSaved:` ใน `EventFormSheet`/`PortfolioItemSheet`/`AddTaskSheet`
     │                                        (optional default nil) **ห้ามลบ** ไม่งั้นบันทึกแล้วเมนูค้าง
-    ├── Settings/  **ยกเครื่อง W2-D** (`docs/redesign/05_Settings.md`) — 588 → 465 บรรทัด + แยก 3 ไฟล์
+    ├── Settings/  **ยกเครื่อง W2-D** (`claude plan/docs/redesign/05_Settings.md`) — 588 → 465 บรรทัด + แยก 3 ไฟล์
     │   ├── SettingsView.swift             (465) 5 section: โปรไฟล์ · การเรียน · การแจ้งเตือน · การแสดงผล · เกี่ยวกับแอป
     │   │                                         · การ์ดโปรไฟล์**กดได้ทั้งใบ** (เปิด EditProfileView เป็น sheet —
     │   │                                           ไม่ push เพราะ EditProfileView มี NavigationStack ของตัวเอง)
@@ -406,7 +411,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                                      + confidence · โหมด "ตารางเรียน" ต่อท้ายแต่ละแถวด้วยผลของ
     │                                      `classifySubjectCode` + รายการตารางที่ parse ได้จริง
     │                                      → เครื่องมือวัดผลของ PLAN_OCRAccuracy และ PLAN_OCRFix
-    ├── Tasks/   หน้า "งาน / การบ้าน" — **ยกเครื่อง W2 ก้อน A** (`docs/redesign/01_Tasks.md`)
+    ├── Tasks/   หน้า "งาน / การบ้าน" — **ยกเครื่อง W2 ก้อน A** (`claude plan/docs/redesign/01_Tasks.md`)
     │   ├── AssignmentListView.swift   (267) root — `List(.plain)` + `plainRow()` (ซ่อนเส้น/พื้นแถว) เพื่อให้ได้
     │   │                                     การ์ดลอย **และ** ปัดซ้ายลบได้ — **ห้ามเปลี่ยนเป็น ScrollView**
     │   │                                     โครง: chip → Section ตาม `TaskDayGroup` ที่ไม่ว่าง → กลุ่ม "เสร็จแล้ว" พับได้
@@ -557,7 +562,7 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
 
 **Round 4 (10 ส.ค. 2569):** ก่อนเริ่ม Ghost Event แยก `CalendarView.swift` ออกเป็น 3 ไฟล์ — `CalendarModels.swift` (EventAlert/CalendarTag/CalendarAttachmentItem/CalendarEvent), `EventFormSheet.swift`, `GhostEventLayer.swift` (แค่ `GhostPillView` — visual ล้วน) ตัว `CalendarView.swift` เหลือ ~963 บรรทัด (โค้ด Ghost Event ใหม่ยาวพอๆกับที่ตัดออกไป) **ตัดสินใจไม่แยก gesture/state logic ของ Ghost Event ออกไฟล์แยกเพิ่ม** เพราะต้อง cascade เปลี่ยน `private`→internal ทั้ง @State และ helper function จำนวนมากที่ Ghost logic เรียกใช้ (modelContext, cal, calendarDays, itemsFor, activeSheet, CalendarSheet เอง ฯลฯ) เสี่ยงพลาดจุดใดจุดหนึ่งโดยไม่มี compiler ยืนยันในนี้ — เก็บไว้เป็น extension ในไฟล์เดียวกันแทน ปลอดภัยกว่า<br>Ghost gesture: `LongPressGesture(0.5).sequenced(before: DragGesture(minimumDistance:0, coordinateSpace:.named("monthGrid")))` แนบที่ `monthGrid` ด้วย `.simultaneousGesture` (ไม่ใช้ `.gesture` เฉยๆ กัน block `dayCell`'s `.onTapGesture`) วัดขนาดกริดครั้งเดียวด้วย `.onGeometryChange` แล้วคำนวณ cell ด้วยเลขคณิตล้วน (`cellIndex`/`cellCenter`/`hitTestItem` — ค่าคงที่ 27/16 ผูกกับ layout จริงใน `dayCell`/`dayPills` ห้ามแก้ที่เดียวไม่แก้อีกที่) เอา `dayCell`'s เดิม `.onLongPressGesture` (เปิด add sheet ตรงๆ) ออกแล้ว เพราะ mode A drop-in-same-cell ทำหน้าที่แทนอยู่แล้ว<br>⚠️ **จุดเสี่ยงที่ยังไม่ได้ทดสอบจริง**: tap (เลือกวัน) ที่ `dayCell` กับ long-press-drag ที่ `monthGrid` เป็น gesture recognizer คนละตัวคนละระดับ — ถ้ากดค้างแล้วปล่อยโดยไม่ลาก อาจ fire ทั้ง `selectedDate` (จาก tap) และเปิด sheet สร้างกิจกรรมใหม่ (จาก ghost) พร้อมกัน ต้องให้ Few ทดสอบจริงบนเครื่อง<br>สร้างกิจกรรมจากการลากใช้ `CalendarSheet.editNewGhost(CalendarEvent)` แยกจาก `.edit` ปกติ — `EventFormSheet` มี `deleteOnCancel: Bool` param กด "ยกเลิก" แล้วลบ event ที่สร้างไว้ล่วงหน้าทิ้ง<br>ย้าย event/assignment ที่มีอยู่: เก็บ `originalStart/originalEnd`/`originalDue` ไว้ก่อน mutate เพื่อรองรับปุ่ม "เลิกทำ" ใน toast (`@State toastUndo`, auto-dismiss 4 วิด้วย `Task.sleep`)<br>Assignment ที่ `hasDueDate == false` ไม่เคยขึ้นเป็น pill ในกริดอยู่แล้ว (กรองออกตั้งแต่ Round 2) จึงลากไม่ได้โดยธรรมชาติ ไม่ต้องเขียน guard/haptic `.warning` เพิ่ม (unreachable case)
 
-**W2 ก้อน G (15 ส.ค. 2569) — เขียนหน้าปฏิทินใหม่ตาม `docs/redesign/08_Calendar.md`** ทับของ Round 3/4 ข้างบนเกือบทั้งหมด:
+**W2 ก้อน G (15 ส.ค. 2569) — เขียนหน้าปฏิทินใหม่ตาม `claude plan/docs/redesign/08_Calendar.md`** ทับของ Round 3/4 ข้างบนเกือบทั้งหมด:
 
 - **ตารางเดือนเดียว → สายเลื่อนแนวตั้ง 12 เดือนในปีเดียว** · `LazyVStack` + `.scrollPosition(id:anchor:.top)` · หัวเดือนอ่านจาก id ที่ผูกไว้ **ห้ามใช้ `GeometryReader` ต่อแถวเพื่ออ่านตำแหน่ง**
 - **หัวเดือน/ปี/ปุ่มวันนี้/ค้นหา อยู่ในหน้าเอง** ไม่ใช่ `navigationTitle`/`toolbar` แล้ว · ค้นหาเป็น `CalendarSearchSheet` ของตัวเอง
@@ -728,4 +733,4 @@ Gated: **ไม่มีหน้าไหน gate จริงเลยตอ�
 
 **`PLAN_ScheduleView.md` ครบทั้ง 3 รอบแล้ว** (Models/Schema → UI ตาราง+ฟอร์ม → งานวันนี้+ร่นคาบ) — ฟีเจอร์ตารางเรียนถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป
 
-**`PLAN_TCASPlanner.md` ครบทั้ง 4 รอบแล้ว** (Models/Schema+resetAllData → TCASScoreEngine+เทสต์ → ลิสต์คณะ/ตั้งน้ำหนัก/คะแนนของฉัน → SOPEditorView/SOPGuideSheet) — โมดูล TCAS Planner ทั้งหมดถือว่าสมบูรณ์ตามแผน · **ยกเครื่องหน้าตาใหม่ทั้งโมดูลใน W2 ก้อน E (15 ส.ค.) ตาม `docs/redesign/06_TCAS.md`** — logic ไม่ถูกแตะเลย (จุดอ่อนที่รู้อยู่แล้ว: swipe-back gesture ใน SOPEditorView ยังไม่ถูกดักด้วย confirmationDialog เตือนไม่บันทึก, ต้องใช้ปุ่ม back ที่ทำเองถึงจะเตือน — ดู §2 บรรทัด SOPEditorView.swift)
+**`PLAN_TCASPlanner.md` ครบทั้ง 4 รอบแล้ว** (Models/Schema+resetAllData → TCASScoreEngine+เทสต์ → ลิสต์คณะ/ตั้งน้ำหนัก/คะแนนของฉัน → SOPEditorView/SOPGuideSheet) — โมดูล TCAS Planner ทั้งหมดถือว่าสมบูรณ์ตามแผน · **ยกเครื่องหน้าตาใหม่ทั้งโมดูลใน W2 ก้อน E (15 ส.ค.) ตาม `claude plan/docs/redesign/06_TCAS.md`** — logic ไม่ถูกแตะเลย (จุดอ่อนที่รู้อยู่แล้ว: swipe-back gesture ใน SOPEditorView ยังไม่ถูกดักด้วย confirmationDialog เตือนไม่บันทึก, ต้องใช้ปุ่ม back ที่ทำเองถึงจะเตือน — ดู §2 บรรทัด SOPEditorView.swift)
