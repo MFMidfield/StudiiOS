@@ -63,8 +63,11 @@ struct CalendarView: View {
     /// sheet ที่รอเปิดต่อหลัง sheet ปัจจุบันปิด (แตะแถวใน sheet รายวัน)
     @State private var pendingSheet: CalendarSheet?
     @State private var displayedYear = Calendar(identifier: .gregorian).component(.year, from: .now)
-    /// id ของเดือนที่อยู่บนสุดของจอ — ผูกกับ `scrollPosition` หัวเดือนอ่านจากตัวนี้
-    @State private var visibleMonthID: String?
+    /// ตำแหน่งสายเลื่อน — ใช้ทั้งอ่านว่าเดือนไหนอยู่บนสุด (หัวเดือน) และสั่งเลื่อนเอง
+    /// (ปุ่มวันนี้ · เปลี่ยนปี · auto-scroll ตอนลากใกล้ขอบ)
+    @State private var scrollPosition = ScrollPosition(idType: String.self)
+    /// ระยะเลื่อนปัจจุบัน — auto-scroll บวกทีละนิดจากค่านี้
+    @State private var scrollOffsetY: CGFloat = 0
 
     /// สถานะการลาก + toast อยู่ในตัวควบคุมของมันเอง ไม่กระจายใน view (ขั้นที่ 6)
     @State private var drag = CalendarDragController()
@@ -75,6 +78,10 @@ struct CalendarView: View {
 
     private var months: [CalendarMonthInfo] {
         CalendarMonthBuilder.months(inYear: displayedYear, calendar: cal)
+    }
+
+    private var visibleMonthID: String? {
+        scrollPosition.viewID(type: String.self)
     }
 
     private var currentMonthTitle: String {
@@ -144,7 +151,10 @@ struct CalendarView: View {
             modelContext: modelContext,
             subjectColor: subjectColor,
             onCreatedEvent: { present(.editNewGhost($0)) },
-            onSelectDate: { selectedDate = $0 }
+            onSelectDate: { selectedDate = $0 },
+            onAutoScroll: { delta in
+                scrollPosition.scrollTo(y: max(scrollOffsetY + delta, 0))
+            }
         )
     }
 
@@ -173,7 +183,7 @@ struct CalendarView: View {
         }
         .onAppear {
             if visibleMonthID == nil {
-                visibleMonthID = CalendarMonthBuilder.key(for: .now, calendar: cal)
+                scrollPosition.scrollTo(id: CalendarMonthBuilder.key(for: .now, calendar: cal), anchor: .top)
             }
         }
     }
@@ -259,10 +269,15 @@ struct CalendarView: View {
             .scrollTargetLayout()
         }
         .coordinateSpace(.named(Self.gridSpaceName))
-        .scrollPosition(id: $visibleMonthID, anchor: .top)
         .scrollDisabled(drag.isDragging)
         .gesture(ghostGesture)
         .overlay(CalendarGhostOverlay(controller: drag, env: dragEnvironment))
+        // ตัวเลื่อนอัตโนมัติตอนลากใกล้ขอบต้องรู้ความสูงของสายเลื่อน + ตำแหน่งปัจจุบัน
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { drag.viewportHeight = $0 }
+        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, new in
+            scrollOffsetY = new
+        }
+        .scrollPosition($scrollPosition)
     }
 
     /// กดค้างแล้วลาก — ห้ามใช้ gesture ของ SwiftUI ตรงนี้ ScrollView จะเลื่อนไม่ได้
@@ -338,7 +353,7 @@ struct CalendarView: View {
         displayedYear = cal.component(.year, from: .now)
         selectedDate = .now
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            visibleMonthID = CalendarMonthBuilder.key(for: .now, calendar: cal)
+            scrollPosition.scrollTo(id: CalendarMonthBuilder.key(for: .now, calendar: cal), anchor: .top)
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
@@ -346,7 +361,7 @@ struct CalendarView: View {
     private func jumpToYear(_ year: Int) {
         guard year != displayedYear else { return }
         displayedYear = year
-        visibleMonthID = String(format: "%04d-01", year)
+        scrollPosition.scrollTo(id: String(format: "%04d-01", year), anchor: .top)
     }
 
     // ── Search ───────────────────────────────────────────
@@ -363,7 +378,7 @@ struct CalendarView: View {
     private func jumpToSearchResult(_ item: CalendarItem) {
         displayedYear = cal.component(.year, from: item.date)
         selectedDate = item.date
-        visibleMonthID = CalendarMonthBuilder.key(for: item.date, calendar: cal)
+        scrollPosition.scrollTo(id: CalendarMonthBuilder.key(for: item.date, calendar: cal), anchor: .top)
     }
 }
 

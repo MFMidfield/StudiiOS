@@ -35,6 +35,19 @@ final class CalendarDragController {
         /// ลากไปวางบนช่องว่าง → สร้างกิจกรรมแล้วเปิดฟอร์มให้แก้ทันที
         let onCreatedEvent: (CalendarEvent) -> Void
         let onSelectDate: (Date) -> Void
+        /// เลื่อนสายเลื่อนเองทีละ delta point (auto-scroll ตอนลากใกล้ขอบ)
+        let onAutoScroll: (CGFloat) -> Void
+    }
+
+    /// ค่าคงที่ของ auto-scroll (08_Calendar §5.2 เฟส 2)
+    private enum AutoScroll {
+        /// ระยะจากขอบบน/ล่างที่ถือว่า "ใกล้ขอบ"
+        static let zone: CGFloat = 60
+        /// ความเร็วต่ำสุด/สูงสุด ต่อหนึ่งเฟรม
+        static let minSpeed: CGFloat = 2
+        static let maxSpeed: CGFloat = 14
+        /// ~60 เฟรมต่อวินาที
+        static let frame = Duration.milliseconds(16)
     }
 
     // ── สถานะ ghost ───────────────────────────────────────
@@ -49,6 +62,10 @@ final class CalendarDragController {
 
     private var lastHapticDay: Date?
     private var lastHapticTime: Date = .distantPast
+
+    /// ความสูงของสายเลื่อนบนจอ — `CalendarView` วัดให้ผ่าน `.onGeometryChange`
+    var viewportHeight: CGFloat = 0
+    private var autoScrollTask: Task<Void, Never>?
 
     // ── สถานะ toast ───────────────────────────────────────
 
@@ -197,6 +214,8 @@ final class CalendarDragController {
 
     func move(to point: CGPoint, env: Environment) {
         position = point
+        updateAutoScroll(for: point, env: env)
+
         guard let hit = hit(at: point, env: env), hit.day.date != lastHapticDay else { return }
         lastHapticDay = hit.day.date
         let now = Date()
@@ -205,7 +224,58 @@ final class CalendarDragController {
         UISelectionFeedbackGenerator().selectionChanged()
     }
 
+    // ══════════════════════════════════════════════════════
+    // MARK: - Auto-scroll ตอนลากใกล้ขอบ (§5.2 เฟส 2)
+    // ══════════════════════════════════════════════════════
+
+    /// ความเร็วเลื่อนต่อเฟรม · บวก = เลื่อนลง · nil = นิ้วไม่ได้อยู่ในโซนขอบ
+    ///
+    /// นิ้วค้างนิ่งในโซน recognizer จะไม่ยิง `.changed` อีกเลย จึงต้องมี task
+    /// เดินเองทุกเฟรม ไม่ใช่รอ callback
+    private func autoScrollSpeed(for point: CGPoint) -> CGFloat? {
+        guard viewportHeight > AutoScroll.zone * 2 else { return nil }
+
+        let depth: CGFloat
+        let direction: CGFloat
+        if point.y < AutoScroll.zone {
+            depth = AutoScroll.zone - point.y
+            direction = -1
+        } else if point.y > viewportHeight - AutoScroll.zone {
+            depth = point.y - (viewportHeight - AutoScroll.zone)
+            direction = 1
+        } else {
+            return nil
+        }
+
+        let ratio = min(max(depth / AutoScroll.zone, 0), 1)
+        return direction * (AutoScroll.minSpeed + (AutoScroll.maxSpeed - AutoScroll.minSpeed) * ratio)
+    }
+
+    private func updateAutoScroll(for point: CGPoint, env: Environment) {
+        guard payload != nil, let speed = autoScrollSpeed(for: point) else {
+            stopAutoScroll()
+            return
+        }
+
+        autoScrollTask?.cancel()
+        autoScrollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self, self.payload != nil else { return }
+                env.onAutoScroll(speed)
+                // ตำแหน่งนิ้วบนจอไม่ขยับ แต่เนื้อหาเลื่อนใต้ปลายนิ้ว →
+                // frame ของเดือนอัปเดตเอง วันเป้าหมายจึงเปลี่ยนตามโดยไม่ต้องแก้ hit-test
+                try? await Task.sleep(for: AutoScroll.frame)
+            }
+        }
+    }
+
+    private func stopAutoScroll() {
+        autoScrollTask?.cancel()
+        autoScrollTask = nil
+    }
+
     func end(at point: CGPoint?, env: Environment) {
+        stopAutoScroll()
         guard payload != nil else { return }
         guard let point, let hit = hit(at: point, env: env) else {
             flyBack()
@@ -256,6 +326,7 @@ final class CalendarDragController {
     }
 
     private func reset() {
+        stopAutoScroll()   // กันหน้าเลื่อนหนีต่อหลังปล่อยนิ้ว
         payload = nil
         lastHapticDay = nil
     }
