@@ -13,8 +13,8 @@
 > **ก้อน G `08_Calendar` จบแล้ว** — Few ยืนยันด้วยตาว่าหน้าปฏิทินปกติ · สถานะรายก้อนอยู่ที่
 > `claude plan/docs/redesign/00_INDEX.md`
 > **PLAN_Redesign.md ปิดแล้ว 15 ส.ค. 2569** — W1 + W2 ทำครบ · **W3 ตัดทิ้ง** (custom navigation ต่อแท็บ ·
-> แตกไฟล์ `CalendarView.swift` · onboarding 5 หน้า) → tab bar คงที่ 5 ช่อง เปลี่ยนเองไม่ได้ ·
-> `CalendarView.swift` ยังเป็นไฟล์เดียว
+> onboarding 5 หน้า) → tab bar คงที่ 5 ช่อง ผู้ใช้เปลี่ยนเองไม่ได้ · ไม่มี `NavPreferences` / `NavCustomizeView`
+> (การแตกไฟล์ `CalendarView.swift` ที่เคยอยู่ใน W3 ทำไปแล้วในก้อน G — เหลือ 395 บรรทัด แยกเป็น 13 ไฟล์)
 >
 > ⚠️ **ปุ่ม ＋ ขวาบนกลับมาแล้วทุกหน้า** — Few ล้ม `PLAN_TCASPlanner.md` §0.1 (ที่เคยสั่งให้เอา ＋ ออกจาก toolbar)
 > เมื่อ 15 ส.ค. · ทุกหน้าที่เพิ่มของได้ใช้ไอคอน ＋ เปล่าๆ เหมือนกันหมด ไม่ใช่ปุ่มมีพื้น
