@@ -109,6 +109,9 @@ final class CalendarDragController {
         let column = min(max(Int(localX / colWidth), 0), 6)
         let index = row * 7 + column
         guard index >= 0, index < month.days.count else { return nil }
+        // ช่องว่างของเดือนข้างเคียง — วันนั้นมีที่อยู่จริงในเดือนของมันเอง
+        // ปล่อยตรงนี้ไม่ได้ ไม่งั้นวันเดียวจะรับของได้สองที่
+        guard month.days[index].inMonth else { return nil }
 
         return Hit(
             day: month.days[index],

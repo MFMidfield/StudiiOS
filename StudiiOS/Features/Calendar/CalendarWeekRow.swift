@@ -82,25 +82,42 @@ struct CalendarWeekRow: View {
         .frame(height: CalendarGeometry.rowHeight)
     }
 
+    /// ช่วงคอลัมน์ที่เป็นวันของเดือนนี้จริงๆ — แถบต้องไม่ล้นไปทับช่องว่าง
+    /// ของเดือนข้างเคียง (ท่อนที่ล้นไปโผล่ในเดือนนั้นแทน พร้อมคำว่า "(ต่อ)")
+    private var inMonthColumns: ClosedRange<Int>? {
+        let columns = days.indices.filter { days[$0].inMonth }
+        guard let first = columns.first, let last = columns.last else { return nil }
+        return first...last
+    }
+
+    /// ตัดแถบให้เหลือเฉพาะช่วงที่อยู่ในเดือนนี้ · nil = ไม่โผล่ในแถวนี้เลย
+    private func clip(_ bar: LaidOutBar) -> (start: Int, span: Int, continued: Bool)? {
+        guard let range = inMonthColumns else { return nil }
+        let start = max(bar.startColumn, range.lowerBound)
+        let end = min(bar.startColumn + bar.columnSpan - 1, range.upperBound)
+        guard end >= start else { return nil }
+        return (start, end - start + 1, bar.isContinuation || start > bar.startColumn)
+    }
+
     private func barsLayer(colWidth: CGFloat) -> some View {
         ForEach(layout.bars, id: \.itemID) { bar in
-            if let item = itemsByID[bar.itemID] {
+            if let item = itemsByID[bar.itemID], let piece = clip(bar) {
                 Button {
                     onSelectItem(item)
                 } label: {
                     CalendarEventBar(
                         item: item,
-                        isContinuation: bar.isContinuation,
+                        isContinuation: piece.continued,
                         isDragging: isBeingDragged(item)
                     )
                 }
                 .buttonStyle(.plain)
                 .frame(
-                    width: max(colWidth * CGFloat(bar.columnSpan) - CalendarGeometry.barGap, 0),
+                    width: max(colWidth * CGFloat(piece.span) - CalendarGeometry.barGap, 0),
                     height: CalendarGeometry.laneHeight
                 )
                 .offset(
-                    x: colWidth * CGFloat(bar.startColumn) + CalendarGeometry.barGap / 2,
+                    x: colWidth * CGFloat(piece.start) + CalendarGeometry.barGap / 2,
                     y: CalendarGeometry.laneOffset(bar.lane)
                 )
             }
@@ -109,7 +126,7 @@ struct CalendarWeekRow: View {
 
     /// แตะ `+N` = เปิด sheet รายวันของวันนั้น (§3.4)
     private func overflowLayer(colWidth: CGFloat) -> some View {
-        ForEach(layout.overflowByColumn.keys.sorted(), id: \.self) { column in
+        ForEach(layout.overflowByColumn.keys.sorted().filter { inMonthColumns?.contains($0) == true }, id: \.self) { column in
             Button {
                 if column < days.count { onSelectDay(days[column].date) }
             } label: {
@@ -137,12 +154,22 @@ struct CalendarDayCell: View {
     let onSelectDay: (Date) -> Void
 
     var body: some View {
+        if day.inMonth {
+            cell
+        } else {
+            // วันของเดือนข้างเคียง — เว้นว่างเปล่า ไม่มีเลข ไม่มีชิป แตะไม่ติด
+            // (แต่ยังกินที่ 1 คอลัมน์ ตารางจึงยังเป็น 7 ช่องเท่าเดิม)
+            Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private var cell: some View {
         let todayFlag = calendar.isDateInToday(day.date)
         let selectedFlag = calendar.isDate(day.date, inSameDayAs: selectedDate)
         let weekendFlag = calendar.component(.weekday, from: day.date) == 1
             || calendar.component(.weekday, from: day.date) == 7
 
-        VStack(spacing: 0) {
+        return VStack(spacing: 0) {
             ZStack {
                 // วงกลมมีเฉพาะ "วันนี้" — วันที่เลือกใช้แค่สีตัวเลข
                 // (วงกลมของวันที่เลือกเด้งตามนิ้วทุกครั้งที่แตะ Few ว่ารก)
