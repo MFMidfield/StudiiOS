@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D18F546B30320CFA0005DB11 /* IMG_1283.JPG in Resources */ = {isa = PBXBuildFile; fileRef = D18F546930320CFA0005DB11 /* IMG_1283.JPG */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		D16C3E0F3017B61F00CE7D8C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		D16C3DFD3017B61D00CE7D8C /* StudiiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StudiiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D16C3E0E3017B61F00CE7D8C /* StudiiOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StudiiOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D16C3E183017B61F00CE7D8C /* StudiiOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StudiiOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D18F546930320CFA0005DB11 /* IMG_1283.JPG */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = IMG_1283.JPG; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -92,6 +97,7 @@
 				D16C3E113017B61F00CE7D8C /* StudiiOSTests */,
 				D16C3E1B3017B61F00CE7D8C /* StudiiOSUITests */,
 				D16C3DFE3017B61D00CE7D8C /* Products */,
+				D18F546A30320CFA0005DB11 /* ภาพตารางเรียน */,
 			);
 			sourceTree = "<group>";
 		};
@@ -103,6 +109,14 @@
 				D16C3E183017B61F00CE7D8C /* StudiiOSUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		D18F546A30320CFA0005DB11 /* ภาพตารางเรียน */ = {
+			isa = PBXGroup;
+			children = (
+				D18F546930320CFA0005DB11 /* IMG_1283.JPG */,
+			);
+			path = "ภาพตารางเรียน";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -225,6 +239,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D18F546B30320CFA0005DB11 /* IMG_1283.JPG in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -15,6 +15,9 @@ import SwiftUI
 struct SubjectPickerSheet: View {
     /// true = มีช่อง "พิมพ์ชื่อเอง" ท้ายรายการ
     var allowsCustomName: Bool = false
+    /// true = มีกลุ่ม "คาบพัก" บนสุด (ใช้ที่ฟอร์มคาบเรียนเท่านั้น — หน้าเกรดไม่ต้องมี
+    /// เพราะคาบพักไม่มีเกรด)
+    var showsBreakOptions: Bool = false
     /// strand ติดไปด้วยเพื่อให้วิชาที่สร้างใหม่ได้สีของกลุ่มสาระตัวเอง
     let onPick: (_ name: String, _ strand: ThaiSubjectStrand?) -> Void
 
@@ -32,6 +35,7 @@ struct SubjectPickerSheet: View {
         NavigationStack {
             List {
                 if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    if showsBreakOptions { breakSection }
                     groupList
                 } else {
                     searchResults
@@ -53,6 +57,29 @@ struct SubjectPickerSheet: View {
     }
 
     // MARK: - Lists
+
+    /// ชื่อคาบพักที่ `ThaiSubjectCatalog.isBreakLabel` รู้จัก — เลือกจากที่นี่แล้ว
+    /// ฟอร์มคาบจะติดธง `Subject.isBreak` ให้เอง
+    private static let breakOptions = ["พักกลางวัน", "โฮมรูม", "พักเบรก"]
+
+    private var breakSection: some View {
+        Section("คาบพัก") {
+            ForEach(Self.breakOptions, id: \.self) { name in
+                Button {
+                    pick(name, nil)
+                } label: {
+                    HStack(spacing: Theme.Spacing.md) {
+                        IconTile(systemName: "fork.knife", color: Theme.Colors.warning)
+                        Text(name)
+                            .font(Theme.Font.body)
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+            }
+        }
+    }
 
     private var groupList: some View {
         ForEach(ThaiCourseCatalog.groups) { group in

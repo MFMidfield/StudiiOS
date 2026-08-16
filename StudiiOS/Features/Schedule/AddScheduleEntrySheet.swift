@@ -32,7 +32,9 @@ struct AddScheduleEntrySheet: View {
     @State private var teacherName: String
     @State private var location: String
     @State private var showDeleteConfirm = false
-    @State private var isAddingSubject = false
+    @State private var isPickingSubject = false
+    @State private var isRenamingSubject = false
+    @State private var renameText = ""
 
     // Photo import (add mode only). Every step of the chain is presented from
     // this NavigationStack, never from a child view — nesting a picker inside a
@@ -114,11 +116,17 @@ struct AddScheduleEntrySheet: View {
                 Button("ลบคาบเรียนนี้", role: .destructive, action: delete)
                 Button("ยกเลิก", role: .cancel) {}
             }
-            .sheet(isPresented: $isAddingSubject) {
-                AddSubjectSheet { subject in
-                    subjectName = subject.name
-                    subjectCode = subject.code
+            .sheet(isPresented: $isPickingSubject) {
+                SubjectPickerSheet(allowsCustomName: true, showsBreakOptions: true) { name, _ in
+                    applyPickedSubject(named: name)
                 }
+            }
+            .alert("แก้ชื่อวิชา", isPresented: $isRenamingSubject) {
+                TextField("ชื่อวิชา", text: $renameText)
+                Button("บันทึก") { renameSubject() }
+                Button("ยกเลิก", role: .cancel) {}
+            } message: {
+                Text("เปลี่ยนชื่อวิชานี้ทุกที่ในแอป — ทั้งตารางเรียน งานที่ผูกวิชานี้ และเกรดรายวิชา")
             }
             .onAppear {
                 if let editing {
@@ -187,14 +195,37 @@ struct AddScheduleEntrySheet: View {
         }
     }
 
+    /// วิชาเลือกจาก `SubjectPickerSheet` ชุดเดียวกับหน้ากรอกเกรด (16 ส.ค. 2569)
+    /// เดิมเป็น `SubjectPickerFields` (กลุ่มสาระ → ชื่อ → พิมพ์เอง) ซึ่งคนละหน้าตากับที่อื่น
     private var subjectSection: some View {
         Section("วิชา") {
-            SubjectPickerFields(name: $subjectName, code: $subjectCode)
-
             Button {
-                isAddingSubject = true
+                isPickingSubject = true
             } label: {
-                Label("เพิ่มวิชาใหม่", systemImage: "plus.circle.fill")
+                HStack(spacing: Theme.Spacing.md) {
+                    Text(subjectName.isEmpty ? "เลือกวิชา" : subjectName)
+                        .font(Theme.Font.body)
+                        .foregroundStyle(subjectName.isEmpty ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
+                    Spacer(minLength: Theme.Spacing.sm)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            TextField("รหัสวิชา (ไม่บังคับ)", text: $subjectCode)
+                .textInputAutocapitalization(.characters)
+
+            // เปลี่ยนชื่อ Subject ตัวจริง — มีผลกับทุกคาบ/งาน/เกรดที่ผูกวิชานี้
+            if editing?.subject != nil {
+                Button("แก้ชื่อวิชานี้ (มีผลทุกคาบ)") {
+                    renameText = subjectName
+                    isRenamingSubject = true
+                }
+                .font(Theme.Font.label)
+                .foregroundStyle(Theme.Colors.primaryDeep)
             }
         }
     }
@@ -285,6 +316,45 @@ struct AddScheduleEntrySheet: View {
 
     // MARK: - Actions
 
+    /// เลือกวิชาจาก picker — **ต้องเซ็ตรหัสตามวิชาที่เลือกด้วยเสมอ**
+    /// `ScheduleConstants.resolveSubject` จับคู่ด้วย "รหัส" ก่อน "ชื่อ" ถ้าปล่อยรหัสของ
+    /// วิชาเดิมค้างไว้ ตอนกดบันทึกมันจะคืนวิชาเดิมกลับมา = ชื่อไม่เปลี่ยน
+    /// (บั๊กที่ Few เจอ 16 ส.ค. 2569)
+    private func applyPickedSubject(named name: String) {
+        subjectName = name
+        let existing = (try? context.fetch(FetchDescriptor<Subject>())) ?? []
+        let match = existing.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        subjectCode = match?.code ?? ""
+    }
+
+    /// เปลี่ยนชื่อ `Subject` ตัวจริง แล้วไล่อัปเดต**สำเนาชื่อ**ที่โมเดลอื่นเก็บไว้
+    /// (ScheduleEntry / Assignment / TermGradeSubject เก็บชื่อเป็น String ไม่ใช่ relation)
+    private func renameSubject() {
+        guard let subject = editing?.subject else { return }
+        let newName = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let oldName = subject.name
+        guard !newName.isEmpty, newName != oldName else { return }
+
+        subject.name = newName
+
+        for entry in allEntries where entry.subject?.persistentModelID == subject.persistentModelID
+            || entry.subjectName.caseInsensitiveCompare(oldName) == .orderedSame {
+            entry.subjectName = newName
+        }
+        let assignments = (try? context.fetch(FetchDescriptor<Assignment>())) ?? []
+        for task in assignments where task.subjectName.caseInsensitiveCompare(oldName) == .orderedSame {
+            task.subjectName = newName
+        }
+        let gradeSubjects = (try? context.fetch(FetchDescriptor<TermGradeSubject>())) ?? []
+        for row in gradeSubjects where row.name.caseInsensitiveCompare(oldName) == .orderedSame {
+            row.name = newName
+        }
+
+        subjectName = newName
+        try? context.save()
+        AppLog.action("Subject", "เปลี่ยนชื่อวิชา: \(oldName) → \(newName) (อัปเดตคาบ/งาน/เกรดที่ผูกชื่อเดิมด้วย)")
+    }
+
     private func save() {
         // Time is checked first: resolveSubject can *insert* a Subject, and
         // bailing out after that would leave a stray one behind.
@@ -297,6 +367,12 @@ struct AddScheduleEntrySheet: View {
         guard let subject = ScheduleConstants.resolveSubject(
             named: subjectName, code: subjectCode, in: context
         ) else { return }
+
+        // เลือกจากกลุ่ม "คาบพัก" ใน picker → วิชาที่เพิ่งสร้างต้องเป็นคาบพักด้วย
+        // (ไม่งั้นคาบพักจะถูกนับเป็นวิชาปกติในเกรด/สถิติ)
+        if ThaiSubjectCatalog.isBreakLabel(subject.name), !subject.isBreak {
+            subject.isBreak = true
+        }
 
         if let overlap = overlappingEntry {
             AppLog.warn("Schedule", "เวลาซ้อนทับกับ คาบ \(overlap.periodNumber) (\(overlap.startMinute.asClockString)-\(overlap.endMinute.asClockString))")

@@ -22,6 +22,7 @@ struct ScheduleImportRowEditSheet: View {
     @State private var startTime: Date
     @State private var endTime: Date
     @State private var isConfirmingDelete = false
+    @State private var isPickingSubject = false
 
     init(
         period: ImportedPeriod,
@@ -90,7 +91,30 @@ struct ScheduleImportRowEditSheet: View {
                 }
                 Button("ยกเลิก", role: .cancel) {}
             }
+            .sheet(isPresented: $isPickingSubject) {
+                SubjectPickerSheet(allowsCustomName: true, showsBreakOptions: true) { name, _ in
+                    applyPickedSubject(named: name)
+                }
+            }
         }
+    }
+
+    /// เลือกวิชาใหม่ = ตอบ ⚠️ "ชื่อเดามาจากรหัส" แล้ว
+    ///
+    /// ⚠️ **ล้างรหัสทิ้งเมื่อผู้ใช้เลือกวิชาที่ไม่ตรงกับที่ OCR อ่านมา** —
+    /// `ScheduleImportCommitter.resolveSubject` จับคู่ด้วย**รหัสก่อนชื่อ** ถ้าปล่อยรหัสเดิม
+    /// ไว้ ตอนคอมมิตจะได้วิชาตามรหัสเก่า ชื่อที่เพิ่งเลือกจะไม่มีผล (บั๊กแบบเดียวกับ
+    /// ฟอร์มแก้คาบ) · เลือกชื่อเดิมซ้ำ = รหัสจากรูปยังอยู่ครบ
+    private func applyPickedSubject(named name: String) {
+        let picked = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !picked.isEmpty else { return }
+        if picked.caseInsensitiveCompare(period.subjectName) != .orderedSame {
+            draft.subjectCode = ""
+        }
+        draft.subjectName = picked
+        draft.nameIsGuessed = false
+        // เลือกจากกลุ่ม "คาบพัก" → แถวนี้ต้องถูกคอมมิตเป็นคาบพัก
+        draft.isBreak = ThaiSubjectCatalog.isBreakLabel(picked)
     }
 
     @ToolbarContentBuilder
@@ -117,12 +141,27 @@ struct ScheduleImportRowEditSheet: View {
                 }
             }
 
-            SubjectPickerFields(
-                name: $draft.subjectName,
-                code: $draft.subjectCode,
-                onNameEdited: { draft.nameIsGuessed = false },
-                onCodeEdited: { draft.codeNeedsReview = false }
-            )
+            // ชุดเดียวกับฟอร์มแก้คาบในตารางเรียน (16 ส.ค. 2569) — เดิมเป็น
+            // `SubjectPickerFields` ซึ่งคนละหน้าตากับที่อื่นในแอป
+            Button {
+                isPickingSubject = true
+            } label: {
+                HStack(spacing: Theme.Spacing.md) {
+                    Text(draft.subjectName.isEmpty ? "เลือกวิชา" : draft.subjectName)
+                        .font(Theme.Font.body)
+                        .foregroundStyle(draft.subjectName.isEmpty ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
+                    Spacer(minLength: Theme.Spacing.sm)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            TextField("รหัสวิชา (ไม่บังคับ)", text: $draft.subjectCode)
+                .textInputAutocapitalization(.characters)
+                .onChange(of: draft.subjectCode) { _, _ in draft.codeNeedsReview = false }
 
             if draft.nameIsGuessed {
                 hint("ชื่อวิชานี้เดามาจากรหัส ตรวจให้ตรงกับที่เรียนจริง", color: Theme.Colors.warning)

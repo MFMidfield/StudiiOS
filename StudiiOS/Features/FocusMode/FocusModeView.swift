@@ -61,6 +61,11 @@ struct FocusModeView: View {
         }
         .animation(.smooth(duration: 0.3), value: engine.isAskingForBreak)
         .toolbar(.hidden, for: .navigationBar)
+        // ระหว่างโฟกัสซ่อนแถบแท็บล่างด้วย — เข้าหน้านี้จากเมนูหน้าแรกแล้วกดเริ่ม
+        // แถบล่างยังค้างอยู่ ทำให้ออกไปแท็บอื่นได้ทั้งที่เซสชันยังเดิน
+        // (หน้าเริ่มโฟกัสยังเห็นแถบตามปกติ)
+        .toolbar(engine.isRunning ? .hidden : .visible, for: .tabBar)
+        .animation(.smooth(duration: 0.3), value: engine.isRunning)
         .interactiveSwipeBack()
         .task {
             engine.attach(context: context)

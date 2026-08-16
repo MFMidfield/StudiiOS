@@ -535,6 +535,8 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   ├── OnboardingPeriodSheet.swift เพิ่มคาบ 1 คาบ — ชื่อวิชามาจาก `SubjectPickerSheet` เท่านั้น
     │   │                              บันทึกผ่าน `ScheduleConstants.resolveSubject` ตัวเดียวกับที่อื่น
     │   ├── SubjectPickerSheet.swift   กลุ่มสาระ → รายวิชา (จาก `ThaiCourseCatalog`) + ค้นหา
+    │   │                              `showsBreakOptions` (ใหม่ 16 ส.ค. 2569) = มีกลุ่ม "คาบพัก" บนสุด
+    │   │                              (พักกลางวัน · โฮมรูม · พักเบรก) — เปิดเฉพาะฟอร์มคาบเรียน
     │   │                              `allowsCustomName` = มีช่องพิมพ์ชื่อเองท้ายลิสต์ (เปิดทั้งหน้า 3 และ 4)
     │   ├── GradeBacklogSetupView.swift หน้า 4 · การ์ดต่อเทอมที่จบไปแล้ว (`sortKey < currentSortKey`)
     │   │                              เกรด + หน่วยกิต prefill 20 · **สร้าง `Term` ต่อเมื่อมีตัวเลขจริง**
@@ -612,8 +614,29 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                     ใช้ร่วมโดย AddScheduleEntrySheet + ScheduleImportRowEditSheet ห้ามแยกกลับ
     │   ├── PeriodNumberField.swift      (76)  "คาบที่" 0–10 + กำหนดเอง — ใช้ร่วม 2 หน้า
     │   ├── AddScheduleEntrySheet.swift (382)  add/edit ใช้ร่วม · section เรียง วิชา→เวลา→รายละเอียด ตรงกับหน้า import
-    │   ├── AddSubjectSheet.swift       (149)
+    │   │                                     **16 ส.ค. 2569 — ช่องวิชาเปลี่ยนทั้งชุด**:
+    │   │                                     · แถวเดียวแตะแล้วเปิด `SubjectPickerSheet(allowsCustomName:
+    │   │                                       showsBreakOptions: true)` (ชุดเดียวกับหน้ากรอกเกรด)
+    │   │                                       แทน `SubjectPickerFields` (ตัวนั้นเหลือใช้ที่ ScheduleImportRowEditSheet)
+    │   │                                     · ⚠️ `applyPickedSubject(named:)` **ต้องเซ็ต `subjectCode` ตามวิชาที่เลือกเสมอ**
+    │   │                                       — `ScheduleConstants.resolveSubject` จับคู่ด้วย**รหัสก่อนชื่อ** ถ้าปล่อยรหัส
+    │   │                                       ของวิชาเดิมค้าง กดบันทึกแล้วจะได้วิชาเดิมกลับมา = ชื่อไม่เปลี่ยน (บั๊กเดิม)
+    │   │                                     · ปุ่ม "แก้ชื่อวิชานี้ (มีผลทุกคาบ)" → `renameSubject()` เปลี่ยนชื่อ `Subject`
+    │   │                                       จริง แล้วไล่แก้**สำเนาชื่อ**ใน `ScheduleEntry.subjectName` ·
+    │   │                                       `Assignment.subjectName` · `TermGradeSubject.name` ด้วย
+    │   │                                     · เลือกจากกลุ่ม "คาบพัก" → `save()` ติดธง `Subject.isBreak` ผ่าน
+    │   │                                       `ThaiSubjectCatalog.isBreakLabel`
+    │   ├── AddSubjectSheet.swift       (149)  ⚠️ **ไม่มีใครเรียกแล้วตั้งแต่ 16 ส.ค. 2569** (ทางเข้าเดิมคือปุ่ม
+    │   │                                     "เพิ่มวิชาใหม่" ในฟอร์มคาบ ซึ่งถูกแทนด้วย SubjectPickerSheet)
+    │   ⚠️ `SubjectPickerFields.swift` **ไม่มีใครเรียกแล้ว 16 ส.ค. 2569** — ทั้งฟอร์มคาบและหน้าตรวจ OCR
+    │      ย้ายไปใช้ `SubjectPickerSheet` หมดแล้ว (ยังไม่ลบไฟล์)
     │   └── ScheduleImportReviewSheet.swift (309) · ScheduleImportRowEditSheet.swift (201)
+    │                                     **16 ส.ค. 2569** RowEdit ใช้ช่องวิชาชุดเดียวกับฟอร์มคาบ:
+    │                                     แถวแตะ → `SubjectPickerSheet(showsBreakOptions: true)` + ช่องรหัสพิมพ์เอง
+    │                                     · เลือกวิชาที่**ต่างจากที่ OCR อ่านมา** = ล้าง `subjectCode` ทิ้ง
+    │                                       (ไม่งั้น `ScheduleImportCommitter.resolveSubject` ที่จับคู่รหัสก่อนชื่อ
+    │                                       จะคืนวิชาตามรหัสเดิม) · เลือกชื่อเดิมซ้ำ รหัสจากรูปยังอยู่
+    │                                     · เลือกกลุ่มคาบพัก → เซ็ต `ImportedPeriod.isBreak`
     │                                     หน้าตรวจผลอ่านตารางจากรูป — ไม่เขียน SwiftData เอง ส่ง [ImportedPeriod]
     │                                     กลับทาง onSave ให้ AddScheduleEntrySheet เรียก ScheduleImportCommitter
     │   ❌ ลบแล้ว W2-B: `ScheduleTodayTasksSection.swift` (การ์ดงานวันนี้ — ซ้ำกับแท็บงานที่จัดกลุ่มตามวันแล้ว
