@@ -19,9 +19,11 @@ struct FocusTagBar: View {
                 manageButton
             }
             .padding(.horizontal, Theme.Spacing.xxl)
+            // กันเส้นขอบ capsule โดน ScrollView ตัดบน-ล่าง — ของเดิมล็อกความสูงไว้ 44
+            // ซึ่งเตี้ยกว่าชิปจริงเมื่อฟอนต์ไทยดันความสูงบรรทัดขึ้น
+            .padding(.vertical, Theme.Spacing.xs)
         }
         .scrollIndicators(.hidden)
-        .frame(height: 44)
     }
 
     private func chip(for tag: FocusTag) -> some View {

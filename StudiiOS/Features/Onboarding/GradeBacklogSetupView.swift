@@ -26,6 +26,10 @@ struct GradeBacklogSetupView: View {
     @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
 
     @State private var editingSlot: TermSlot?
+    /// เป้า GPAX — ตั้งตรงนี้ได้เลย ข้ามได้ (หน้าเกรดจะทวงให้เองถ้ายังไม่ตั้ง)
+    @State private var targetText = GPAXSettings.hasTarget
+        ? GPAXCalculator.formatted(GPAXSettings.target)
+        : ""
 
     /// เทอมย้อนหลังที่ควรถาม — ว่างเมื่อเพิ่งขึ้น ม.4 เทอม 1
     static var backlogSortKeys: [Int] {
@@ -33,6 +37,8 @@ struct GradeBacklogSetupView: View {
         return GPAXCalculator.upperBandSortKeys.filter { $0 < current }
     }
 
+    /// เดิมใช้ตัดสินว่าจะข้ามหน้านี้ไหม — ตั้งแต่ 16 ส.ค. 2569 หน้านี้แสดงเสมอ
+    /// (มีช่องตั้งเป้า GPAX อยู่ด้วย) เก็บไว้เพราะยังใช้บอกได้ว่ามีเทอมย้อนหลังไหม
     static var hasBacklog: Bool { !backlogSortKeys.isEmpty }
 
     private var slots: [TermSlot] {
@@ -45,14 +51,21 @@ struct GradeBacklogSetupView: View {
 
     private var currentTerm: Term? { TermStore.find(idString: activeTermID, in: allTerms) }
 
+    /// ทุกอย่างในหน้านี้ข้ามได้ ปุ่มจึงบอกตรงๆ ว่ายังไม่ได้กรอกอะไรเลย
+    private var primaryTitle: String {
+        if slots.isEmpty { return GPAXSettings.hasTarget ? "ถัดไป" : "ยังไม่ตั้งเป้า ข้ามไปก่อน" }
+        return filledCount == 0 && !GPAXSettings.hasTarget ? "ยังไม่กรอก ข้ามไปก่อน" : "ถัดไป"
+    }
+
     var body: some View {
         OnboardingScaffold(
             step: .grades,
             onBack: onBack,
-            primaryTitle: filledCount == 0 ? "ยังไม่กรอก ข้ามไปก่อน" : "ถัดไป",
+            primaryTitle: primaryTitle,
             onPrimary: onNext
         ) {
             VStack(spacing: Theme.Spacing.lg) {
+                targetCard
                 explainer
                 ForEach(slots) { slot in
                     TermGradeCard(
@@ -82,12 +95,70 @@ struct GradeBacklogSetupView: View {
         }
     }
 
+    /// เป้า GPAX — ไม่บังคับ กดข้ามได้ตามปกติ เขียนผ่าน `GPAXSettings.setTarget` เท่านั้น
+    private var targetCard: some View {
+        CardContainer {
+            Text("เป้า GPAX")
+                .font(Theme.Font.plex(15, .semibold))
+                .foregroundStyle(Theme.Colors.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("อยากจบ ม.6 ที่เท่าไหร่ ไม่ตั้งตอนนี้ก็ได้ ตั้งทีหลังที่หน้าเกรดได้ตลอด")
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: Theme.Spacing.sm) {
+                ForEach(Self.targetPresets, id: \.self) { value in
+                    targetChip(value)
+                }
+            }
+
+            TextField("หรือพิมพ์เอง เช่น 3.65", text: $targetText)
+                .font(Theme.Font.body)
+                .keyboardType(.decimalPad)
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background(Theme.Colors.surfaceRaised)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                .onChange(of: targetText) { _, _ in saveTarget() }
+        }
+    }
+
+    private static let targetPresets: [Double] = [3.00, 3.25, 3.50, 3.75, 4.00]
+
+    private func targetChip(_ value: Double) -> some View {
+        let label = GPAXCalculator.formatted(value)
+        let isSelected = targetText == label
+
+        return Button {
+            targetText = label
+        } label: {
+            Text(label)
+                .font(Theme.Font.plex(13, isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? Theme.Colors.onPrimary : Theme.Colors.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background(isSelected ? Theme.Colors.primary : Theme.Colors.surfaceRaised, in: Capsule())
+        }
+        .buttonStyle(PressScaleButtonStyle())
+    }
+
+    /// ช่องว่าง = ยังไม่ตั้งเป้า (ไม่ลบเป้าเดิมทิ้ง — ผู้ใช้อาจแค่กำลังพิมพ์ใหม่)
+    private func saveTarget() {
+        guard let value = Double(targetText.trimmingCharacters(in: .whitespaces)),
+              value > 0, value <= 4.0 else { return }
+        GPAXSettings.setTarget(value, source: GPAXSettings.targetSource)
+    }
+
     private var explainer: some View {
         HStack(alignment: .top, spacing: Theme.Spacing.sm) {
             Image(systemName: "info.circle.fill")
                 .font(.system(size: 13))
                 .foregroundStyle(Theme.Colors.primaryDeep)
-            Text("กรอกเท่าที่จำได้ก็พอ ข้ามไปเลยก็ได้ แล้วค่อยมาเติมทีหลังที่หน้าเกรด — ยิ่งกรอกครบ ตัวเลข GPAX กับเป้าที่ต้องทำยิ่งตรงความจริง")
+            Text(slots.isEmpty
+                 ? "ยังไม่มีเทอมที่จบไปแล้ว พอจบเทอมนี้ค่อยมากรอกเกรดที่หน้าเกรดได้เลย"
+                 : "กรอกเท่าที่จำได้ก็พอ ข้ามไปเลยก็ได้ แล้วค่อยมาเติมทีหลังที่หน้าเกรด — ยิ่งกรอกครบ ตัวเลข GPAX กับเป้าที่ต้องทำยิ่งตรงความจริง")
                 .font(Theme.Font.label)
                 .foregroundStyle(Theme.Colors.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

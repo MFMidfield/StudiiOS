@@ -44,6 +44,7 @@ struct TermManagementView: View {
                 Text("แตะเพื่อสลับเทอม · ปัดซ้ายเพื่อลบ")
             }
         }
+        .themedFormBackground()
         .navigationTitle("เทอมทั้งหมด")
         .navigationBarTitleDisplayMode(.inline)
         .alert(

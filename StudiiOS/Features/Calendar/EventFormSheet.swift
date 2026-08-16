@@ -17,7 +17,6 @@ struct EventFormSheet: View {
     /// created — "ยกเลิก" then deletes it instead of leaving an empty stub.
     private let deleteOnCancel: Bool
 
-    @Query(sort: \Subject.createdAt) private var subjects: [Subject]
     @Query(sort: \CalendarTag.name) private var allTags: [CalendarTag]
 
     @State private var title: String
@@ -47,11 +46,17 @@ struct EventFormSheet: View {
     /// else, so existing call sites are untouched.
     private let onSaved: (() -> Void)?
 
+    /// กดปุ่ม "เพิ่มเป็นการบ้าน/งานแทน" — ฟอร์มนี้ปิดตัวเอง แล้วให้ผู้เรียกเปิด
+    /// `AddTaskSheet` ต่อ (สั่งเปิด sheet ใหม่ตอนตัวเก่ายังปิดไม่เสร็จ ฟอร์มจะไม่ขึ้น
+    /// จึงต้องส่งกลับไปให้ฝั่งที่ present เป็นคนเปิด)
+    private let onSwitchToTask: (() -> Void)?
+
     // ── Add initializer ──
-    init(initialDate: Date, onSaved: (() -> Void)? = nil) {
+    init(initialDate: Date, onSaved: (() -> Void)? = nil, onSwitchToTask: (() -> Void)? = nil) {
         existingEvent = nil
         deleteOnCancel = false
         self.onSaved = onSaved
+        self.onSwitchToTask = onSwitchToTask
         let dayStart = Calendar(identifier: .gregorian).startOfDay(for: initialDate)
         _title            = State(initialValue: "")
         _location         = State(initialValue: "")
@@ -71,6 +76,8 @@ struct EventFormSheet: View {
         existingEvent     = event
         self.deleteOnCancel = deleteOnCancel
         self.onSaved      = onSaved
+        // แก้กิจกรรมที่มีอยู่แล้วไม่มีปุ่มสลับไปฟอร์มงาน — ของที่สร้างไว้แล้วย้ายประเภทไม่ได้
+        self.onSwitchToTask = nil
         _title            = State(initialValue: event.title)
         _location         = State(initialValue: event.location)
         _notes            = State(initialValue: event.notes)
@@ -105,7 +112,7 @@ struct EventFormSheet: View {
         NavigationStack {
             Form {
                 titleSection
-                subjectSection
+                if onSwitchToTask != nil { switchToTaskSection }
                 dateSection
                 notesSection
                 tagSection
@@ -113,6 +120,7 @@ struct EventFormSheet: View {
                 colorSection
                 if isEditing { deleteSection }
             }
+            .themedFormBackground()
             .navigationTitle(isEditing ? "แก้ไขกิจกรรม" : "กิจกรรมใหม่")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -152,13 +160,17 @@ struct EventFormSheet: View {
         }
     }
 
-    private var subjectSection: some View {
+    /// ช่อง "วิชา" ถูกเอาออก 16 ส.ค. 2569 — `CalendarEvent.subjectName` ยังอยู่ในโมเดล
+    /// (กิจกรรมเก่าที่เคยผูกวิชาไว้ยังโชว์ชื่อวิชาใน pill ได้) แค่ไม่มีที่ให้ตั้งใหม่
+    private var switchToTaskSection: some View {
         Section {
-            Picker("วิชา", selection: $subjectName) {
-                Text("ไม่ระบุ").tag("")
-                ForEach(subjects.filter { !$0.isBreak }) { subject in
-                    Text(subject.name).tag(subject.name)
-                }
+            Button {
+                onSwitchToTask?()
+                dismiss()
+            } label: {
+                Label("นี่คือการบ้าน/งาน — เปิดฟอร์มงานแทน", systemImage: "checklist")
+                    .font(Theme.Font.body)
+                    .foregroundStyle(Theme.Colors.primaryDeep)
             }
         }
     }

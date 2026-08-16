@@ -26,31 +26,31 @@ struct TermGradeListSection: View {
     }
 
     var body: some View {
-        CardContainer {
-            Text("ผลการเรียนรายเทอม · ม.ปลาย")
-                .font(Theme.Font.plex(15, .semibold))
-                .foregroundStyle(Theme.Colors.textPrimary)
+        VStack(spacing: Theme.Spacing.md) {
+            CardContainer {
+                Text("ผลการเรียนรายเทอม · ม.ปลาย")
+                    .font(Theme.Font.plex(15, .semibold))
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            TermGradeChart(result: result, terms: terms, currentSortKey: currentSortKey)
-                .padding(.bottom, Theme.Spacing.xs)
-
-            VStack(spacing: 0) {
-                ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
-                    TermGradeRow(
-                        sortKey: row.sortKey,
-                        term: row.term,
-                        currentSortKey: currentSortKey,
-                        requiredAverage: result?.requiredAverage
-                    )
-                    if index < rows.count - 1 {
-                        Divider()
-                    }
-                }
+                TermGradeChart(result: result, terms: terms, currentSortKey: currentSortKey)
             }
 
-            Text("กรอกได้เฉพาะเทอมที่จบแล้ว · พอขึ้นเทอมใหม่ กด \"ขึ้นชั้นแล้ว\" ในตั้งค่า เทอมนี้จะกรอกได้")
+            // 16 ส.ค. 2569: แต่ละเทอมเป็นการ์ดของตัวเอง (เดิมเป็น 6 แถวคั่น Divider
+            // ในการ์ดใบเดียวกับกราฟ ซึ่งอ่านเป็นตารางมากกว่าเป็นของที่กดได้)
+            ForEach(rows, id: \.sortKey) { row in
+                TermGradeRow(
+                    sortKey: row.sortKey,
+                    term: row.term,
+                    currentSortKey: currentSortKey,
+                    requiredAverage: result?.requiredAverage
+                )
+            }
+
+            Text("กดลูกศรที่ตั้งค่าเพื่อกรอกเกรดเทอมนี้")
                 .font(Theme.Font.caption)
                 .foregroundStyle(Theme.Colors.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -73,7 +73,7 @@ private struct TermGradeRow: View {
     /// deliberately excluded: GPAXCalculator counts `sortKey < currentSortKey`
     /// as completed, so a grade entered for the current term is silently
     /// dropped from every GPAX number. It becomes editable once Few advances
-    /// the real term with "ขึ้นชั้นแล้ว" in Settings.
+    /// the real term with the up-arrow button in Settings.
     private var isEditable: Bool {
         guard let current = currentSortKey else { return false }
         return sortKey < current
@@ -93,28 +93,31 @@ private struct TermGradeRow: View {
     }
 
     private var rowLabel: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            Text(displayName)
-                .font(Theme.Font.label)
-                .foregroundStyle(Theme.Colors.textPrimary)
-                .frame(width: 76, alignment: .leading)
+        CardContainer(padding: Theme.Spacing.md) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Text(displayName)
+                    .font(Theme.Font.label)
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .frame(width: 76, alignment: .leading)
 
-            meter
+                meter
 
-            Spacer(minLength: Theme.Spacing.xs)
+                Spacer(minLength: Theme.Spacing.xs)
 
-            trailing
+                trailing
 
-            // The one honest signal of "this opens something".
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .opacity(isEditable ? 1 : 0)
+                // The one honest signal of "this opens something".
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .opacity(isEditable ? 1 : 0)
+            }
         }
-        .padding(.vertical, Theme.Spacing.sm)
-        .padding(.horizontal, isCurrent ? Theme.Spacing.sm : 0)
-        .background(isCurrent ? Theme.Colors.surfaceRaised : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+        // เทอมปัจจุบันเน้นด้วยขอบสีหลัก (พื้นเทาแบบเดิมใช้ไม่ได้แล้ว — การ์ดมีพื้นของตัวเอง)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .stroke(Theme.Colors.primary, lineWidth: isCurrent ? 1.5 : 0)
+        )
         .opacity(isFuture ? 0.55 : 1)
         .contentShape(Rectangle())
     }
@@ -122,8 +125,9 @@ private struct TermGradeRow: View {
     /// Same scale as the chart above — filled with the real grade, or washed in
     /// with the average this term still has to hit.
     private var meter: some View {
-        let value = term?.gpa ?? (isCurrent ? nil : requiredAverage)
-        let fraction = CGFloat(min(1, max(0, (value ?? 0) / 4.0)))
+        // เทอมที่ยังไม่กรอก = 0 (แถบว่าง) — ของเดิมเติมแถบด้วยค่าที่ "ต้องได้"
+        // ทำให้ดูเหมือนกรอกไปแล้ว (16 ส.ค. 2569)
+        let fraction = CGFloat(min(1, max(0, (term?.gpa ?? 0) / 4.0)))
 
         return GeometryReader { geo in
             ZStack(alignment: .leading) {
@@ -140,14 +144,11 @@ private struct TermGradeRow: View {
     @ViewBuilder
     private var trailing: some View {
         if let gpa = term?.gpa {
-            HStack(spacing: Theme.Spacing.xs) {
-                Text(GPAXCalculator.formatted(gpa))
-                if let credits = term?.totalCredits {
-                    Text("· \(String(format: "%.1f", credits)) นก.")
-                }
-            }
-            .font(Theme.Font.plex(13, .medium))
-            .foregroundStyle(Theme.Colors.textSecondary)
+            // เกรดอย่างเดียว — หน่วยกิตถูกเอาออก 16 ส.ค. 2569 (ยังกรอก/ใช้คิด GPAX
+            // เหมือนเดิม แค่ไม่โชว์ในแถวนี้)
+            Text(GPAXCalculator.formatted(gpa))
+                .font(Theme.Font.plex(13, .medium))
+                .foregroundStyle(Theme.Colors.textSecondary)
         } else if isCurrent {
             // Neutral, not orange: orange means "tappable" everywhere else and
             // this row is the one row that isn't.

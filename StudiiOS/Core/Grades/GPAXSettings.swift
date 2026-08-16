@@ -48,6 +48,7 @@ enum GPAXSettings {
     static func setCurrentTerm(gradeLevel: Int, termNumber: Int) {
         UserDefaults.standard.set(gradeLevel, forKey: Key.currentGradeLevel)
         UserDefaults.standard.set(termNumber, forKey: Key.currentTermNumber)
+        GPAXStore.shared.bump()
     }
 
     // MARK: - เป้า GPAX
@@ -66,6 +67,7 @@ enum GPAXSettings {
     static func setTarget(_ value: Double, source: String) {
         UserDefaults.standard.set(value, forKey: Key.target)
         UserDefaults.standard.set(source, forKey: Key.targetSource)
+        GPAXStore.shared.bump()
     }
 
     // MARK: - โหมดกรอก (D3/D4)
@@ -76,6 +78,7 @@ enum GPAXSettings {
 
     static func setEntryMode(_ mode: EntryMode) {
         UserDefaults.standard.set(mode.rawValue, forKey: Key.entryMode)
+        GPAXStore.shared.bump()
     }
 
     static var priorGPAX: Double {
@@ -97,6 +100,7 @@ enum GPAXSettings {
         if let credits {
             UserDefaults.standard.set(credits, forKey: Key.priorCredits)
         }
+        GPAXStore.shared.bump()
     }
 
     /// nil เมื่อไม่ได้อยู่โหมดสะสม หรือยังไม่เคยกรอกตัวเลข — ใช้ส่งตรงเข้า
@@ -127,5 +131,6 @@ enum GPAXSettings {
             Key.priorTermCount,
         ]
         keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+        GPAXStore.shared.bump()
     }
 }

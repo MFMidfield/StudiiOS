@@ -24,10 +24,8 @@ struct StudiiOSApp: App {
             PortfolioItem.self,
             PortfolioImage.self,
             CareerInterestResult.self,
-            TCASEntry.self,
-            TCASScoreWeight.self,
-            TCASScoreRecord.self,
-            TCASSOP.self,
+            SOPTarget.self,
+            SOPDocument.self,
             SemesterRecord.self,
             CalendarEvent.self,
             CalendarTag.self,
@@ -104,6 +102,12 @@ private struct RootContainerView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var assignments: [Assignment]
 
+    /// เซสชันโฟกัสอยู่เหนือทุกอย่างในแอป: ปิดแอปทิ้ง ปัดทิ้ง หรือเปิดใหม่แล้ว
+    /// เซสชันยังเดินอยู่ → หน้าโฟกัสต้องเด้งขึ้นมาเองทันที ไม่ใช่รอให้ผู้ใช้เดินเข้าไป
+    /// (ของเดิมเข้าได้ทางเดียวคือเมนูหน้าแรก คนที่ปัดแอปทิ้งจึงเห็นแอปเหมือนไม่ได้โฟกัสอยู่)
+    @State private var engine = PomodoroEngine.shared
+    @State private var isShowingFocus = false
+
     @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
     @Query private var terms: [Term]
     private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
@@ -135,8 +139,20 @@ private struct RootContainerView: View {
             }
         }
         .preferredColorScheme(appTheme.colorScheme)
+        // ปิดเซสชันแล้ว (กดค้าง 3 วิ) cover ยังอยู่ — ผู้ใช้ตกลงมาที่หน้าเริ่มโฟกัส
+        // แล้วค่อยกดย้อนกลับออกเอง ปิด cover ทันทีจะเด้งกลับหน้าเดิมแบบงงๆ
+        .fullScreenCover(isPresented: $isShowingFocus) {
+            NavigationStack { FocusModeView() }
+        }
         .task {
             TermStore.bootstrap(in: modelContext)
+            presentFocusIfNeeded()
+        }
+        .onChange(of: engine.isRunning) { _, running in
+            if running { presentFocusIfNeeded() }
+        }
+        .onChange(of: engine.isAskingForBreak) { _, asking in
+            if asking { presentFocusIfNeeded() }
         }
         .onChange(of: scenePhase) { _, newPhase in
             // ป้ายวัน ("พรุ่งนี้"/"วันนี้") และหน้าต่าง 14 วัน ขึ้นกับวันที่ปัจจุบัน
@@ -150,6 +166,18 @@ private struct RootContainerView: View {
             PomodoroEngine.shared.attach(context: modelContext)
             PomodoroEngine.shared.syncToNow()
             AppBlockManager.shared.reconcile()
+
+            // กลับเข้าแอปมาแล้วยังโฟกัสอยู่ (หรือกำลังพัก) → เด้งหน้าโฟกัสทับ
+            presentFocusIfNeeded()
         }
+    }
+
+    /// เด้ง cover เฉพาะตอนที่หน้าโฟกัส**ยังไม่อยู่บนจอ** — ถ้าผู้ใช้เดินเข้าหน้าโฟกัส
+    /// จากเมนูหน้าแรกอยู่แล้ว การเปิด cover ทับจะได้หน้าโฟกัส 2 ชั้น พอหยุดเซสชัน
+    /// แล้วกดย้อนกลับก็เจอหน้าโฟกัสซ้อนอยู่อีกใบ
+    private func presentFocusIfNeeded() {
+        guard engine.isRunning || engine.isAskingForBreak else { return }
+        guard !FocusScreenPresence.shared.isOnScreen else { return }
+        isShowingFocus = true
     }
 }

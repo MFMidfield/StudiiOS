@@ -93,6 +93,7 @@ struct AddScheduleEntrySheet: View {
                     deleteSection
                 }
             }
+            .themedFormBackground()
             .navigationTitle(isEditing ? "แก้คาบเรียน" : "เพิ่มคาบเรียน")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

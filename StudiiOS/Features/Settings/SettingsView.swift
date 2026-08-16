@@ -1,11 +1,19 @@
 //
 //  SettingsView.swift
-//  ตั้งค่า — โปรไฟล์ · การเรียน · การแจ้งเตือน · เกี่ยวกับแอป
+//  ตั้งค่า — โปรไฟล์ · การเรียน · การแจ้งเตือน · การแสดงผล · เกี่ยวกับแอป
 //  No login/account screens — V1 is offline-first with no cloud sync.
+//
+//  ยกเครื่องหน้าตา 16 ส.ค. 2569: ทิ้ง `List`/`Section` มาเป็น ScrollView +
+//  CardContainer บนพื้น `Theme.Colors.background` ให้เข้าชุดกับหน้าอื่น
+//
+//  section "การเรียน" เดิม (6 แถว: ระดับชั้น · แก้ระดับชั้น · ขึ้นชั้นแล้ว ·
+//  วิธีกรอกเทอมที่ผ่านมา · จัดการเทอม · โหมดโฟกัส) ยุบเหลือการ์ดใบเดียว:
+//  เทอมปัจจุบัน + ปุ่มดินสอ (แก้ระดับชั้น) + ปุ่มลูกศรขึ้น (ขึ้นเทอมใหม่)
+//  โหมดโฟกัสเข้าจากเมนูหน้าแรก · จัดการเทอมย้ายไปกล่องนักพัฒนา
 //
 //  Every developer tool (including the permanent-delete button, which used to
 //  sit third from the top under a name that never said "delete") is behind
-//  seven taps on the version row. #if DEBUG alone was not enough: a demo runs
+//  twenty taps on the version row. #if DEBUG alone was not enough: a demo runs
 //  from Xcode, which IS a debug build, so the box would have been on screen
 //  the whole time.
 //
@@ -30,7 +38,7 @@ struct SettingsView: View {
 
     @Query private var terms: [Term]
 
-    /// Seven taps on the version row reveal the developer box. Deliberately
+    /// Twenty taps on the version row reveal the developer box. Deliberately
     /// @State, not @AppStorage — it resets on every launch, so a demo can never
     /// start with the delete button already on screen.
     @State private var versionTapCount = 0
@@ -46,22 +54,29 @@ struct SettingsView: View {
     /// preference; AddTaskSheet only consumes it.
     static let reminderDefaultKey = "com.studentos.assignment.remindersDefaultOn"
 
+    /// จำนวนครั้งที่ต้องแตะแถวเวอร์ชันเพื่อปลดล็อกกล่องนักพัฒนา
+    private static let developerTapsRequired = 20
+
     // MARK: - Level 1 GPAX (D7: currentGradeLevel/currentTermNumber are the
     // student's REAL term — unrelated to TermStore.activeTermKey)
 
     @State private var isPresentingGradeLevelSheet = false
-    @State private var isPresentingCumulativeSheet = false
+    @State private var isConfirmingAdvance = false
+    @State private var isConfirmingGradeLevelEdit = false
 
-    // Ping pattern (see GradeCenterView) — makes SwiftUI redraw currentTermLabel
-    // after GradeLevelSheet or advanceToNextTerm() write these keys.
+    /// ทำให้การ์ด "การเรียน" อัปเดตทันทีที่ขึ้นเทอม/แก้ระดับชั้น — อ่าน `revision` ใน body
+    @State private var gpaxStore = GPAXStore.shared
+
+    // ping แบบ @AppStorage ของเดิม (พึ่งอย่างเดียวไม่ได้ ดู GPAXStore)
     @AppStorage(GPAXSettings.Key.currentGradeLevel) private var gpaxGradeLevelPing = 0
     @AppStorage(GPAXSettings.Key.currentTermNumber) private var gpaxTermNumberPing = 0
 
     // target / targetSource moved out entirely — GPAXTargetSheet on the grades
     // screen is now the only place a target is set.
-    @AppStorage(GPAXSettings.Key.entryMode) private var gpaxEntryMode: GPAXSettings.EntryMode = .perTerm
-    @AppStorage(GPAXSettings.Key.priorGPAX) private var gpaxPriorGPAX: Double = 0
-    @AppStorage(GPAXSettings.Key.priorTermCount) private var gpaxPriorTermCount: Int = 0
+    // โหมด "GPAX สะสม" ถูกถอดออกจาก UI 16 ส.ค. 2569 (GPAXSettings.entryMode
+    // ค้างที่ .perTerm ตลอด ไม่มีใครเขียนอีกแล้ว)
+
+    private var hasTerm: Bool { GPAXSettings.currentSortKey != nil }
 
     private var currentTermLabel: String {
         guard let level = GPAXSettings.currentGradeLevel, let term = GPAXSettings.currentTermNumber else {
@@ -86,20 +101,38 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        List {
-            profileSection
-            studySection
-            notificationSection
-            displaySection
-            aboutSection
-            developerSection
+        ScrollView {
+            VStack(spacing: Theme.Spacing.lg) {
+                let _ = gpaxStore.revision
+
+                profileCard
+                studyCard
+                notificationCard
+                displayCard
+                aboutCard
+                developerCard
+            }
+            .padding(Theme.Spacing.lg)
         }
+        .background(Theme.Colors.background)
         .navigationTitle("ตั้งค่า")
         .task { await notifications.refreshStatus() }
         .alert("ส่งแจ้งเตือนทดสอบแล้ว", isPresented: $showTestNotificationHint) {
             Button("ตกลง", role: .cancel) { }
         } message: {
             Text("จะเด้งใน 5 วินาที ลองสลับออกจากแอปดูก็ได้")
+        }
+        .alert("เรียน \(currentTermLabel) จบแล้วใช่มั้ย", isPresented: $isConfirmingAdvance) {
+            Button("ใช่", role: .destructive) { advanceToNextTerm() }
+            Button("ไม่ใช่", role: .cancel) {}
+        } message: {
+            Text("ขึ้นเทอมใหม่แล้วเทอมนี้จะกรอกเกรดได้")
+        }
+        .alert("แก้ระดับชั้น?", isPresented: $isConfirmingGradeLevelEdit) {
+            Button("แก้", role: .destructive) { isPresentingGradeLevelSheet = true }
+            Button("ยกเลิก", role: .cancel) {}
+        } message: {
+            Text("งานและเกรดที่ผูกกับเทอมเดิมจะไม่ตรงกับระดับชั้นใหม่")
         }
         .fullScreenCover(isPresented: $isPresentingIntro) {
             // NavigationStack ของตัวเอง: OnboardingScaffold ซ่อน nav bar
@@ -113,9 +146,6 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $isPresentingGradeLevelSheet) {
             GradeLevelSheet()
-        }
-        .sheet(isPresented: $isPresentingCumulativeSheet) {
-            CumulativeGPAXSheet()
         }
         .confirmationDialog(
             "ลบข้อมูลทั้งหมดถาวร",
@@ -131,15 +161,15 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Sections
+    // MARK: - โปรไฟล์
 
     /// The whole card is the button. The old design put a small "แก้ไข" link on
     /// the right, so the obvious target — the card — did nothing.
-    private var profileSection: some View {
-        Section {
-            Button {
-                isPresentingEditProfile = true
-            } label: {
+    private var profileCard: some View {
+        Button {
+            isPresentingEditProfile = true
+        } label: {
+            CardContainer {
                 HStack(spacing: Theme.Spacing.md) {
                     profileAvatarView
                         .frame(width: 46, height: 46)
@@ -159,122 +189,183 @@ struct SettingsView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
-                .padding(.vertical, Theme.Spacing.xs)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - การเรียน
+
+    /// การ์ดใบเดียวแทน 6 แถวเดิม: เทอมปัจจุบัน + ดินสอแก้ระดับชั้น + ลูกศรขึ้นเทอมใหม่
+    private var studyCard: some View {
+        CardContainer {
+            Text("การเรียน")
+                .font(Theme.Font.plex(13, .medium))
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: Theme.Spacing.sm) {
+                Text(currentTermLabel)
+                    .font(Theme.Font.plex(24, .semibold))
+                    .foregroundStyle(Theme.Colors.textPrimary)
+
+                Spacer(minLength: Theme.Spacing.sm)
+
+                if hasTerm {
+                    Button {
+                        isConfirmingGradeLevelEdit = true
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Theme.Colors.primaryDeep)
+                            .frame(width: 40, height: 40)
+                            .background(Theme.Colors.primarySoft)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("แก้ระดับชั้น")
+
+                    if canAdvanceTerm {
+                        Button {
+                            isConfirmingAdvance = true
+                        } label: {
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(Theme.Colors.onPrimary)
+                                .frame(width: 40, height: 40)
+                                .background(Theme.Colors.primary)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("ขึ้นเทอมใหม่")
+                    }
+                } else {
+                    Button("ตั้งระดับชั้น") { isPresentingGradeLevelSheet = true }
+                        .font(Theme.Font.plex(13, .semibold))
+                        .buttonStyle(.borderedProminent)
+                        .tint(Theme.Colors.primary)
+                }
+            }
         }
     }
 
-    private var studySection: some View {
-        Section("การเรียน") {
-            LabeledContent("ระดับชั้นปัจจุบัน", value: currentTermLabel)
+    // MARK: - การแจ้งเตือน
 
-            Button(GPAXSettings.currentSortKey == nil ? "ตั้งระดับชั้น" : "แก้ระดับชั้น") {
-                isPresentingGradeLevelSheet = true
-            }
+    private var notificationCard: some View {
+        CardContainer {
+            SectionHeader("การแจ้งเตือน")
 
-            // Referenced by name in the grades list ("กด \"ขึ้นชั้นแล้ว\" ในตั้งค่า")
-            // — do not rename without changing that copy too.
-            if canAdvanceTerm {
-                Button("ขึ้นชั้นแล้ว") { advanceToNextTerm() }
-            }
-
-            Picker("วิธีกรอกเทอมที่ผ่านมา", selection: $gpaxEntryMode) {
-                Text("กรอกทีละเทอม").tag(GPAXSettings.EntryMode.perTerm)
-                Text("กรอก GPAX สะสม").tag(GPAXSettings.EntryMode.cumulative)
-            }
-
-            if gpaxEntryMode == .cumulative {
-                LabeledContent(
-                    "GPAX สะสมที่กรอกไว้",
-                    value: gpaxPriorGPAX > 0 ? String(format: "%.2f · %d เทอม", gpaxPriorGPAX, gpaxPriorTermCount) : "ยังไม่ได้กรอก"
-                )
-                Button("กรอก GPAX สะสม") { isPresentingCumulativeSheet = true }
-            }
-
-            NavigationLink {
-                TermManagementView()
-            } label: {
-                LabeledContent("จัดการเทอม", value: "\(terms.count) เทอม")
-            }
-
-            NavigationLink("โหมดโฟกัส") { FocusModeView() }
-        }
-    }
-
-    private var notificationSection: some View {
-        Section("การแจ้งเตือน") {
-            LabeledContent("สถานะสิทธิ์", value: authorizationStatusLabel)
+            SettingsRow(title: "สถานะสิทธิ์", value: authorizationStatusLabel)
 
             if notifications.authorizationStatus == .notDetermined {
+                Divider()
                 Button("ขอสิทธิ์แจ้งเตือน") {
                     Task { await notifications.requestAuthorization() }
                 }
+                .font(Theme.Font.body)
+                .tint(Theme.Colors.primaryDeep)
             }
 
             if notifications.authorizationStatus == .denied {
+                Divider()
                 Button("เปิดตั้งค่าแจ้งเตือนของเครื่อง") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
                 }
+                .font(Theme.Font.body)
+                .tint(Theme.Colors.primaryDeep)
             }
+
+            Divider()
 
             Toggle("เตือนงานใหม่อัตโนมัติ", isOn: $remindersDefaultOn)
+                .font(Theme.Font.body)
+                .foregroundStyle(Theme.Colors.textPrimary)
+                .tint(Theme.Colors.primary)
 
-            // Wording matches NotificationManager's three slots exactly — a
-            // promise here that the scheduler doesn't keep is worse than no
-            // description at all.
-            Text("เปิดไว้ = งานใหม่ที่มีกำหนดส่งจะเตือน 3 ครั้ง — 1 วันก่อน · 07:00 ของวันกำหนด · 1 ชั่วโมงก่อน (ปรับรายชิ้นได้ในฟอร์มเพิ่มงาน)")
-                .font(Theme.Font.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+            Divider()
 
-            NavigationLink("การแจ้งเตือนที่ตั้งไว้") {
+            NavigationLink {
                 PendingNotificationsView()
+            } label: {
+                SettingsRow(title: "งานที่มีการแจ้งเตือน", showsChevron: true)
             }
+            .buttonStyle(.plain)
         }
     }
 
-    private var displaySection: some View {
-        Section("การแสดงผล") {
-            Picker("ธีม", selection: $appTheme) {
+    // MARK: - การแสดงผล
+
+    private var displayCard: some View {
+        CardContainer {
+            SectionHeader("การแสดงผล")
+
+            // chip 3 ช่องเรียงนอน แทน Picker แบบเมนู — เห็นตัวเลือกครบโดยไม่ต้องกดเปิด
+            HStack(spacing: Theme.Spacing.sm) {
                 ForEach(AppTheme.allCases) { theme in
-                    Text(theme.label).tag(theme)
+                    themeChip(theme)
                 }
             }
-            .pickerStyle(.menu)
         }
     }
 
-    private var aboutSection: some View {
-        Section("เกี่ยวกับแอป") {
-            Button("ดูหน้าแนะนำแอปอีกครั้ง") { isPresentingIntro = true }
+    private func themeChip(_ theme: AppTheme) -> some View {
+        let isSelected = appTheme == theme
 
-            LabeledContent("เวอร์ชัน", value: "1.0.0 (Prototype)")
+        return Button {
+            appTheme = theme
+        } label: {
+            Text(theme.label)
+                .font(Theme.Font.plex(13, isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? Theme.Colors.onPrimary : Theme.Colors.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background(isSelected ? Theme.Colors.primary : Theme.Colors.surfaceRaised, in: Capsule())
+        }
+        .buttonStyle(PressScaleButtonStyle())
+        .accessibilityLabel("ธีม \(theme.label)")
+    }
+
+    // MARK: - เกี่ยวกับแอป
+
+    private var aboutCard: some View {
+        CardContainer {
+            SectionHeader("เกี่ยวกับแอป")
+
+            Button("ดูหน้าแนะนำแอปอีกครั้ง") { isPresentingIntro = true }
+                .font(Theme.Font.body)
+                .tint(Theme.Colors.primaryDeep)
+
+            Divider()
+
+            SettingsRow(title: "เวอร์ชัน", value: "1.0.0")
                 .contentShape(Rectangle())
                 .onTapGesture(perform: registerVersionTap)
 
-            // Plain HStack, not LabeledContent: with a trailing closure the
-            // compiler picks LabeledContent(content:label:) and reads the title
-            // as the content view.
+            Divider()
+
             HStack {
                 Text("แผน")
+                    .font(Theme.Font.body)
+                    .foregroundStyle(Theme.Colors.textPrimary)
                 Spacer()
                 if entitlements.hasPro || entitlements.hasPlus {
                     TierBadge(tier: entitlements.hasPlus ? .plus : .pro)
                 } else {
-                    Text("ฟรี").foregroundStyle(Theme.Colors.textSecondary)
+                    Text("ฟรี")
+                        .font(Theme.Font.body)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
         }
     }
 
-    /// Counts up to seven, then stops counting — tapping further does nothing.
+    /// Counts up to twenty, then stops counting — tapping further does nothing.
     private func registerVersionTap() {
         guard !isShowingDeveloperTools else { return }
         versionTapCount += 1
-        if versionTapCount >= 7 {
+        if versionTapCount >= Self.developerTapsRequired {
             isShowingDeveloperTools = true
             AppLog.action("Settings", "ปลดล็อกเครื่องมือนักพัฒนา")
         }
@@ -283,23 +374,29 @@ struct SettingsView: View {
     // MARK: - Developer tools
     //
     // Two locks, not one: `#if DEBUG` keeps this out of a release build, and
-    // the seven-tap gate keeps it off screen during a demo — which runs from
+    // the twenty-tap gate keeps it off screen during a demo — which runs from
     // Xcode and is therefore a debug build.
     //
     /// Kept out of `body` on purpose: `#if DEBUG` written inline inside a
     /// ViewBuilder confuses the type checker, so the conditional lives here
     /// and `body` just references the property.
     @ViewBuilder
-    private var developerSection: some View {
+    private var developerCard: some View {
         #if DEBUG
         if isShowingDeveloperTools {
-            // header/footer as closures: there is no
-            // Section(_ title:, content:, footer:) — passing a title string
-            // alongside a footer makes the compiler read the string as content.
-            Section {
+            CardContainer {
+                SectionHeader("สำหรับนักพัฒนา")
+
                 Toggle("เปิด Pro", isOn: $entitlements.hasPro)
+                    .font(Theme.Font.body)
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .tint(Theme.Colors.primary)
+
+                Divider()
 
                 Button("เปิดหน้า Setup อีกครั้ง") { startSetupTest() }
+                    .font(Theme.Font.body)
+                    .tint(Theme.Colors.primaryDeep)
 
                 Button("ทดสอบแจ้งเตือน (5 วินาที)") {
                     Task {
@@ -307,17 +404,36 @@ struct SettingsView: View {
                         showTestNotificationHint = true
                     }
                 }
+                .font(Theme.Font.body)
+                .tint(Theme.Colors.primaryDeep)
 
-                NavigationLink("ทดสอบ OCR") { OCRDebugView() }
+                // ทางเข้าเดียวของหน้าจัดการเทอมตั้งแต่ 16 ส.ค. 2569 — เป็นหน้าที่ลบ
+                // เทอมพร้อมงาน/คะแนนได้ ไม่ควรอยู่ในตั้งค่าปกติ
+                NavigationLink {
+                    TermManagementView()
+                } label: {
+                    SettingsRow(title: "จัดการเทอม", value: "\(terms.count) เทอม", showsChevron: true)
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    OCRDebugView()
+                } label: {
+                    SettingsRow(title: "ทดสอบ OCR", showsChevron: true)
+                }
+                .buttonStyle(.plain)
+
+                Divider()
 
                 Button("ลบข้อมูลทั้งหมดถาวร", role: .destructive) {
                     isConfirmingReset = true
                 }
-            } header: {
-                Text("สำหรับนักพัฒนา")
-            } footer: {
+                .font(Theme.Font.body)
+
                 Text("กล่องนี้ไม่ขึ้นในเวอร์ชันจริง และซ่อนใหม่ทุกครั้งที่เปิดแอป")
                     .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         #endif
@@ -339,11 +455,10 @@ struct SettingsView: View {
         return fullName.isEmpty ? "ยังไม่ได้ตั้งชื่อ" : fullName
     }
 
-    /// "ธน · ม.5 เทอม 1" — falls back to whichever half exists.
+    /// ชื่อเล่นอย่างเดียว — ระดับชั้น/เทอมถูกเอาออก 16 ส.ค. 2569 เพราะการ์ด "การเรียน"
+    /// ที่อยู่ถัดลงมาบอกอยู่แล้ว
     private var profileSubtitle: String {
-        let name = profile.nickname.isEmpty ? profile.firstName : profile.nickname
-        let term = GPAXSettings.currentSortKey == nil ? "" : currentTermLabel
-        return [name, term].filter { !$0.isEmpty }.joined(separator: " · ")
+        profile.nickname.isEmpty ? profile.firstName : profile.nickname
     }
 
     /// Initials on a soft accent circle beat a grey stock silhouette — the card
@@ -387,10 +502,8 @@ struct SettingsView: View {
         deleteAll(PortfolioImage.self)
         PortfolioImageStore.deleteAll()
         deleteAll(CareerInterestResult.self)
-        deleteAll(TCASScoreWeight.self)
-        deleteAll(TCASScoreRecord.self)
-        deleteAll(TCASSOP.self)
-        deleteAll(TCASEntry.self)
+        deleteAll(SOPDocument.self)
+        deleteAll(SOPTarget.self)
         deleteAll(SemesterRecord.self)
         deleteAll(CalendarEvent.self)
         deleteAll(CalendarTag.self)
@@ -434,6 +547,33 @@ struct SettingsView: View {
         #if DEBUG
         OnboardingGate.startReplay()
         #endif
+    }
+}
+
+/// แถว "ชื่อ · ค่า" ในการ์ด — แทน `LabeledContent` ที่ผูกกับสไตล์ของ List
+private struct SettingsRow: View {
+    let title: String
+    var value: String?
+    var showsChevron = false
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Text(title)
+                .font(Theme.Font.body)
+                .foregroundStyle(Theme.Colors.textPrimary)
+            Spacer(minLength: Theme.Spacing.sm)
+            if let value {
+                Text(value)
+                    .font(Theme.Font.body)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
+        }
+        .contentShape(Rectangle())
     }
 }
 

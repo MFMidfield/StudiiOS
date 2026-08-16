@@ -22,6 +22,9 @@ struct QuickAddSheet: View {
     /// form is fully gone, so dismissing this menu is its own clean transition
     /// instead of two dismissals racing inside one update.
     @State private var didSave = false
+    /// ฟอร์มที่ต้องเปิดต่อหลังตัวปัจจุบันปิดสนิท — ใช้ตอนผู้ใช้กด
+    /// "นี่คือการบ้าน/งาน" ในฟอร์มกิจกรรม (สั่งเปิดทันทีฟอร์มใหม่จะไม่ขึ้น)
+    @State private var pendingForm: QuickAddForm?
 
     private let options: [QuickAddOption] = [
         QuickAddOption(icon: "checklist", title: "งาน",
@@ -32,17 +35,17 @@ struct QuickAddSheet: View {
                        color: Theme.Colors.subjectPalette[4], form: .portfolio),
     ]
 
-    private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: Theme.Spacing.lg) {
+                // 3 แถวเรียงลง แถวละตัวเลือก (16 ส.ค. 2569 — เดิมเป็น 3 ช่องเรียงนอน
+                // ซึ่งบีบชื่อจนต้องย่อฟอนต์)
+                VStack(spacing: Theme.Spacing.md) {
                     ForEach(options) { option in
                         Button {
                             activeForm = option.form
                         } label: {
-                            tile(for: option)
+                            row(for: option)
                         }
                         .buttonStyle(PressScaleButtonStyle())
                     }
@@ -74,13 +77,25 @@ struct QuickAddSheet: View {
         case .task:
             AddTaskSheet(onSaved: { didSave = true })
         case .event:
-            EventFormSheet(initialDate: .now, onSaved: { didSave = true })
+            EventFormSheet(
+                initialDate: .now,
+                onSaved: { didSave = true },
+                onSwitchToTask: { pendingForm = .task }
+            )
         case .portfolio:
             PortfolioItemSheet(mode: .create, onSaved: { didSave = true })
         }
     }
 
+    /// ปิดฟอร์มแล้ว 3 ทาง: มีฟอร์มค้างรอเปิด → เปิดต่อ · เพิ่งบันทึก → ปิดเมนูตาม
+    /// · ยกเลิกเฉยๆ → อยู่ที่เมนูต่อ
     private func closeIfSaved() {
+        if let next = pendingForm {
+            pendingForm = nil
+            didSave = false
+            activeForm = next
+            return
+        }
         guard didSave else { return }
         didSave = false
         dismiss()
@@ -88,16 +103,19 @@ struct QuickAddSheet: View {
 
     // MARK: - Tile
 
-    private func tile(for option: QuickAddOption) -> some View {
-        VStack(spacing: Theme.Spacing.sm) {
-            IconTile(systemName: option.icon, size: 64, color: option.color, cornerRadius: Theme.Radius.card)
-            Text(option.title)
-                .font(Theme.Font.plex(13, .medium))
-                .foregroundStyle(Theme.Colors.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+    private func row(for option: QuickAddOption) -> some View {
+        CardContainer(padding: Theme.Spacing.md) {
+            HStack(spacing: Theme.Spacing.md) {
+                IconTile(systemName: option.icon, size: 44, color: option.color, cornerRadius: Theme.Radius.control)
+                Text(option.title)
+                    .font(Theme.Font.plex(15, .medium))
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                Spacer(minLength: Theme.Spacing.sm)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
         }
-        .frame(maxWidth: .infinity)
     }
 }
 

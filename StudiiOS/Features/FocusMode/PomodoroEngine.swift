@@ -266,9 +266,15 @@ final class PomodoroEngine {
     private func scheduleEndNotification() {
         guard let deadline else { return }
         let endingPhase = phase
-        let body = endingPhase == .focus
-            ? "เปิดแอปเพื่อเลือกว่าจะพัก 5 นาทีไหม"
-            : "พักครบแล้ว กลับมาต่อได้เลย"
+        let body: String
+        if endingPhase != .focus {
+            body = "พักครบแล้ว กลับมาต่อได้เลย"
+        } else if mode == .countUp {
+            // โหมด ∞ ไม่มีคำถามเรื่องพัก — ชนเพดาน 180 นาทีแล้วจบเลย
+            body = "ครบ \(PomodoroSettings.maxMinutes) นาทีแล้ว เซสชันจบลงเอง"
+        } else {
+            body = "เปิดแอปเพื่อเลือกว่าจะพัก \(PomodoroSettings.breakMinutes) นาทีไหม"
+        }
         Task {
             await NotificationManager.shared.scheduleFocusEnd(
                 at: deadline,

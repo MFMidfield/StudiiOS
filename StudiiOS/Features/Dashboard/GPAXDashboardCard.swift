@@ -15,8 +15,10 @@ import SwiftData
 struct GPAXDashboardCard: View {
     @Query private var terms: [Term]
 
-    // Same reactivity-ping pattern as GradeCenterView — see the comment there
-    // for why plain GPAXSettings getters alone don't trigger a SwiftUI redraw.
+    /// ตัวจริงที่ทำให้การ์ดนี้อัปเดตเมื่อเป้า/เทอมเปลี่ยน — อ่าน `revision` ใน body (ดู `GPAXStore`)
+    @State private var gpaxStore = GPAXStore.shared
+
+    // ping แบบ @AppStorage ของเดิม — เก็บไว้เป็นตาข่ายกันพลาด แต่พึ่งอย่างเดียวไม่ได้
     @AppStorage(GPAXSettings.Key.currentGradeLevel) private var gpaxGradeLevelPing = 0
     @AppStorage(GPAXSettings.Key.currentTermNumber) private var gpaxTermNumberPing = 0
     @AppStorage(GPAXSettings.Key.target) private var gpaxTargetPing = 0.0
@@ -40,6 +42,7 @@ struct GPAXDashboardCard: View {
     }
 
     var body: some View {
+        let _ = gpaxStore.revision
         if let result, let gpax = result.gpax {
             NavigationLink(value: DashboardDestination.gradeCenter) {
                 CardContainer(padding: Theme.Spacing.md) {

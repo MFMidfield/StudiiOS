@@ -116,9 +116,12 @@ struct RIASECResultView: View {
         }
     }
 
+    // A destination link, not `NavigationLink(value:)` — the value form relies on
+    // RootTabView's `navigationDestination`, which was pushing the wrong screen
+    // from here.
     private var linkOutButton: some View {
-        NavigationLink(value: DashboardDestination.tcasPlanner) {
-            Text("ดูแผน TCAS ของฉัน")
+        NavigationLink(destination: GradeCenterView()) {
+            Text("ดูเกรดของฉัน")
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Theme.Spacing.xs)

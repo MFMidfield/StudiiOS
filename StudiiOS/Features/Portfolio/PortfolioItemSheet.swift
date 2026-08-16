@@ -92,6 +92,7 @@ struct PortfolioItemSheet: View {
                 dateSection
                 detailSection
             }
+            .themedFormBackground()
             .navigationTitle(mode.isCreate ? "เพิ่มผลงาน" : "แก้ไขผลงาน")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

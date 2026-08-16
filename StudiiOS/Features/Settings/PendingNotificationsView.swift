@@ -40,6 +40,7 @@ struct PendingNotificationsView: View {
                 }
             }
         }
+        .themedFormBackground()
         .navigationTitle("การแจ้งเตือนที่ตั้งไว้")
         .navigationBarTitleDisplayMode(.inline)
         .task {

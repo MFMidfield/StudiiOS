@@ -4,7 +4,7 @@
 //  per-item press-scale gesture state doesn't bloat the root view's body.
 //
 //  Every tile shares one icon treatment (`primaryDeep` on `primarySoft`)
-//  rather than a color per feature: seven differently-colored squares read as
+//  rather than a color per feature: six differently-colored squares read as
 //  decoration, and it left `danger`/`warning`/`success` meaning nothing.
 //
 
@@ -22,11 +22,10 @@ struct DashboardMenuGrid: View {
     private let menuItems: [MenuItem] = [
         MenuItem(title: "ปฏิทิน", icon: "calendar", destination: .calendar, tier: .free),
         MenuItem(title: "ศูนย์เกรด", icon: "chart.bar", destination: .gradeCenter, tier: .free),
-        MenuItem(title: "TCAS", icon: "target", destination: .tcasPlanner, tier: .free),
+        MenuItem(title: "SOP", icon: "square.and.pencil", destination: .sop, tier: .free),
         MenuItem(title: "ผลงาน", icon: "folder", destination: .portfolio, tier: .free),
         MenuItem(title: "ค้นหาอาชีพ", icon: "briefcase", destination: .careerDiscovery, tier: .free),
         MenuItem(title: "โหมดโฟกัส", icon: "timer", destination: .focusMode, tier: .free),
-        MenuItem(title: "งานทั้งหมด", icon: "checkmark.square", destination: .assignments, tier: .free),
     ]
 
     private let columns = [

@@ -19,12 +19,17 @@ struct TermGradeChart: View {
     /// Tallest a 4.00 bar can be. Everything scales off this.
     private let plotHeight: CGFloat = 96
 
+    /// The grade now sits inside the bar, so no bar may be shorter than the
+    /// 11pt number plus its padding — a 1.00 bar would otherwise be 24pt.
+    private let minBarHeight: CGFloat = 26
+
     private var target: Double? {
         GPAXSettings.hasTarget ? GPAXSettings.target : nil
     }
 
-    /// The height a bar with no grade should reach. Falls back to today's GPAX
-    /// so an untargeted chart still has a readable shape instead of flat zeros.
+    /// ตัวเลขที่ป้ายของแท่งว่างอ้างถึง ("ต้องได้ X") — **ไม่ได้ใช้คุมความสูงแล้ว**
+    /// ตั้งแต่ 16 ส.ค. 2569: เทอมที่ยังไม่กรอกคือเกรด 0 แท่งจึงเตี้ยสุดเสมอ
+    /// (ของเดิมวาดแท่งว่างสูงเท่าค่าที่ต้องได้ ทำให้กราฟดูเหมือนมีเกรดแล้ว)
     private var projectedValue: Double? {
         result?.requiredAverage ?? result?.gpax
     }
@@ -33,9 +38,6 @@ struct TermGradeChart: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             plot
             axisRow
-            Text("แท่งทึบ = กรอกแล้ว · แท่งจาง = ระดับที่ต้องได้ · แท่งเส้นประ = เทอมที่กำลังเรียน")
-                .font(Theme.Font.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
         }
     }
 
@@ -43,9 +45,6 @@ struct TermGradeChart: View {
 
     private var plot: some View {
         ZStack(alignment: .bottom) {
-            if let target {
-                targetLine(for: target)
-            }
             // Gap fixed at 6: any wider and the bars drop under the 44pt
             // minimum touch target on a 402pt-wide screen.
             HStack(alignment: .bottom, spacing: 6) {
@@ -53,9 +52,21 @@ struct TermGradeChart: View {
                     column(for: sortKey)
                 }
             }
+            // Drawn last so the line stays readable across the bars it crosses —
+            // the other order let a tall bar bury the target.
+            if let target {
+                targetLine(for: target)
+            }
         }
-        .frame(height: plotHeight + 18)
+        // headroom ต้องพอวางป้าย "เป้า 4.00" ที่ลอยอยู่**เหนือ**เส้น — เป้า 4.00 ดันเส้น
+        // ไปสุดขอบบนของ plot พอดี ป้ายจึงเคยล้นไปทับหัวข้อการ์ด (Few เจอ 16 ส.ค. 2569)
+        // ⚠️ **ห้ามใส่ `.clipped()` ตรงนี้** — ตัวอักษรไทยมีสระบน/วรรณยุกต์ กรอบตัวอักษร
+        // จริงสูงกว่าที่คำนวณ พอ clip แล้วป้ายโดนตัดครึ่งบน
+        .frame(height: plotHeight + targetLabelHeadroom)
     }
+
+    /// ที่ว่างเหนือแท่งสูงสุด สำหรับป้ายเป้า (caption ไทย ~20pt + ระยะห่าง)
+    private let targetLabelHeadroom: CGFloat = 34
 
     @ViewBuilder
     private func column(for sortKey: Int) -> some View {
@@ -78,21 +89,24 @@ struct TermGradeChart: View {
         }
     }
 
+    /// The number lives inside the bar now, pinned to its top edge — above the
+    /// bar it read as a floating caption and collided with the target line.
     private func barBody(_ bar: BarModel) -> some View {
-        VStack(spacing: 2) {
-            Text(bar.label)
-                .font(Theme.Font.plex(11, bar.isSolid ? .semibold : .regular))
-                .foregroundStyle(bar.isSolid ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-
-            shape(for: bar)
-                .frame(height: max(4, plotHeight * bar.fraction))
-        }
-        .frame(maxWidth: .infinity, alignment: .bottom)
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(bar.accessibilityLabel)
+        shape(for: bar)
+            .frame(height: max(minBarHeight, plotHeight * bar.fraction))
+            .overlay(alignment: .top) {
+                Text(bar.label)
+                    .font(Theme.Font.plex(11, bar.isSolid ? .semibold : .regular))
+                    .foregroundStyle(bar.isSolid ? Theme.Colors.onPrimary : Theme.Colors.primaryDeep)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.horizontal, 2)
+                    .padding(.top, 5)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(bar.accessibilityLabel)
     }
 
     @ViewBuilder
@@ -179,7 +193,8 @@ struct TermGradeChart: View {
 
         return BarModel(
             kind: isCurrent ? .current : .future,
-            fraction: CGFloat(min(1, (projected ?? 0) / 4.0)),
+            // ยังไม่กรอก = 0 เสมอ (แท่งเตี้ยสุด) ไม่ใช่ความสูงของค่าที่ต้องได้
+            fraction: 0,
             label: labelFor(isCurrent: isCurrent, isPast: isPast, projected: projected),
             isEditable: isPast,
             accessibilityLabel: accessibilityFor(name: name, isCurrent: isCurrent, isPast: isPast, projected: projected)

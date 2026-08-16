@@ -15,7 +15,7 @@ struct PortfolioView: View {
     @State private var isPresentingNew = false
     @State private var selectedCategory: PortfolioCategory?
     @State private var sortOrder: PortfolioSortOrder = .newestFirst
-    @State private var searchText = ""
+    @State private var isSearching = false
     @State private var detailItem: PortfolioItem?
     @State private var pendingDelete: PortfolioItem?
     @State private var isConfirmingDelete = false
@@ -25,19 +25,12 @@ struct PortfolioView: View {
         GridItem(.flexible(), spacing: Theme.Spacing.md)
     ]
 
-    /// Fixed pipeline: category → search text → sort. Reordering these changes
-    /// what the user sees.
+    /// Fixed pipeline: category → sort. คำค้นย้ายไปอยู่ใน `PortfolioSearchSheet`
+    /// ซึ่งค้นจากผลงานทั้งหมด ไม่ผูกกับหมวดที่เลือกค้างไว้ในหน้านี้
     private var visibleItems: [PortfolioItem] {
         var result = items
         if let selectedCategory {
             result = result.filter { $0.category == selectedCategory }
-        }
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !query.isEmpty {
-            result = result.filter {
-                $0.title.localizedCaseInsensitiveContains(query)
-                    || $0.detail.localizedCaseInsensitiveContains(query)
-            }
         }
         return sortOrder.sorted(result)
     }
@@ -50,12 +43,17 @@ struct PortfolioView: View {
         content
             .navigationTitle("ผลงาน")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "ค้นหาชื่อหรือรายละเอียด")
             .toolbar {
+                // แว่นขยายอยู่ซ้ายปุ่ม + — `.searchable` บนหน้าที่อยู่ในแท็บจะกลายเป็น
+                // แท็บค้นหาที่แถบล่างบน iOS 26 จึงเปิดเป็น sheet แทน
+                ToolbarItem(placement: .topBarTrailing) { searchButton }
                 ToolbarItem(placement: .topBarTrailing) { addButton }
             }
             .sheet(isPresented: $isPresentingNew) {
                 PortfolioItemSheet(mode: .create)
+            }
+            .sheet(isPresented: $isSearching) {
+                PortfolioSearchSheet(items: items)
             }
             .navigationDestination(for: PortfolioItem.self) { item in
                 PortfolioDetailView(item: item)
@@ -72,6 +70,15 @@ struct PortfolioView: View {
             } message: { _ in
                 Text("การลบจะลบรูปภาพที่แนบไว้ทั้งหมดด้วย และไม่สามารถย้อนกลับได้")
             }
+    }
+
+    private var searchButton: some View {
+        Button {
+            isSearching = true
+        } label: {
+            Image(systemName: "magnifyingglass")
+        }
+        .accessibilityLabel("ค้นหาผลงาน")
     }
 
     private var addButton: some View {
@@ -119,7 +126,7 @@ struct PortfolioView: View {
     }
 
     private var noMatchState: some View {
-        Text("ไม่พบผลงานที่ตรงกับที่ค้นหา")
+        Text("ยังไม่มีผลงานในหมวดนี้")
             .font(Theme.Font.body)
             .foregroundStyle(Theme.Colors.textSecondary)
             .frame(maxWidth: .infinity)

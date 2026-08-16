@@ -148,7 +148,7 @@ struct ScheduleImportReviewSheet: View {
             }
         }
         .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
+        .themedFormBackground()
     }
 
     private func daySection(_ day: Int) -> some View {

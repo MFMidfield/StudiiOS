@@ -1,4 +1,3 @@
-//
 //  CalendarItemBuilder.swift
 //  แปลง CalendarEvent / Assignment เป็น CalendarItem — ตรรกะล้วน ไม่มี View
 //

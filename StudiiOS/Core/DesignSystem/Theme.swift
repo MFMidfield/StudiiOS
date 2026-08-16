@@ -151,9 +151,13 @@ struct CardContainer<Content: View>: View {
     }
 
     var body: some View {
+        // maxWidth: .infinity ตั้งแต่ 16 ส.ค. 2569 — ของเดิมกว้างตามเนื้อหา การ์ดที่มีแต่
+        // ข้อความสั้นจึงหดจนแคบกว่าการ์ดอื่นในหน้าเดียวกัน (เจอซ้ำ 4 รอบ: การ์ดผลอาชีพ ·
+        // การ์ดรายวิชาในหน้ากรอกเกรด · การ์ดสถิติโฟกัส · ทั้งหน้า SOP)
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             content
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(padding)
         .background(Theme.Colors.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))

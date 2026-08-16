@@ -40,6 +40,7 @@ struct SubjectPickerSheet: View {
                     customSection
                 }
             }
+            .themedFormBackground()
             .navigationTitle("เลือกวิชา")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: "ค้นหาวิชา")
@@ -89,6 +90,7 @@ struct SubjectPickerSheet: View {
                 }
             }
         }
+        .themedFormBackground()
         .navigationTitle(group.name)
         .navigationBarTitleDisplayMode(.inline)
     }

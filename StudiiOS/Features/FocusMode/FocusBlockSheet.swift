@@ -61,6 +61,7 @@ struct FocusBlockSheet: View {
                     }
                 }
             }
+            .themedFormBackground()
             .navigationTitle("บล็อกแอป")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

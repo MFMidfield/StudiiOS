@@ -78,6 +78,7 @@ struct AddSubjectSheet: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .themedFormBackground()
             .navigationTitle("เพิ่มวิชา")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

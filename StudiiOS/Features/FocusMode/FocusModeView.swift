@@ -17,6 +17,20 @@
 import SwiftUI
 import SwiftData
 
+/// "ตอนนี้หน้าโฟกัสอยู่บนจอแล้วหรือยัง"
+///
+/// `RootContainerView` เด้ง `FocusModeView` ทับทั้งแอปเมื่อเซสชันยังเดินอยู่ — ถ้าไม่มี
+/// ธงตัวนี้ คนที่เดินเข้าหน้าโฟกัสจากเมนูหน้าแรกแล้วกดเริ่ม จะได้หน้าโฟกัส **2 ชั้น**
+/// (ตัวที่ push ไว้ + ตัวใน cover) พอหยุดแล้วกดย้อนกลับจึงเจอหน้าโฟกัสซ้อนอยู่อีกใบ
+@Observable
+@MainActor
+final class FocusScreenPresence {
+    static let shared = FocusScreenPresence()
+    private init() {}
+
+    var isOnScreen = false
+}
+
 struct FocusModeView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
@@ -28,7 +42,7 @@ struct FocusModeView: View {
     var body: some View {
         ZStack {
             if engine.isRunning {
-                FocusRunningView(onBack: { dismiss() })
+                FocusRunningView()
                     .transition(.opacity.combined(with: .scale(scale: 1.08)))
             } else {
                 FocusHomeView(onBack: { dismiss() })
@@ -52,6 +66,8 @@ struct FocusModeView: View {
             engine.attach(context: context)
             engine.syncToNow()
         }
+        .onAppear { FocusScreenPresence.shared.isOnScreen = true }
+        .onDisappear { FocusScreenPresence.shared.isOnScreen = false }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
             engine.syncToNow()

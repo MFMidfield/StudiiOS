@@ -121,6 +121,7 @@ struct PeriodShiftSheet: View {
                 infoSection
                 actionSection
             }
+            .themedFormBackground()
             .navigationTitle("ร่นคาบ")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

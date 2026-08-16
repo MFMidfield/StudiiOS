@@ -19,10 +19,13 @@ struct GradeCenterView: View {
     // D7: reads GPAXSettings.currentSortKey (the student's real term), never
     // activeTermID above (that one is only the term being browsed).
     //
+    /// ตัวจริงที่ทำให้หน้านี้วาดใหม่เมื่อค่า GPAX เปลี่ยน — **ต้องอ่าน `revision` ใน body**
+    /// (ดู `GPAXStore`) · @AppStorage ข้างล่างเป็นของเดิม เก็บไว้เป็นตาข่ายกันพลาด
+    @State private var gpaxStore = GPAXStore.shared
+
     // These @AppStorage vars are never read directly below — GPAXSettings'
-    // getters re-apply validation/fallbacks. Declaring them here is what makes
-    // SwiftUI redraw gpaxResult when GradeLevelSheet / TermGradeEditView's
-    // "จำเกรดเทอมนี้ไม่ได้" / the inline target setter write to UserDefaults.
+    // getters re-apply validation/fallbacks. เดิมพึ่งตัวพวกนี้อย่างเดียวแล้ว
+    // **ไม่พอ**: ตั้งเป้า GPAX แล้วหน้าไม่อัปเดตจนกว่าจะออกแล้วเข้าใหม่ (16 ส.ค. 2569)
     @AppStorage(GPAXSettings.Key.currentGradeLevel) private var gpaxGradeLevelPing = 0
     @AppStorage(GPAXSettings.Key.currentTermNumber) private var gpaxTermNumberPing = 0
     @AppStorage(GPAXSettings.Key.target) private var gpaxTargetPing = 0.0
@@ -48,10 +51,6 @@ struct GradeCenterView: View {
         )
     }
 
-    /// No GPAX yet = nothing for the six-row list to say. Six identical
-    /// "ยังไม่มีข้อมูล" rows are a wall, not information.
-    private var hasGPAX: Bool { gpaxResult?.gpax != nil }
-
     private var title: String {
         guard let sortKey = GPAXSettings.currentSortKey else { return "เกรดและ GPAX" }
         return "เกรดและ GPAX · ม.\(sortKey / 10) เทอม \(sortKey % 10)"
@@ -60,8 +59,13 @@ struct GradeCenterView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Theme.Spacing.xl) {
+                // อ่าน revision เพื่อผูก dependency — ตั้งเป้า/เปลี่ยนเทอมแล้วหน้านี้จะวาดใหม่ทันที
+                let _ = gpaxStore.revision
+
                 GPAXSummaryCard(result: gpaxResult)
-                if hasGPAX {
+                // โชว์กราฟ + รายการเทอมตั้งแต่ตั้งเป้าแล้ว แม้ยังไม่มีเกรดสักเทอม —
+                // นี่คือทางเดียวที่ผู้ใช้จะรู้ว่าต้องไปกดเทอมไหนเพื่อกรอก (16 ส.ค. 2569)
+                if GPAXSettings.currentSortKey != nil {
                     TermGradeListSection(result: gpaxResult, terms: terms)
                 }
             }

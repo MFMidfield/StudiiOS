@@ -77,6 +77,7 @@ struct OnboardingPeriodSheet: View {
                     TextField("ห้องเรียน", text: $location)
                 }
             }
+            .themedFormBackground()
             .navigationTitle("เพิ่มคาบเรียน")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

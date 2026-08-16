@@ -96,31 +96,30 @@ struct HeaderSection: View {
     }
 
     var body: some View {
+        // 3 บรรทัดไล่ขนาดลงมา: คำทักทายเล็ก → ชื่อใหญ่ → วันที่เล็กสุด
+        // ของเดิมเอาวันที่ไว้บนสุดแล้วคำทักทายกับชื่อขนาดใกล้กัน อ่านแล้วไม่รู้ว่าอะไรสำคัญ
         HStack(alignment: .center, spacing: Theme.Spacing.md) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 5) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 11, weight: .medium))
-                    Text(date.thaiFullString)
-                        .font(Theme.Font.caption)
-                }
-                .foregroundStyle(Theme.Colors.textSecondary)
-
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     Text(greeting.text)
                         .font(Theme.Font.label)
-                        .foregroundStyle(Theme.Colors.textSecondary)
                     Text(greeting.emoji)
                         .font(Theme.Font.label)
                 }
+                .foregroundStyle(Theme.Colors.textSecondary)
 
                 Text(displayName)
-                    .font(Theme.Font.title)
+                    .font(Theme.Font.plex(26, .semibold))
                     .foregroundStyle(Theme.Colors.textPrimary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
+                Text(date.thaiFullString)
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
             }
             Spacer(minLength: 0)
-            AvatarView()
+            AvatarView(size: 56)
         }
         .padding(.top, Theme.Spacing.sm)
     }

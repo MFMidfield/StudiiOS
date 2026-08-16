@@ -73,11 +73,12 @@ struct FocusHomeView: View {
 
     private var header: some View {
         HStack(spacing: Theme.Spacing.md) {
-            FocusGlassButton(systemName: "chevron.left", action: onBack)
-            FocusGlassButton(systemName: "chart.bar.fill") { showStats = true }
+            FocusGlassButton(systemName: "chevron.left", title: "กลับหน้าหลัก", action: onBack)
+            FocusGlassButton(systemName: "chart.bar.fill", title: "สถิติโฟกัส") { showStats = true }
             Spacer()
             FocusGlassButton(
                 systemName: "hand.raised.fill",
+                title: "บล็อกแอป",
                 isActive: blockAppsEnabled
             ) { showBlockSheet = true }
         }
@@ -137,22 +138,37 @@ struct FocusHomeView: View {
     }
 }
 
-/// ปุ่มกลมแบบ Liquid Glass ที่ใช้ทั้งหน้าเริ่มต้นและหน้ากำลังโฟกัส
+/// ปุ่มกลมแบบ Liquid Glass ของหน้าโฟกัส
+///
+/// 44pt = ขนาดขั้นต่ำของ HIG และเท่ากับปุ่มกลมในหน้าตั้งค่า · ไอคอนใช้
+/// `primaryDeep` ให้เป็นสีเดียวกับปุ่มไอคอนที่เหลือของแอป (เดิมเป็น textPrimary
+/// ซึ่งเป็นสีตัวอักษร ไม่ใช่สีของ affordance)
 struct FocusGlassButton: View {
     let systemName: String
+    /// ชื่อปุ่ม — ปุ่มแบบ Liquid Glass กางป้ายชื่อออกมาตอนกดค้าง ถ้า label เป็น
+    /// `Image` เปล่าๆ ป้ายนั้นจะว่าง (บั๊กที่ Few เจอ) จึงต้องเป็น `Label` เสมอ
+    let title: String
+    /// true = สถานะเปิดอยู่ (เช่นบล็อกแอป) — ไอคอนกลับสีบนพื้นทึบสีหลัก
     var isActive: Bool = false
-    var tint: Color = Theme.Colors.textPrimary
+    var tint: Color = Theme.Colors.primaryDeep
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(isActive ? Theme.Colors.primaryDeep : tint)
-                .frame(width: 40, height: 40)
+            Label(title, systemImage: systemName)
+                .labelStyle(.iconOnly)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(isActive ? Theme.Colors.onPrimary : tint)
+                .frame(width: 44, height: 44)
+                .background {
+                    if isActive {
+                        Circle().fill(Theme.Colors.primary)
+                    }
+                }
                 .glassEffect(.regular.interactive(), in: .circle)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 }
 

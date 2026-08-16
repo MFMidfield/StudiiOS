@@ -2,28 +2,26 @@
 //  FocusRunningView.swift
 //  หน้ากำลังโฟกัส — มีแค่เวลา ไม่มีปุ่มควบคุมเลย
 //
-//  หยุดได้ทางเดียว: **กดค้างที่ไหนก็ได้บนจอ 5 วินาที** จนแถบเต็ม
-//  ปุ่มเดียวที่เหลือคือย้อนกลับมุมซ้ายบน — กดแล้วออกจากหน้าเฉยๆ
+//  หยุดได้ทางเดียว: **กดค้างที่ไหนก็ได้บนจอ 3 วินาที** จนแถบเต็ม
+//  **ไม่มีปุ่มใดๆ บนหน้านี้เลย** (16 ส.ค. 2569 — ปุ่มย้อนกลับถูกเอาออก): ปุ่มย้อนกลับ
+//  เคยพาออกจากหน้าไปทั้งที่เซสชันยังเดินอยู่ ซึ่งทำให้ผู้ใช้คิดว่าโฟกัสจบแล้ว
 //  **นาฬิกาไม่หยุด** (ตั้งใจ: PomodoroEngine นับจาก Date กลับเข้ามาเมื่อไหร่ก็ยังตรง)
 //
 //  โครง ZStack เรียงจากล่างขึ้นบน: พื้นหลัง → เนื้อหา (ปิด hit-test)
-//  → ตัวรับการกดค้างเต็มจอ → ปุ่มย้อนกลับ
+//  → ตัวรับการกดค้างเต็มจอ
 //  ลำดับนี้จำเป็น: ถ้าเนื้อหาอยู่บนตัวรับ การกดค้างบนตัวเลขจะไม่ทำงาน
-//  และถ้าปุ่มย้อนกลับอยู่ใต้ตัวรับ ก็จะกดไม่ได้
 //
 
 import SwiftUI
 
 struct FocusRunningView: View {
-    let onBack: () -> Void
-
     @State private var engine = PomodoroEngine.shared
     @State private var holdProgress: Double = 0
     @State private var isHolding = false
     @State private var holdTask: Task<Void, Never>?
 
     /// ต้องกดค้างนานเท่านี้ถึงจะหยุด
-    private let holdSeconds: Double = 5
+    private let holdSeconds: Double = 3
 
     var body: some View {
         ZStack {
@@ -33,20 +31,6 @@ struct FocusRunningView: View {
                 .allowsHitTesting(false)
 
             holdCatcher
-
-            VStack {
-                HStack {
-                    FocusGlassButton(
-                        systemName: "chevron.left",
-                        tint: Theme.Colors.onFocusBackdrop,
-                        action: onBack
-                    )
-                    Spacer()
-                }
-                Spacer()
-            }
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.top, Theme.Spacing.sm)
         }
         .statusBarHidden(true)
         .onDisappear { cancelHold() }
@@ -73,13 +57,18 @@ struct FocusRunningView: View {
                 }
             }
 
+            // อ่าน tickToken เพื่อให้ @Observable รู้ว่าต้องวาดใหม่ทุก tick
+            // (secondsRemaining คำนวณจาก Date.now ซึ่งไม่ใช่ค่าที่สังเกตได้)
+            let _ = engine.tickToken
+
             Text(engine.timeString)
                 .font(.system(size: 68, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(Theme.Colors.onFocusBackdrop)
-                // อ่าน tickToken เพื่อให้ @Observable รู้ว่าต้องวาดใหม่ทุก tick
-                // (secondsRemaining คำนวณจาก Date.now ซึ่งไม่ใช่ค่าที่สังเกตได้)
-                .animation(.linear(duration: 0.4), value: engine.tickToken)
+                // เลขเลื่อนขึ้น/ลงแทนการกระพริบ — ผูกกับ displaySeconds ไม่ใช่ tickToken
+                // (tick เดิน 2 ครั้งต่อวินาที จะสั่ง animation ทิ้งรอบละครั้งเปล่าๆ)
+                .contentTransition(.numericText(countsDown: engine.mode == .countdown))
+                .animation(.smooth(duration: 0.35), value: engine.displaySeconds)
 
             Spacer()
 

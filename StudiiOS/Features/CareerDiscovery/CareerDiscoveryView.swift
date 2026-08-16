@@ -56,24 +56,13 @@ struct CareerDiscoveryView: View {
     private func latestResultCard(_ result: CareerInterestResult) -> some View {
         CardContainer {
             Text("ผลลัพธ์ล่าสุด").font(.subheadline).fontWeight(.semibold)
-            if result.isInconclusive {
-                NavigationLink(destination: RIASECResultView(result: result)) {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                        Text("ผลยังไม่ชัดเจนพอ")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Theme.Colors.textPrimary)
-                        Text(result.takenAt.thaiShortString)
-                            .font(.caption2)
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                    }
-                }
-                .buttonStyle(.plain)
-            } else {
-                NavigationLink(destination: RIASECResultView(result: result)) {
-                    ResultSummaryRow(result: result)
-                }
-                .buttonStyle(.plain)
+            // Both states share ResultSummaryRow — it already renders the
+            // inconclusive case. A bespoke VStack here made the card shrink to
+            // its text instead of filling the width like every other card.
+            NavigationLink(destination: RIASECResultView(result: result)) {
+                ResultSummaryRow(result: result)
             }
+            .buttonStyle(.plain)
         }
     }
 

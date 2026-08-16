@@ -58,13 +58,24 @@ final class CalendarDragController {
     private(set) var scale: CGFloat = 1.0
 
     /// id เดือน → frame ในระบบพิกัดสายเลื่อน · 12 รายการ ไม่ใช่ 365 (§5.1)
-    var monthFrames: [String: CGRect] = [:]
+    /// `@ObservationIgnored` ด้วยเหตุผลเดียวกับ `scrollOffsetY` — ใช้ตอน hit-test
+    /// ระหว่างลากเท่านั้น ไม่มี view ไหนวาดจากมัน
+    @ObservationIgnored var monthFrames: [String: CGRect] = [:]
 
     private var lastHapticDay: Date?
     private var lastHapticTime: Date = .distantPast
 
     /// ความสูงของสายเลื่อนบนจอ — `CalendarView` วัดให้ผ่าน `.onGeometryChange`
-    var viewportHeight: CGFloat = 0
+    @ObservationIgnored var viewportHeight: CGFloat = 0
+
+    /// ระยะเลื่อนปัจจุบันของสายเลื่อน — auto-scroll บวกทีละนิดจากค่านี้
+    ///
+    /// `@ObservationIgnored` และอยู่ที่นี่แทนที่จะเป็น `@State` ใน `CalendarView`
+    /// **โดยตั้งใจ**: `.onScrollGeometryChange` ยิงทุกเฟรมที่เลื่อน ถ้าเขียนลง state
+    /// ที่ view สังเกตอยู่ body จะถูกคิดใหม่ทุกเฟรมแล้วได้ warning
+    /// "<OnScrollGeometryChange Modifier> tried to update multiple times per frame"
+    /// ค่านี้ไม่มีใครวาดจากมัน มีแต่ auto-scroll ที่อ่านตอนลาก
+    @ObservationIgnored var scrollOffsetY: CGFloat = 0
     private var autoScrollTask: Task<Void, Never>?
 
     // ── สถานะ toast ───────────────────────────────────────

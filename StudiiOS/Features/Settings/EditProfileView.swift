@@ -71,9 +71,10 @@ struct EditProfileView: View {
                 } header: {
                     Text("โรงเรียน")
                 } footer: {
-                    Text("ไม่กรอกก็ได้ — ใช้แสดงบนโปรไฟล์อย่างเดียว · ระดับชั้นกับเทอมอยู่ที่ปุ่ม “ขึ้นชั้นแล้ว”")
+                    Text("ไม่กรอกก็ได้ — ใช้แสดงบนโปรไฟล์อย่างเดียว · ระดับชั้นกับเทอมอยู่ที่การ์ด “การเรียน” ในตั้งค่า")
                 }
             }
+            .themedFormBackground()
             .navigationTitle("แก้ไขโปรไฟล์")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

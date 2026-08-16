@@ -25,6 +25,8 @@ enum CalendarSheet: Identifiable {
     /// deletes it back out if the user cancels instead of leaving a stub.
     case editNewGhost(CalendarEvent)
     case editTask(Assignment)
+    /// เปิดฟอร์มงานใบใหม่ — มาจากปุ่ม "นี่คือการบ้าน/งาน" ใน `EventFormSheet`
+    case addTask
     case day(Date)
     case search
 
@@ -34,6 +36,7 @@ enum CalendarSheet: Identifiable {
         case .edit(let e): return "edit_\(e.id)"
         case .editNewGhost(let e): return "editNewGhost_\(e.id)"
         case .editTask(let a): return "task_\(a.persistentModelID)"
+        case .addTask: return "addTask"
         case .day(let d): return "day_\(d.timeIntervalSince1970)"
         case .search: return "search"
         }
@@ -66,8 +69,8 @@ struct CalendarView: View {
     /// ตำแหน่งสายเลื่อน — ใช้ทั้งอ่านว่าเดือนไหนอยู่บนสุด (หัวเดือน) และสั่งเลื่อนเอง
     /// (ปุ่มวันนี้ · เปลี่ยนปี · auto-scroll ตอนลากใกล้ขอบ)
     @State private var scrollPosition = ScrollPosition(idType: String.self)
-    /// ระยะเลื่อนปัจจุบัน — auto-scroll บวกทีละนิดจากค่านี้
-    @State private var scrollOffsetY: CGFloat = 0
+    // ระยะเลื่อนปัจจุบันย้ายไปอยู่ใน `CalendarDragController.scrollOffsetY`
+    // (@ObservationIgnored) — เก็บเป็น @State ที่นี่ทำให้ body คิดใหม่ทุกเฟรมที่เลื่อน
 
     /// สถานะการลาก + toast อยู่ในตัวควบคุมของมันเอง ไม่กระจายใน view (ขั้นที่ 6)
     @State private var drag = CalendarDragController()
@@ -153,7 +156,7 @@ struct CalendarView: View {
             onCreatedEvent: { present(.editNewGhost($0)) },
             onSelectDate: { selectedDate = $0 },
             onAutoScroll: { delta in
-                scrollPosition.scrollTo(y: max(scrollOffsetY + delta, 0))
+                scrollPosition.scrollTo(y: max(drag.scrollOffsetY + delta, 0))
             }
         )
     }
@@ -274,8 +277,10 @@ struct CalendarView: View {
         .overlay(CalendarGhostOverlay(controller: drag, env: dragEnvironment))
         // ตัวเลื่อนอัตโนมัติตอนลากใกล้ขอบต้องรู้ความสูงของสายเลื่อน + ตำแหน่งปัจจุบัน
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { drag.viewportHeight = $0 }
+        // เขียนลงค่าที่ไม่มีใครสังเกต (ดู CalendarDragController.scrollOffsetY) —
+        // เขียนลง @State จะได้ warning "tried to update multiple times per frame"
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, new in
-            scrollOffsetY = new
+            drag.scrollOffsetY = new
         }
         .scrollPosition($scrollPosition)
     }
@@ -296,7 +301,9 @@ struct CalendarView: View {
     private func sheetContent(_ sheet: CalendarSheet) -> some View {
         switch sheet {
         case .add(let date):
-            EventFormSheet(initialDate: date)
+            EventFormSheet(initialDate: date, onSwitchToTask: { present(.addTask) })
+        case .addTask:
+            AddTaskSheet()
         case .edit(let event):
             EventFormSheet(event: event)
         case .editNewGhost(let event):

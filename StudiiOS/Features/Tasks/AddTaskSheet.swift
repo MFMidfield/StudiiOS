@@ -10,11 +10,18 @@ import SwiftData
 struct AddTaskSheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \Subject.createdAt) private var subjects: [Subject]
-
     @AppStorage(TermStore.activeTermKey) private var activeTermID = ""
     @Query private var terms: [Term]
+    @Query private var scheduleEntries: [ScheduleEntry]
     private var activeTerm: Term? { TermStore.find(idString: activeTermID, in: terms) }
+
+    /// คาบของเทอมปัจจุบัน ตัดคาบพักออก — ใช้เป็นแหล่งชื่อวิชาของฟอร์มนี้
+    private var termEntries: [ScheduleEntry] {
+        scheduleEntries.filter { entry in
+            guard entry.term?.id == activeTerm?.id else { return false }
+            return entry.subject?.isBreak != true && !entry.subjectName.isEmpty
+        }
+    }
 
     /// `nil` = creating a new task.
     private let editing: Assignment?
@@ -32,7 +39,6 @@ struct AddTaskSheet: View {
     @State private var dueDate: Date
     @State private var remindersEnabled: Bool
 
-    @State private var showSubjectSheet = false
     @State private var saveError: String?
 
     /// - Parameter presetKind: which kind the form opens on when creating a new
@@ -67,11 +73,6 @@ struct AddTaskSheet: View {
 
     private var canSave: Bool { !trimmedTitle.isEmpty }
 
-    /// Break slots are not something homework can belong to.
-    private var selectableSubjects: [Subject] {
-        subjects.filter { !$0.isBreak }
-    }
-
     private var autoPriorityLabel: String {
         AssignmentPriorityEngine
             .priority(kind: kind, dueDate: hasDueDate ? dueDate : nil)
@@ -90,11 +91,12 @@ struct AddTaskSheet: View {
             Form {
                 basicSection
                 if kind == .exam { examSection }
-                if kind != .personal { subjectSection }
+                if needsSubject { subjectSection }
                 detailSection
                 prioritySection
                 dueDateSection
             }
+            .themedFormBackground()
             .navigationTitle(editing == nil ? "เพิ่มงาน" : "แก้ไขงาน")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -105,11 +107,6 @@ struct AddTaskSheet: View {
                     Button("บันทึก", action: save)
                         .fontWeight(.semibold)
                         .disabled(!canSave)
-                }
-            }
-            .sheet(isPresented: $showSubjectSheet) {
-                AddSubjectSheet { created in
-                    subjectName = created.name
                 }
             }
             .alert("บันทึกงานไม่สำเร็จ", isPresented: Binding(
@@ -150,15 +147,33 @@ struct AddTaskSheet: View {
         }
     }
 
+    /// เลือกวิชาด้วย "วัน → คาบ" ไม่ใช่รายชื่อวิชา (ดู TaskSubjectPeriodPicker)
+    /// โชว์เฉพาะการบ้าน กับสอบแบบ "เก็บคะแนน" — กลางภาค/ปลายภาคสอบรวมทุกวิชา
+    /// จึงไม่ต้องผูกวิชา
     private var subjectSection: some View {
         Section {
-            Picker("วิชา", selection: $subjectName) {
-                Text("ไม่ระบุ").tag("")
-                ForEach(selectableSubjects) { subject in
-                    Text(subject.name).tag(subject.name)
-                }
+            if termEntries.isEmpty {
+                Text("ยังไม่ได้ตั้งตารางเรียนของเทอมนี้ — ตั้งก่อนถึงจะเลือกวิชาได้")
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            } else {
+                TaskSubjectPeriodPicker(entries: termEntries, subjectName: $subjectName)
             }
-            Button("เพิ่มวิชาใหม่") { showSubjectSheet = true }
+        } header: {
+            Text("วิชา")
+        } footer: {
+            if !subjectName.isEmpty {
+                Text("วิชาที่เลือก: \(subjectName)")
+            }
+        }
+    }
+
+    /// การบ้าน = ผูกวิชาเสมอ · สอบ = เฉพาะ "เก็บคะแนน" · งานทั่วไป = ไม่ผูก
+    private var needsSubject: Bool {
+        switch kind {
+        case .homework: return true
+        case .exam: return examScope == .quiz
+        case .personal: return false
         }
     }
 
@@ -223,7 +238,7 @@ struct AddTaskSheet: View {
         target.title = trimmedTitle
         target.kind = kind
         target.examScope = kind == .exam ? examScope : nil
-        target.subjectName = kind != .personal ? subjectName : ""
+        target.subjectName = needsSubject ? subjectName : ""
         target.detail = detail.trimmingCharacters(in: .whitespacesAndNewlines)
         target.isPriorityManual = priorityChoice != .auto
         if let manual = priorityChoice.priority { target.priority = manual }
@@ -288,5 +303,5 @@ struct AddTaskSheet: View {
 
 #Preview {
     AddTaskSheet()
-        .modelContainer(for: [Assignment.self, Subject.self, Term.self, TermSubject.self], inMemory: true)
+        .modelContainer(for: [Assignment.self, Subject.self, Term.self, TermSubject.self, ScheduleEntry.self], inMemory: true)
 }

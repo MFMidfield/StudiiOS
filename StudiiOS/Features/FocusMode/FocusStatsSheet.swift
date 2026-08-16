@@ -42,6 +42,7 @@ struct FocusStatsSheet: View {
             Text("รวม")
                 .font(Theme.Font.label)
                 .foregroundStyle(Theme.Colors.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: Theme.Spacing.lg) {
                 FocusStatBlock(value: "\(todayMinutes)", label: "นาทีวันนี้")
                 FocusStatBlock(value: "\(weekMinutes)", label: "นาทีสัปดาห์นี้")
@@ -52,14 +53,18 @@ struct FocusStatsSheet: View {
 
     private var tagCard: some View {
         CardContainer {
+            // maxWidth บังคับไว้เพราะ CardContainer กว้างตามเนื้อหา — ตอนยังไม่มีสถิติ
+            // การ์ดนี้มีแต่ข้อความสั้นๆ เลยแคบกว่าการ์ดอื่นในชีทเดียวกัน
             Text("แยกตามแท็ก")
                 .font(Theme.Font.label)
                 .foregroundStyle(Theme.Colors.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             if tagTotals.isEmpty {
                 Text("ยังไม่มีข้อมูล")
                     .font(Theme.Font.body)
                     .foregroundStyle(Theme.Colors.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 ForEach(tagTotals, id: \.id) { row in
                     HStack(spacing: Theme.Spacing.md) {

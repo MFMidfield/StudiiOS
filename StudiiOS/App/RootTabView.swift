@@ -15,7 +15,8 @@ enum DashboardDestination: Hashable {
     case assignments
     case calendar
     case gradeCenter
-    case tcasPlanner
+    /// เดิมชื่อ `.tcasPlanner` — ระบบคิดคะแนน TCAS ถูกตัดออก 16 ส.ค. 2569 เหลือ SOP
+    case sop
     case portfolio
     case careerDiscovery
     case focusMode
@@ -78,7 +79,7 @@ struct RootTabView: View {
         case .assignments: AssignmentListView()
         case .calendar: CalendarView()
         case .gradeCenter: GradeCenterView()
-        case .tcasPlanner: TCASPlannerView()
+        case .sop: SOPListView()
         case .portfolio: PortfolioView()
         case .careerDiscovery: CareerDiscoveryView()
         case .focusMode: FocusModeView()

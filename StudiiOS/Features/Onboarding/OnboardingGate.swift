@@ -23,6 +23,9 @@ enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
     case schedule
     case grades
     case portfolio
+    /// แทรก 16 ส.ค. 2569 — `permissions` เลื่อนจาก 5 เป็น 6 (เครื่องที่ค้างกลาง setup
+    /// ที่ step 5 พอดีจะไปโผล่หน้า SOP แทนหน้าสิทธิ์ ครั้งเดียว)
+    case sop
     case permissions
 
     var id: Int { rawValue }
@@ -39,6 +42,7 @@ enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
         case .schedule:    return "ตารางเรียน"
         case .grades:      return "เกรดที่ผ่านมา"
         case .portfolio:   return "ผลงานของคุณ"
+        case .sop:         return "SOP"
         case .permissions: return "พร้อมใช้งานแล้ว"
         }
     }
@@ -50,6 +54,7 @@ enum OnboardingStep: Int, CaseIterable, Identifiable, Hashable {
         case .schedule:    return "ถ่ายรูปตารางจากโรงเรียน หรือกรอกเองก็ได้"
         case .grades:      return "กรอกไว้เพื่อให้แอปคำนวณ GPAX ให้ตรงความจริง"
         case .portfolio:   return "เก็บเกียรติบัตรและกิจกรรมไว้ตั้งแต่วันนี้"
+        case .sop:         return "ใส่คณะที่อยากยื่น แล้วเริ่มร่าง SOP ได้เลย"
         case .permissions: return "เปิดสิทธิ์ที่ต้องใช้ แล้วเริ่มได้เลย"
         }
     }

@@ -46,15 +46,16 @@ struct OnboardingFlowView: View {
         case .profile:
             ProfileSetupView(onBack: goBack) { advance(to: .schedule) }
         case .schedule:
-            // เพิ่งขึ้น ม.4 เทอม 1 = ไม่มีเทอมย้อนหลังให้กรอก ข้ามไปเลยตั้งแต่ตอนกด
-            // ไม่ใช่เข้าหน้านั้นแล้วเด้งออก (เด้งออกเอง = ปัดย้อนกลับมาไม่ได้อีก)
-            ScheduleSetupView(onBack: goBack) {
-                advance(to: GradeBacklogSetupView.hasBacklog ? .grades : .portfolio)
-            }
+            // 16 ส.ค. 2569: หน้านี้ไม่ถูกข้ามอีกแล้วแม้ไม่มีเทอมย้อนหลัง (ม.4 เทอม 1)
+            // เพราะช่องตั้งเป้า GPAX ย้ายมาอยู่ในหน้านี้ด้วย — เนื้อหาส่วนเกรดย้อนหลัง
+            // จะหายไปเองเมื่อไม่มีเทอมให้กรอก
+            ScheduleSetupView(onBack: goBack) { advance(to: .grades) }
         case .grades:
             GradeBacklogSetupView(onBack: goBack) { advance(to: .portfolio) }
         case .portfolio:
-            PortfolioSetupView(onBack: goBack) { advance(to: .permissions) }
+            PortfolioSetupView(onBack: goBack) { advance(to: .sop) }
+        case .sop:
+            SOPSetupView(onBack: goBack) { advance(to: .permissions) }
         case .permissions:
             PermissionsSetupView(onBack: goBack, onFinish: finish)
         }

@@ -2,7 +2,8 @@
 //  GradeLevelSheet.swift
 //  Screen 1 (§6.1) — the student's REAL current term, written to GPAXSettings.
 //  Distinct from TermStore.activeTermKey (the term being browsed) — see D7.
-//  Shown once on first use, and reachable again from Settings as "ขึ้นชั้นแล้ว".
+//  Shown once on first use, and reachable again from the pencil button on the
+//  "การเรียน" card in Settings.
 //
 
 import SwiftUI
@@ -42,6 +43,7 @@ struct GradeLevelSheet: View {
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
+            .themedFormBackground()
             .navigationTitle("ระดับชั้นปัจจุบัน")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

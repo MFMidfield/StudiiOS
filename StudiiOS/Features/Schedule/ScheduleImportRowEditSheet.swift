@@ -75,6 +75,7 @@ struct ScheduleImportRowEditSheet: View {
                 detailSection
                 deleteSection
             }
+            .themedFormBackground()
             .navigationTitle(period.isUserAdded ? "เพิ่มคาบเรียน" : "แก้คาบที่อ่านมา")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }

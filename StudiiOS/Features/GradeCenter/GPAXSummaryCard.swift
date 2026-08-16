@@ -20,16 +20,61 @@ struct GPAXSummaryCard: View {
     @State private var showingGradeLevelSheet = false
     @State private var showingTargetSheet = false
 
+    /// อ่าน `revision` ใน body ข้างล่าง — นี่คือตัวที่ทำให้การ์ดสลับจาก CTA เป็นตัวเลขจริง
+    /// ทันทีที่ปิด `GPAXTargetSheet` (ping แบบ @AppStorage อย่างเดียวพึ่งไม่ได้)
+    @State private var gpaxStore = GPAXStore.shared
+
     var body: some View {
         CardContainer {
-            if let result, let gpax = result.gpax {
-                content(result: result, gpax: gpax)
+            let _ = gpaxStore.revision
+
+            // ยังไม่ตั้งเป้า = การ์ดทั้งใบกลายเป็นคำชวนตั้งเป้า ไม่โชว์เลข GPAX เลย
+            // ตัวเลข GPAX ที่ไม่มีเป้าเทียบ บอกไม่ได้ว่าต้องทำอะไรต่อ
+            if !GPAXSettings.hasTarget {
+                targetCallToAction
+            } else if let result {
+                // ตั้งเป้าแล้วแต่ยังไม่กรอกเกรดสักเทอม = โชว์ทุกอย่างตามปกติโดยใช้ 0.00
+                // (16 ส.ค. 2569 — เดิมขึ้นการ์ด "ยังไม่มีข้อมูล" ทั้งใบแทน ทำให้ไม่เห็นเป้า
+                // ไม่เห็นกราฟ และไม่รู้ว่าต้องไปกรอกที่ไหน)
+                content(result: result, gpax: result.gpax ?? 0)
             } else {
                 emptyState
             }
         }
         .sheet(isPresented: $showingGradeLevelSheet) { GradeLevelSheet() }
         .sheet(isPresented: $showingTargetSheet) { GPAXTargetSheet() }
+    }
+
+    // MARK: - ยังไม่ตั้งเป้า
+
+    private var targetCallToAction: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Image(systemName: "target")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(Theme.Colors.primaryDeep)
+
+            Text("ตั้งเป้า GPAX")
+                .font(Theme.Font.plex(24, .semibold))
+                .foregroundStyle(Theme.Colors.textPrimary)
+
+            Text("มีเป้าแล้วแอปถึงจะบอกได้ว่าเทอมที่เหลือต้องได้เท่าไหร่ และเป้ายังอยู่ในระยะเอื้อมไหม")
+                .font(Theme.Font.body)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                showingTargetSheet = true
+            } label: {
+                Text("ตั้งเป้า")
+                    .font(Theme.Font.plex(17, .semibold))
+                    .foregroundStyle(Theme.Colors.onPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Spacing.md)
+                    .background(Theme.Colors.primary, in: Capsule())
+            }
+            .buttonStyle(PressScaleButtonStyle())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Filled state
@@ -198,7 +243,7 @@ struct GPAXSummaryCard: View {
     private func copy(for state: GPAXCalculator.State, gpax: Double) -> String {
         switch state {
         case .noData:
-            return "ยังไม่มีข้อมูล — เพิ่มผลการเรียนเทอมแรก"
+            return "ยังไม่ได้กรอกเกรดสักเทอม — แตะเทอมที่จบแล้วในรายการด้านล่างเพื่อกรอก"
         case .achieved:
             return "ถึงเป้าแล้ว แม้ได้ 0 ทุกเทอมที่เหลือ"
         case .onTrack(let required):

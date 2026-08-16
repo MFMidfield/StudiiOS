@@ -24,7 +24,7 @@ struct AssignmentListView: View {
 
     /// เปิดหน้ามาเห็นงานที่ยังไม่เสร็จก่อน — ไม่ใช่กองรวมทุกใบ
     @State private var scope: TaskScope = .notDone
-    @State private var searchText = ""
+    @State private var isSearching = false
     @State private var kindFilter: TaskKindFilter = .all
     @State private var subjectFilter = ""
 
@@ -33,26 +33,20 @@ struct AssignmentListView: View {
     @State private var isDoneGroupExpanded = false
 
     var body: some View {
-        List {
-            chipSection
-            ForEach(dayGroups) { entry in
-                Section {
-                    ForEach(entry.tasks) { task in
-                        row(for: task)
-                    }
-                } header: {
-                    groupHeader(entry.group)
-                }
-            }
-            if !doneTasks.isEmpty { doneSection }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Theme.Colors.background)
+        content
         .navigationTitle("งาน / การบ้าน")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $searchText, prompt: "ค้นหางาน วิชา หรือรายละเอียด")
         .toolbar {
+            // แว่นขยายอยู่ซ้ายปุ่ม + — `.searchable` บนหน้าที่อยู่ในแท็บจะกลายเป็น
+            // แท็บค้นหาที่แถบล่างบน iOS 26 จึงเปิดเป็น sheet แทน (เหมือนหน้าปฏิทิน)
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isSearching = true
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                }
+                .accessibilityLabel("ค้นหางาน")
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 TaskAddMenu(
                     kindFilter: $kindFilter,
@@ -62,12 +56,47 @@ struct AssignmentListView: View {
                 )
             }
         }
-        .overlay { emptyState }
         .sheet(isPresented: $isAddingTask) { AddTaskSheet() }
         .sheet(item: $editingTask) { task in AddTaskSheet(editing: task) }
+        .sheet(isPresented: $isSearching) {
+            TaskSearchSheet(
+                tasks: scopedAssignments,
+                subjectFor: { subject(named: $0) },
+                onToggleDone: { toggleDone($0) }
+            )
+        }
     }
 
     // MARK: - Sections
+
+    /// ยังไม่มีงานสักชิ้นในเทอมนี้ = วาดคำชวนเพิ่มงานแทน `List` ทั้งใบ (แบบเดียวกับ
+    /// หน้าผลงานและหน้า SOP) — ของเดิมเป็น `.overlay` ทับ List ที่มีแต่แถบ chip
+    /// ว่างๆ ค้างอยู่ ทั้งที่ยังไม่มีอะไรให้กรอง
+    @ViewBuilder
+    private var content: some View {
+        if scopedAssignments.isEmpty {
+            emptyState
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Theme.Colors.background)
+        } else {
+            List {
+                chipSection
+                ForEach(dayGroups) { entry in
+                    Section {
+                        ForEach(entry.tasks) { task in
+                            row(for: task)
+                        }
+                    } header: {
+                        groupHeader(entry.group)
+                    }
+                }
+                if !doneTasks.isEmpty { doneSection }
+            }
+            .listStyle(.plain)
+            .themedFormBackground()
+            .overlay { noMatchState }
+        }
+    }
 
     private var chipSection: some View {
         Section {
@@ -129,19 +158,28 @@ struct AssignmentListView: View {
             .listRowInsets(EdgeInsets())
     }
 
-    @ViewBuilder
+    /// ยังไม่มีงานเลย — ชวนให้เพิ่ม พร้อมปุ่มกดได้ในตัว (เดิมมีแต่ข้อความบอกให้ไปกดปุ่ม ＋)
     private var emptyState: some View {
-        if scopedAssignments.isEmpty {
-            ContentUnavailableView(
-                "ยังไม่มีงาน",
-                systemImage: "checkmark.square",
-                description: Text("กดปุ่ม + มุมขวาบนเพื่อเพิ่มงานชิ้นแรก")
-            )
-        } else if visibleTasks.isEmpty && doneTasks.isEmpty {
+        ContentUnavailableView {
+            Label("ยังไม่มีงาน", systemImage: "checkmark.square")
+        } description: {
+            Text("จดการบ้าน งานส่ง หรือวันสอบไว้ที่นี่\nแล้วแอปจะเตือนก่อนถึงกำหนดให้เอง")
+        } actions: {
+            Button("เพิ่มงานชิ้นแรก") { isAddingTask = true }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.Colors.primary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// มีงานอยู่ แต่ตัวกรอง/ชิปที่เลือกไม่เหลืออะไรให้แสดง
+    @ViewBuilder
+    private var noMatchState: some View {
+        if visibleTasks.isEmpty && doneTasks.isEmpty {
             ContentUnavailableView(
                 "ไม่พบงานที่ตรงเงื่อนไข",
                 systemImage: "line.3.horizontal.decrease",
-                description: Text("ลองเปลี่ยนคำค้นหา หรือกดค้างที่ปุ่ม + มุมขวาบนเพื่อล้างตัวกรอง")
+                description: Text("กดค้างที่ปุ่ม + มุมขวาบนเพื่อล้างตัวกรอง")
             )
         }
     }
@@ -152,15 +190,7 @@ struct AssignmentListView: View {
     private func passesSecondaryFilters(_ task: Assignment) -> Bool {
         guard kindFilter.matches(task) else { return false }
         if !subjectFilter.isEmpty && task.subjectName != subjectFilter { return false }
-        return matchesSearch(task)
-    }
-
-    private func matchesSearch(_ task: Assignment) -> Bool {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return true }
-        return [task.title, task.detail, task.subjectName].contains {
-            $0.localizedCaseInsensitiveContains(query)
-        }
+        return true
     }
 
     /// Everything matching the secondary filters, before the chip narrows it.

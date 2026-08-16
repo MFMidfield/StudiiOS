@@ -44,6 +44,7 @@ struct FocusTagEditorSheet: View {
                     .disabled(trimmedNewName.isEmpty)
                 }
             }
+            .themedFormBackground()
             .navigationTitle("แท็ก")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -169,6 +170,7 @@ struct FocusTagRenameSheet: View {
                     .padding(.vertical, Theme.Spacing.xs)
                 }
             }
+            .themedFormBackground()
             .navigationTitle("แก้ไขแท็ก")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -74,6 +74,7 @@ struct GPAXTargetSheet: View {
                     }
                 }
             }
+            .themedFormBackground()
             .navigationTitle("ตั้งเป้า GPAX")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
