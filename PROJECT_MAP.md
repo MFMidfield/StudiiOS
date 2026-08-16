@@ -1,7 +1,12 @@
 # PROJECT_MAP — Student OS (StudiiOS)
 
 > แผนที่โปรเจกต์ที่ใช้แทนการ grep/read ซ้ำทุก session
-> **อัปเดตล่าสุด:** 2026-08-16 — **ค้นหาเลิกใช้ `.searchable` บนหน้าที่อยู่ในแท็บ** (ยังไม่ได้คอมไพล์)
+> **อัปเดตล่าสุด:** 2026-08-16 — **คอมมิตรอบตัด TCAS แล้ว (`8b33513` บน `dev`, 82 ไฟล์ +2453/−2900)
+> · ยังไม่ได้คอมไพล์** · ตัวเลขบรรทัด/จำนวนไฟล์ในเอกสารนี้ตรวจใหม่ทั้งหมดแล้ววันนี้
+>
+> ### ⚠️ ก่อนติดตั้งรุ่นนี้ทุกครั้ง — ลบแอปออกจากเครื่อง/simulator ก่อน
+> Schema เปลี่ยน (4 model ของ TCAS ออก · `SOPTarget`/`SOPDocument` เข้า) — เครื่องที่มีสโตร์เก่าอยู่
+> จะไปตาย `fatalError` ที่ `StudiiOSApp.swift:44` ตั้งแต่เปิดแอป
 >
 > ### กติกาค้นหาของแอป (อ่านก่อนเพิ่ม `.searchable` ที่ไหนก็ตาม)
 > `.searchable` ที่แปะบนหน้าซึ่งอยู่ใน `TabView` จะกลายเป็น**แท็บค้นหาที่แถบล่าง**บน iOS 26 —
@@ -110,7 +115,7 @@
 | Bundle ID | `mfmidfield.StudiiOS` |
 | Framework | SwiftUI + SwiftData (ไม่มี dependency ภายนอกเลย) |
 | Xcode project | objectVersion 77, ใช้ **file-system-synchronized groups** |
-| Test targets | `StudiiOSTests`, `StudiiOSUITests` (ยังเป็น template เปล่า) |
+| Test targets | `StudiiOSTests` (4 ไฟล์: GPAXCalculatorTests · MonthLayoutEngineTests · RIASECScorerTests · StudiiOSTests) · `StudiiOSUITests` (template เปล่า)<br>`TCASScoreEngineTests.swift` **ถูกลบแล้ว 16 ส.ค. 2569** พร้อมเอนจิน |
 
 **ผลจาก file-system-synchronized groups:** สร้างไฟล์ `.swift` ใหม่ในโฟลเดอร์ = เข้า target อัตโนมัติ **ไม่ต้องแก้ `.pbxproj` เลย** อย่าไปยุ่งกับ pbxproj โดยไม่จำเป็น
 
@@ -118,12 +123,12 @@
 
 ---
 
-## 2. โครงสร้างไฟล์จริง (~60 ไฟล์ Swift)
+## 2. โครงสร้างไฟล์จริง (158 ไฟล์ Swift ใน `StudiiOS/` + 4 ไฟล์เทสต์ · ~23,000 บรรทัด — นับใหม่ 16 ส.ค. 2569)
 
 ```
 StudiiOS/                      ← โฟลเดอร์ซอร์ส (ชั้นในของ repo)
 ├── App/
-│   ├── StudiiOSApp.swift     (160)  @main + Schema + RootContainerView + NotificationManager.shared bootstrap + seed Subject
+│   ├── StudiiOSApp.swift     (183)  @main + Schema + RootContainerView + NotificationManager.shared bootstrap + seed Subject
 │   │                                **16 ส.ค. 2569**: `RootContainerView` มี `fullScreenCover` ของหน้าโฟกัส —
 │   │                                เปิดแอปมาแล้ว `engine.isRunning` (หรือ `isAskingForBreak`) จริง = เด้ง
 │   │                                `FocusModeView` ทับทันที ทั้งตอน launch และตอนกลับเป็น `.active`
@@ -131,23 +136,23 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
 │   │                                ⚠️ `presentFocusIfNeeded()` เช็ค `FocusScreenPresence.shared.isOnScreen` ก่อนเสมอ
 │   │                                (ประกาศใน FocusModeView.swift · `FocusModeView` ตั้งค่าเองใน onAppear/onDisappear)
 │   │                                — ไม่งั้นคนที่เข้าหน้าโฟกัสจากเมนูหน้าแรกแล้วกดเริ่ม จะได้หน้าโฟกัส 2 ชั้น
-│   └── RootTabView.swift          (89)  5-tab shell (หน้าแรก·งาน·+·ตารางสอน·ตั้งค่า) + DashboardDestination
+│   └── RootTabView.swift          (92)  5-tab shell (หน้าแรก·งาน·+·ตารางสอน·ตั้งค่า) + DashboardDestination
 ├── Core/
 │   ├── DesignSystem/
-│   │   ├── Theme.swift           (191)  design tokens + Theme.Font + CardContainer + TierBadge + PressScaleButtonStyle
+│   │   ├── Theme.swift           (201)  design tokens + Theme.Font + CardContainer + TierBadge + PressScaleButtonStyle
 │   │   ├── PillLabel.swift        (83)  ป้ายแคปซูล 5 tone (accent/neutral/danger/warning/custom)
 │   │   ├── IconTile.swift         (55)  SF Symbol บนพื้นสี่เหลี่ยมมน — ปรับ size/tint/background/radius ได้
 │   │   ├── SectionHeader.swift    (75)  หัวข้อ section + trailing ViewBuilder + SectionMoreLabel
 │   │   ├── ThemedForm.swift       (22)  **ใหม่ 16 ส.ค. 2569** `.themedFormBackground()` =
 │   │   │                                `scrollContentBackground(.hidden)` + พื้น `Theme.Colors.background`
-│   │   │                                **ทุก `Form`/`List` ในแอปต้องแปะตัวนี้** (24 ไฟล์แปะแล้ว) —
+│   │   │                                **ทุก `Form`/`List` ในแอปต้องแปะตัวนี้** (21 จุดแปะแล้ว) —
 │   │   │                                ไม่งั้นได้พื้นเทา systemGrouped ของ iOS ที่ไม่เข้าธีม
 │   │   │                                ⚠️ พื้น**แถว** ยังเป็นสีของ iOS — ถ้าจะให้ตรงเป๊ะต้องเติม
 │   │   │                                `.listRowBackground(Theme.Colors.cardBackground)` ราย Section
-│   │   ├── AppTheme.swift         (36)  **ใหม่ W2-D** ธีม system/light/dark — จุดเดียวที่รู้จัก key ธีม
+│   │   ├── AppTheme.swift         (37)  **ใหม่ W2-D** ธีม system/light/dark — จุดเดียวที่รู้จัก key ธีม
 │   │   │                                (`AppTheme.storageKey`) อ่าน 2 ที่: Picker ใน SettingsView +
 │   │   │                                `.preferredColorScheme` ใน RootContainerView · `.system` → nil
-│   │   ├── InteractiveSwipeBack.swift (52) **ใหม่ 15 ส.ค.** `.interactiveSwipeBack()` — คืน edge swipe ให้หน้าที่
+│   │   ├── InteractiveSwipeBack.swift (58) **ใหม่ 15 ส.ค.** `.interactiveSwipeBack()` — คืน edge swipe ให้หน้าที่
 │   │   │                                ซ่อน nav bar (UIKit ปิดให้เองเมื่อปุ่ม back ถูกซ่อน)
 │   │   │                                ⚠️ ตั้งค่า **ครั้งเดียวต่อ navigation controller** — `update` ยิงทุกเฟรม
 │   │   │                                รวมเฟรมที่กำลังเปิด sheet · delegate เป็นของเราเอง ไม่ใช่ nil
@@ -168,15 +173,23 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
 │   │   │                                requiredAverage/state/provenance) · `state` เป็น `State?` — nil เฉพาะกรณีมีข้อมูลแล้ว
 │   │   │                                แต่ยังไม่ตั้งเป้า (ไม่ใช่ `.noData`) · ปัดเลขแสดงผลผ่าน `.formatted`/`.rounded` เท่านั้น
 │   │   │                                ห้ามปัดเลขระหว่างคำนวณ (§3.5 ของแผน)
-│   │   └── GPAXSettings.swift    (106)  จุดเดียวที่รู้จัก UserDefaults key ของ GPAX (`Key.*`) เหมือน PomodoroSettings
+│   │   └── GPAXSettings.swift    (136)  จุดเดียวที่รู้จัก UserDefaults key ของ GPAX (`Key.*`) เหมือน PomodoroSettings
 │   │                                    `currentGradeLevel`/`currentTermNumber` = เทอม**จริง**ของนักเรียน (D7) — คนละตัวกับ
 │   │                                    `TermStore.activeTermKey` (เทอมที่กำลังเปิดดู) **ห้ามใช้แทนกันเด็ดขาด** ไม่งั้น
 │   │                                    จำนวนเทอมที่เหลือจะเพี้ยนแบบเงียบๆ (ไม่ crash) · `entryMode` สลับ perTerm/cumulative
 │   │                                    (D3/D4) · ทุก View ที่ต้องรีเฟรชตามค่าพวกนี้ต้องประกาศ `@AppStorage(GPAXSettings.Key.*)`
-│   │                                    ของตัวเองไว้เป็น "ping" แม้ไม่ได้อ่านค่าตรงๆ — ไม่งั้น SwiftUI ไม่รู้ว่า UserDefaults
-│   │                                    เปลี่ยน (ดูตัวอย่างที่ GradeCenterView/DashboardView/SettingsView)
+│   │                                    ของตัวเองไว้เป็น "ping" แม้ไม่ได้อ่านค่าตรงๆ — **ping อย่างเดียวพึ่งไม่ได้**
+│   │                                    ต้องคู่กับ `GPAXStore.revision` เสมอ (ดู GPAXStore.swift ข้างล่าง)
+│   │   └── GPAXStore.swift        (26)  **ใหม่ 16 ส.ค. 2569** `@Observable` singleton ตัวเดียว มี `revision: Int`
+│   │                                    ทุก setter ของ `GPAXSettings` เรียก `bump()` · View ที่โชว์ตัวเลข GPAX
+│   │                                    ประกาศ `@State private var gpaxStore = GPAXStore.shared` แล้ว
+│   │                                    **อ่าน `gpaxStore.revision` ใน body** (4 หน้าทำแล้ว: GradeCenterView ·
+│   │                                    GPAXSummaryCard · GPAXDashboardCard · SettingsView)
+│   ├── Calendar/MonthLayoutEngine.swift (149) จัดเลนแถบพาดข้ามช่องในตารางเดือน — ฟังก์ชันบริสุทธิ์
+│   │                                    ไม่ import SwiftUI (เทสต์ `MonthLayoutEngineTests` 10 เคส)
 │   ├── Logging/AppLog.swift             print-based console log (🔵🟠🔴)
-│   ├── Models/                          (21 ไฟล์ — ดูตาราง §3, รวม Term.swift + TermSubject.swift + FocusTag.swift)
+│   ├── Models/                          (19 ไฟล์ — ดูตาราง §3 · Calendar 3 ตัวไม่ได้อยู่ที่นี่ อยู่
+│   │                                    `Features/Calendar/CalendarModels.swift`)
 │   ├── Career/                          RIASEC screening inventory v2 (PLAN_RIASEC.md) — logic ล้วน ไม่มี View
 │   │   ├── RIASECDimension.swift        enum R/I/A/S/E/C (CaseIterable — **ลำดับ declaration คือลำดับ tie-break หลัก**) + thaiName/groupName/color/symbolName
 │   │   ├── RIASECItem.swift             18 ข้อ (`.all`) + Likert label 1-5 — น้ำหนัก secondary balance ทุกมิติรวม 1.0 (RIASECScorerTests คุ้ม invariant นี้)
@@ -282,7 +295,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
 │   │                                     ⚠️ **ห้ามลบ Subject** — Assignment.subjectName ผูกด้วยชื่อแบบ lookup
 │   └── Tasks/AssignmentPriorityEngine.swift  logic ล้วน: priority(kind:dueDate:) + daysUntil() + dueLabel() — สูตรความสำคัญอัตโนมัติที่เดียว
 └── Features/
-    ├── Calendar/CalendarView.swift        (366) root — สถานะหน้า · query · header เดือน/ปี · ScrollView 12 เดือน · sheet routing (W2 ก้อน G)
+    ├── Calendar/CalendarView.swift        (402) root — สถานะหน้า · query · header เดือน/ปี · ScrollView 12 เดือน · sheet routing (W2 ก้อน G)
     │   ├── CalendarMonthSection.swift     หนึ่งเดือน + CalendarStrings/CalendarDay/CalendarMonthInfo/CalendarMonthBuilder + แถวชื่อวัน
     │   ├── CalendarWeekRow.swift          แถวสัปดาห์ (ZStack ช่องวัน + แถบพาดข้ามช่อง) + CalendarDayCell + **CalendarGeometry** (ขนาดแถวจุดเดียว)
     │   ├── CalendarEventBar.swift         ชิป 3 แบบ (กิจกรรม / งาน / งานเสร็จแล้ว)
@@ -303,7 +316,10 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                  (เดิม `scrollOffsetY` เป็น @State ใน CalendarView — ย้ายมา 16 ส.ค. 2569)
     │   ├── CalendarPressDragGesture.swift UIGestureRecognizerRepresentable ห่อ UILongPressGestureRecognizer
     │   ├── CalendarItemBuilder.swift      สร้าง CalendarItem/MonthLayoutItem — ตรรกะล้วน ไม่มี View
-    │   └── CalendarItem.swift             เพิ่ม 10 ส.ค. 2569 (Round 2) — struct รวม CalendarEvent+Assignment ไม่ใช่ @Model
+    │   ├── CalendarItem.swift             เพิ่ม 10 ส.ค. 2569 (Round 2) — struct รวม CalendarEvent+Assignment ไม่ใช่ @Model
+    │   ├── CalendarModels.swift     (114) **@Model 3 ตัวอยู่ที่นี่** `CalendarEvent`/`CalendarTag`/
+    │   │                                  `CalendarAttachmentItem` + `EventAlert` (แยกออกจาก CalendarView ตั้งแต่ Round 4)
+    │   └── GhostEventLayer.swift     (34) `GhostPillView` — visual ล้วน สถานะอยู่ที่ CalendarDragController
     ├── CareerDiscovery/  RIASEC v2 (PLAN_RIASEC.md) — 18 ข้อ Likert แทนที่ chip picker เดิม
     │   ├── CareerDiscoveryView.swift     หน้า hub: intro card เริ่มแบบสำรวจ + การ์ดผลล่าสุด + ประวัติ 5 รายการ
     │   │                                 ทุกลิงก์ push `RIASECResultView(result:)` ที่สร้างจากแถวที่บันทึกไว้ ไม่ re-run scorer
@@ -346,12 +362,12 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                  ห้ามใส่กลับโดยไม่ถามก่อน · โค้ดเดิมอยู่ใน commit `4626607`
     │                ⚠️ **ไม่มีหน้า "ตั้งค่า Pomodoro" แล้ว** (โละทิ้ง) · ไม่มีพักยาว · ไม่มีการนับรอบ
     │                  · ไม่มีปุ่มหยุดชั่วคราว · ไม่มีปุ่มปลดบล็อกฉุกเฉิน — ห้ามใส่กลับโดยไม่ถาม
-    │   ├── PomodoroSettings.swift   (68)  **จุดเดียวที่รู้จัก UserDefaults key ของโหมดโฟกัส**
+    │   ├── PomodoroSettings.swift   (67)  **จุดเดียวที่รู้จัก UserDefaults key ของโหมดโฟกัส**
     │   │                                  เหลือ 3 key: `focusMinutes` (**`0` = โหมด ∞**) ·
     │   │                                  `blockAppsEnabled` · `selectedTagID`
     │   │                                  พักคงที่ `breakMinutes = 5` ผู้ใช้เปลี่ยนไม่ได้ ·
     │   │                                  `countUpSuccessSeconds = 600` (∞ ที่ทำได้ ≥10 นาที = สำเร็จ)
-    │   ├── PomodoroEngine.swift     (330) `@Observable @MainActor` singleton — **หัวใจของโหมดโฟกัส**
+    │   ├── PomodoroEngine.swift     (359) `@Observable @MainActor` singleton — **หัวใจของโหมดโฟกัส**
     │   │                                  ⚠️ **นับจาก Date ไม่ใช่นับ tick** ห้ามกลับไปใช้
     │   │                                    `secondsRemaining -= 1` เด็ดขาด (ของเดิมพังเพราะข้อนี้ —
     │   │                                    Timer หยุดตอนแอปเข้า background → เวลาค้าง)
@@ -364,7 +380,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                  `activeTag: FocusTagSnapshot?` ติดไปกับ FocusSession ตอนบันทึก
     │   │                                  สถานะทั้งหมด mirror ลง UserDefaults (`pomodoroState*`) เพื่อกู้
     │   │                                    หลัง force-quit — **จำเป็น** เพราะการบล็อกแอปเป็นค่าระดับระบบ
-    │   ├── AppBlockManager.swift    (~200) `@Observable @MainActor` singleton — Screen Time API จริง
+    │   ├── AppBlockManager.swift    (210) `@Observable @MainActor` singleton — Screen Time API จริง
     │   │                                  FamilyControls (ขออนุญาต) + ManagedSettings (shield) +
     │   │                                    DeviceActivity (ตาข่ายกันพลาด)
     │   │                                  ⚠️ **ใช้บน Simulator ไม่ได้** · ต้องเปิด Capability
@@ -374,23 +390,23 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                  `reconcile()` เรียกจาก RootContainerView ตอน .active —
     │   │                                    **ห้ามลบ** ไม่งั้นแอปอื่นถูกบล็อกค้างถาวร (นี่คือเหตุผลที่
     │   │                                    ลบปุ่มปลดฉุกเฉินทิ้งได้)
-    │   ├── FocusModeView.swift       (68) root — สลับ `FocusHomeView` ↔ `FocusRunningView` ตาม
+    │   ├── FocusModeView.swift       (82) root — สลับ `FocusHomeView` ↔ `FocusRunningView` ตาม
     │   │                                  `engine.isRunning` + overlay `FocusBreakPrompt`
     │   │                                  ซ่อน nav bar ทั้งหน้า (`.toolbar(.hidden)`) → ปุ่มย้อนกลับ
     │   │                                  วาดเอง + `.interactiveSwipeBack()` คืน edge swipe
-    │   ├── FocusHomeView.swift      (158) หน้าเริ่มต้น: ปุ่ม back/สถิติ (ซ้ายบน) · บล็อกแอป (ขวาบน)
+    │   ├── FocusHomeView.swift      (178) หน้าเริ่มต้น: ปุ่ม back/สถิติ (ซ้ายบน) · บล็อกแอป (ขวาบน)
     │   │                                  · ตัวเลขนาที (แตะ = กางไม้บรรทัด) · แถบแท็ก · ปุ่มเริ่ม
     │   │                                  ประกาศ `FocusGlassButton` — ปุ่มกลม Liquid Glass **44pt ไอคอน 17pt
     │   │                                  สี `primaryDeep`** (16 ส.ค. 2569 เดิม 40pt/15pt/textPrimary) ·
     │   │                                  `isActive` = พื้นทึบ `primary` + ไอคอน `onPrimary` (ใช้กับปุ่มบล็อกแอป)
     │   │                                  **ใช้ที่หน้าเริ่มต้นหน้าเดียวแล้ว** — หน้ากำลังโฟกัสไม่มีปุ่มเลย
-    │   ├── FocusDurationRuler.swift (114) ไม้บรรทัดเลื่อนซ้ายขวา `0`(∞)–180 ทีละ 1 นาที
+    │   ├── FocusDurationRuler.swift (117) ไม้บรรทัดเลื่อนซ้ายขวา `0`(∞)–180 ทีละ 1 นาที
     │   │                                  ใช้ `scrollPosition(id:)` + `.viewAligned` ให้ระบบ snap ให้
     │   │                                  **ห้ามกลับไปคำนวณ offset เอง** · ขีดยาวทุก 5 · เลขทุก 15
-    │   ├── FocusTagBar.swift         (67) แถบชิปแท็ก — แตะซ้ำ = ยกเลิกเลือก (ไม่บังคับเลือกแท็ก)
-    │   ├── FocusTagEditorSheet.swift (190) เพิ่ม/แก้ชื่อ/แก้สี/ลบแท็ก + `FocusTagRenameSheet`
+    │   ├── FocusTagBar.swift         (69) แถบชิปแท็ก — แตะซ้ำ = ยกเลิกเลือก (ไม่บังคับเลือกแท็ก)
+    │   ├── FocusTagEditorSheet.swift (199) เพิ่ม/แก้ชื่อ/แก้สี/ลบแท็ก + `FocusTagRenameSheet`
     │   │                                  สี 8 ตัวจาก `Theme.Colors.subjectPaletteHex` (ชุดเดียวกับสีวิชา)
-    │   ├── FocusRunningView.swift   (110) หน้ากำลังโฟกัส พื้น `focusBackdrop` (มืดทั้งสองธีม)
+    │   ├── FocusRunningView.swift   (119) หน้ากำลังโฟกัส พื้น `focusBackdrop` (มืดทั้งสองธีม)
     │   │                                  **ไม่มีปุ่มใดๆ บนหน้านี้เลย 16 ส.ค. 2569** (ปุ่มย้อนกลับถูกเอาออก —
     │   │                                  เคยพาออกจากหน้าไปทั้งที่เซสชันยังเดิน ทำให้เข้าใจผิดว่าโฟกัสจบแล้ว)
     │   │                                  ออกได้ทางเดียว = **กดค้าง 3 วินาที** (เดิม 5) แล้วตกไปหน้าเริ่มโฟกัส
@@ -398,16 +414,16 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                    ตัวรับกดค้างเต็มจอ · สลับแล้วกดค้างบนตัวเลขไม่ทำงาน
     │   ├── FocusHoldToStopBar.swift  (43) แถบกดค้าง 3 วิเพื่อหยุด — ไม่บอกจำนวนวินาทีโดยตั้งใจ
     │   ├── FocusBreakPrompt.swift    (58) ถาม "พัก 5 นาทีไหม" — ไม่มีปุ่มปิด ต้องเลือกอย่างใดอย่างหนึ่ง
-    │   ├── FocusStatsSheet.swift    (167) สถิติ: วันนี้/สัปดาห์นี้/รอบสำเร็จ · แยกตามแท็ก (group ด้วย
+    │   ├── FocusStatsSheet.swift    (173) สถิติ: วันนี้/สัปดาห์นี้/รอบสำเร็จ · แยกตามแท็ก (group ด้วย
     │   │                                  `tagID`) · รอบที่หยุดกลางคัน · ประกาศ `FocusStatBlock`
-    │   └── FocusBlockSheet.swift     (92) สวิตช์บล็อกแอป + familyActivityPicker (เปลี่ยนได้เฉพาะตอน idle)
+    │   └── FocusBlockSheet.swift     (94) สวิตช์บล็อกแอป + familyActivityPicker (เปลี่ยนได้เฉพาะตอน idle)
     ├── GradeCenter/  หน้าเกรดและ GPAX — **ยกเครื่องรอบ W2 ก้อน C** (`claude plan/docs/redesign/04_GradeCenter.md`)
     │   │            🟡 build เขียวแล้วแต่ **Few บอกว่าหน้าตายังไม่ผ่าน รอเก็บตกละเอียด** — อย่ารื้อเองก่อนถาม
-    │   ├── GradeCenterView.swift        (79)  หัวข้อหน้าใช้ `GPAXSettings.currentSortKey` (เทอมจริง)
+    │   ├── GradeCenterView.swift        (83)  หัวข้อหน้าใช้ `GPAXSettings.currentSortKey` (เทอมจริง)
     │   │                                     **เลิกใช้ `TermStore.activeTermKey` ในไฟล์นี้แล้ว** (เดิมหัวข้อบอกเทอมที่
     │   │                                     เปิดดูตาราง ไม่ตรงกับตัวเลขทั้งหน้า) · ไม่มี GPAX = ซ่อน TermGradeListSection
     │   │                                     ทั้งอัน ไม่โชว์ 6 แถวว่าง · `@AppStorage` ping 7 ตัว **ห้ามลบ**
-    │   ├── GPAXSummaryCard.swift       (300)  ⚠️ **ยังไม่ตั้งเป้า = การ์ดทั้งใบกลายเป็น CTA "ตั้งเป้า GPAX ก่อน"**
+    │   ├── GPAXSummaryCard.swift       (305)  ⚠️ **ยังไม่ตั้งเป้า = การ์ดทั้งใบกลายเป็น CTA "ตั้งเป้า GPAX ก่อน"**
     │   │                                     (16 ส.ค. 2569 — ไม่โชว์เลข GPAX เลยจนกว่าจะตั้งเป้า) มี `@AppStorage`
     │   │                                     ping ของ `Key.target` ในการ์ดเองเพื่อให้วาดใหม่ทันทีที่ปิด sheet
     │   │                                     เลข GPAX เป็น `textPrimary` (ไม่ใช่สีลิงก์) · เป้า+ดินสอมุมขวาบน
@@ -417,10 +433,10 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                     · ที่เหลือ primarySoft) ข้อความมาจาก `copy(for:gpax:)` เดิมทั้งหมด
     │   │                                     · `TargetQuickSetter` **ถูกลบแล้ว**
     │   ├── GPAXRangeBar.swift           (45)  **ใหม่ W2-C** แถบ floor–ceiling + ขีดเป้า (แยกจากการ์ดกัน type-check)
-    │   ├── GPAXTargetSheet.swift       (120)  **ใหม่ W2-C — ที่ตั้งเป้า GPAX ที่เดียวของทั้งแอป**
+    │   ├── GPAXTargetSheet.swift       (121)  **ใหม่ W2-C — ที่ตั้งเป้า GPAX ที่เดียวของทั้งแอป**
     │   │                                     ปุ่มลัด 5 ค่า + ช่อง "ตั้งเป้านี้เพราะ" + ปุ่มลบเป้า
     │   │                                     เขียนผ่าน `GPAXSettings.setTarget` เท่านั้น (Settings ไม่มีช่องเป้าแล้ว)
-    │   ├── TermGradeChart.swift        (224)  **ใหม่ W2-C** กราฟแท่ง 6 เทอม สเกล gpa/4.0
+    │   ├── TermGradeChart.swift        (239)  **ใหม่ W2-C** กราฟแท่ง 6 เทอม สเกล gpa/4.0
     │   │                                     ทึบ = กรอกแล้ว (แตะ→push TermGradeEditView) · จาง+ป้าย "เพิ่ม" = จบแล้วยังไม่กรอก
     │   │                                     (แตะได้เหมือนกัน) · เส้นประ = เทอมกำลังเรียน (กดไม่ได้) · จาง = อนาคต
     │   │                                     + เส้นเป้าพาดขวาง + แกน x + `accessibilityLabel` ทุกแท่ง
@@ -429,7 +445,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                     `minBarHeight = 26` กันแท่งเกรดต่ำเตี้ยจนเลขไม่พอ ·
     │   │                                     ลบบรรทัดคำอธิบาย "แท่งทึบ = ... แท่งเส้นประ = ..." ใต้กราฟทิ้ง
     │   │                                     ⚠️ gap ระหว่างแท่งล็อกที่ 6 — กว้างกว่านี้แท่งจะต่ำกว่า 44pt ของ HIG
-    │   ├── TermGradeListSection.swift  (190)  **16 ส.ค. 2569: แต่ละเทอมเป็น `CardContainer` ของตัวเอง**
+    │   ├── TermGradeListSection.swift  (191)  **16 ส.ค. 2569: แต่ละเทอมเป็น `CardContainer` ของตัวเอง**
     │   │                                     (กราฟอยู่การ์ดบนสุดใบเดียว · ไม่มี Divider แล้ว) เทอมปัจจุบัน
     │   │                                     เน้นด้วยเส้นขอบ `primary` 1.5pt แทนพื้น surfaceRaised แบบเดิม
     │   │                                     · ท้ายลิสต์เหลือ "กดลูกศรที่ตั้งค่าเพื่อกรอกเกรดเทอมนี้"
@@ -442,13 +458,15 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                     `sortKey < currentSortKey` เกรดที่กรอกให้เทอมปัจจุบันจะถูกเมินทั้งหมด
     │   │                                     จะกรอกได้ต่อเมื่อกด **"ขึ้นชั้นแล้ว"** ใน Settings (ลิสต์อ้างชื่อปุ่มนี้ตรงๆ
     │   │                                     — **ห้ามเปลี่ยนชื่อปุ่มนั้น**)
-    │   ├── TermGradeEditView.swift     (400)  pushed page — **ยกเครื่องหน้าตา 16 ส.ค. 2569**: ทิ้ง `Form`
+    │   ├── TermGradeEditView.swift     (525)  pushed page — **ยกเครื่องหน้าตา 16 ส.ค. 2569**: ทิ้ง `Form`
     │   │                                     มาเป็น `ScrollView` + `CardContainer` บนพื้น `Theme.Colors.background`
     │   │                                     · Toggle "กรอกละเอียด" กลายเป็น **ปุ่มเดี่ยวสลับโหมด** ในการ์ดบนสุด
     │   │                                     (default = เกรดเฉลี่ยรวม · กดสลับไป-กลับได้ · `applyMode(_:)` เขียน
     │   │                                     `term.gpa` ใหม่ให้ตรงโหมด ข้อมูลอีกโหมดไม่ถูกลบ) · alert เตือน
     │   │                                     **เฉพาะตอนจะทับของเดิม** (`requestModeSwitch`) · **ปุ่ม "จำเกรดเทอมนี้ไม่ได้" ถูกลบ**
-    │   │                                     (`CumulativeGPAXSheet` ยังใช้อยู่ที่ SettingsView เท่านั้นแล้ว)
+    │   │                                     (`CumulativeGPAXSheet.swift` **ถูกลบทั้งไฟล์** — ไม่มี UI โหมด GPAX สะสมแล้วทั้งแอป)
+    │   │                                     ⚠️ `saveSimpleGrade()` เรียก `ensureTerm()` ทุกตัวอักษรที่พิมพ์ →
+    │   │                                     พิมพ์แล้วลบทิ้งยังเหลือ `Term` เปล่าค้างใน "จัดการเทอม"
     │   │                                     · ช่องเกรดเฉลี่ย **ไม่ prefill 2.00 แล้ว** เริ่มเป็นช่องว่าง
     │   │                                     · ประกาศ `FieldBlock` + `ThemedNumberField` (ช่องกรอกในการ์ด — `Form`
     │   │                                     เคยวาดกรอบให้ฟรี) ทั้งคู่ private ในไฟล์นี้
@@ -479,18 +497,24 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │            (16 ส.ค. 2569 แทรกหน้า SOP เป็นหน้า 6 · `permissions` เลื่อน rawValue 5 → 6)
     │   │            ❌ ลบแล้ว: `WelcomeView` · `SetupSummaryView` · `GradeReportSetupView`
     │   │              (ทางนำเข้าใบ ปพ. หายจาก onboarding · `GradeReportOCRParser` ยังอยู่แต่ไม่มีใครเรียก)
-    │   ├── OnboardingGate.swift       `OnboardingStep` 6 ขั้น (intro/profile/schedule/grades/portfolio/permissions)
+    │   ├── OnboardingGate.swift (155) `OnboardingStep` **7 ขั้น**
+    │   │                              (intro/profile/schedule/grades/portfolio/**sop**/permissions)
     │   │                              + **จุดเดียวที่รู้จัก key ของ onboarding** (`completed`/`step`)
+    │   │                              ⚠️ **`startReplay()` ไม่ล้าง `Key.step`** — ปุ่ม "เปิดหน้า Setup อีกครั้ง"
+    │   │                              ในกล่อง dev จึงเด้งไปหน้า `permissions` (หน้าสุดท้าย) ไม่ใช่หน้าแรก
+    │   │                              เพราะ `restoreSavedStep()` ดัน path ตามค่าที่ค้างไว้ ·
+    │   │                              **จะดู onboarding ครบทั้ง 7 หน้าต้องใช้ "ลบข้อมูลทั้งหมดถาวร"** (`reset()` ล้าง step ให้)
     │   │                              `migrateLegacyIfNeeded()` เรียกจาก `StudiiOSApp.init()` **ก่อนวาดจอแรก**
     │   │                              (เรียกใน `.task` = ผู้ใช้เดิมเห็น onboarding แว้บนึง) — เครื่องที่เคยจบ
     │   │                              `hasCompletedSetupSummary` ถือว่าจบเลย แล้วลบ key เก่าทั้ง 5 ทิ้ง
     │   │                              `#if DEBUG` มีธง replay (`startReplay/endReplay`) ให้ Settings เรียก
     │   │                              — **ไม่มีปุ่มปิดกลางทาง** ต้องเดินจนจบ flow ถึงจะออก (Few ตัดออก 15 ส.ค.)
-    │   ├── OnboardingFlowView.swift   `NavigationStack(path: [OnboardingStep])` · จำขั้นที่ค้างไว้ตอน force-quit
-    │   │                              · ม.4 เทอม 1 = **ข้ามหน้า grades ตั้งแต่ตอนกดถัดไปที่หน้า schedule**
-    │   │                              (ไม่ใช่เข้าไปแล้วเด้งออก — เด้งออกเองแปลว่าปัดย้อนกลับไม่ได้อีก)
+    │   ├── OnboardingFlowView.swift (90) `NavigationStack(path: [OnboardingStep])` · จำขั้นที่ค้างไว้ตอน force-quit
+    │   │                              · **ไม่มีหน้าไหนถูกข้ามแล้ว** — ม.4 เทอม 1 ก็เข้าหน้า grades
+    │   │                              (หน้านั้นมีช่องตั้งเป้า GPAX อยู่ด้วย ส่วนเกรดย้อนหลังหายไปเอง)
     │   │                              · `onFinished` มีไว้ให้โหมด replay เท่านั้น
-    │   ├── OnboardingScaffold.swift   โครงร่วมทุกหน้า: ปุ่มย้อนกลับ + แถบคืบหน้า 6 ช่อง + หัวข้อ + ปุ่มล่างติดขอบ
+    │   ├── OnboardingScaffold.swift (156) โครงร่วมทุกหน้า: ปุ่มย้อนกลับ + แถบคืบหน้า (ช่องนับจาก
+    │   │                              `OnboardingStep.count` ไม่ hardcode → ตอนนี้ 7) + หัวข้อ + ปุ่มล่างติดขอบ
     │   │                              ซ่อน nav bar แล้วเรียก `.interactiveSwipeBack()` คืน edge swipe
     │   ├── OnboardingFields.swift     `OnboardingTextField` · `OnboardingChipRow` (LazyVGrid ห่อบรรทัดเอง)
     │   │                              · `OnboardingSection` — **ห้ามใช้ `Form` ในหน้า setup** พื้น/inset ของ Form
@@ -522,7 +546,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                `hasBacklog` ยังอยู่แต่ไม่มีใครใช้ตัดสินใจข้ามหน้าแล้ว
     │   ├── PortfolioSetupView.swift   หน้า 5 · เปิด `PortfolioItemSheet(mode: .create)` ตัวเดิมของแท็บผลงาน
     │   │                              ปุ่มล่าง "ข้าม"→"ถัดไป" ทันทีที่มีของ 1 ชิ้น
-    │   ├── SOPSetupView.swift        **หน้า 6 · ใหม่ 16 ส.ค. 2569** — ปุ่มการ์ด "เพิ่มคณะที่อยากยื่น"
+    │   ├── SOPSetupView.swift  (148) **หน้า 6 · ใหม่ 16 ส.ค. 2569** — ปุ่มการ์ด "เพิ่มคณะที่อยากยื่น"
     │   │                              → `NewSOPTargetSheet` ตัวเดิมของแอป · แถวคณะที่เพิ่มแล้ว แตะ =
     │   │                              sheet `NavigationStack { SOPEditorView }` + ปุ่ม "เสร็จ"
     │   │                              (เปิดเป็น sheet ไม่ push — OnboardingScaffold ซ่อน nav bar ไว้)
@@ -533,14 +557,14 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                                  ในตัว enum เองแล้ว** (เดิม extension ซ่อนอยู่ท้าย ProfileSetupView เก่า
     │                                  ลบไฟล์นั้นทีเดียว `AddScheduleEntrySheet` พังทันที)
     ├── Portfolio/  ผลงาน — **ยกเครื่องรอบ W2 ก้อน F** (`claude plan/docs/redesign/07_Portfolio.md`)
-    │                PortfolioView.swift (216) หัวข้อ "ผลงาน" · `@Query` **ไม่มี sort** (เรียงใน `visibleItems`)
+    │                PortfolioView.swift (223) หัวข้อ "ผลงาน" · `@Query` **ไม่มี sort** (เรียงใน `visibleItems`)
     │                  pipeline คงที่ `กรองหมวด → เรียง` ห้ามสลับลำดับ · chip มีตัวเลขทุกอัน (สไตล์เดียวกับ
     │                  `TaskFilterChips`) · **ค้นหาย้ายออกไป `PortfolioSearchSheet` แล้ว 16 ส.ค. 2569**
     │                  (ปุ่มแว่นขยายซ้ายปุ่ม ＋) · Menu เรียง 4 แบบท้ายแถว chip
     │                  · `.contextMenu` กดค้างการ์ด = ดูรายละเอียด/ลบ (+alert) · ＋ ขวาบนเป็นไอคอนเปล่า
     │                  ⚠️ มี `.navigationDestination` 2 ตัวในหน้าเดียว: `(for: PortfolioItem.self)` ให้ NavigationLink
     │                  ของการ์ด + `(item:)` ให้เมนู "ดูรายละเอียด" push ได้
-    │                + PortfolioSearchSheet.swift (81) **ใหม่ 16 ส.ค. 2569** sheet ค้นหาผลงาน — `NavigationStack`
+    │                + PortfolioSearchSheet.swift (83) **ใหม่ 16 ส.ค. 2569** sheet ค้นหาผลงาน — `NavigationStack`
     │                  ของตัวเอง + `.searchable(.navigationBarDrawer(.always))` + `navigationDestination` push
     │                  `PortfolioDetailView` ในตัว (ไม่ปิด sheet ก่อน) ค้นทุกหมวดเสมอ ไม่ผูกกับ chip หน้าหลัก
     │                + PortfolioSortOrder.swift (45) 4 แบบ: ล่าสุด/เก่าสุด/ชื่อ ก–ฮ (`localizedStandardCompare`)/ตามหมวด
@@ -566,12 +590,12 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                     ซึ่ง**ไม่มี "คาบเรียน"** — ตัดปุ่มนี้ทิ้งเมื่อไรจะเพิ่มคาบไม่ได้เลย)
     │   │                                     `termSelection` binding + `entryCount` ยกมาทั้งก้อนจาก ScheduleSettingsSheet
     │   │                                     ที่ถูกลบ — เรียก `TermStore` ซึ่งเป็น logic ห้ามแตะ
-    │   ├── ScheduleConstants.swift      (84)  visibleDays/dayLabels + `todayWeekday` (1=จ…7=อา) + `defaultEntryDay`
+    │   ├── ScheduleConstants.swift      (88)  visibleDays/dayLabels + `todayWeekday` (1=จ…7=อา) + `defaultEntryDay`
     │   │                                     (เสาร์/อาทิตย์ → ตกไปจันทร์) — **จุดเดียวที่แปลงวัน** ScheduleView กับ
     │   │                                     DayPickerBar เรียกตัวนี้แล้ว ไม่มีสูตรซ้ำ
     │   │                                     + `findOrCreateSubject` (onboarding) · `resolveSubject(named:code:in:)`
     │   │                                     (ฟอร์มคาบ — รหัสก่อน→ชื่อ, สี/ไอคอนจาก ThaiSubjectCatalog)
-    │   ├── ScheduleDayPickerBar.swift   (66)  **แคปซูลทึบ** เลื่อนด้วย matchedGeometryEffect (เดิมเป็นขีดใต้)
+    │   ├── ScheduleDayPickerBar.swift   (67)  **แคปซูลทึบ** เลื่อนด้วย matchedGeometryEffect (เดิมเป็นขีดใต้)
     │   │                                     วันนี้บอกด้วยสีตัวอักษร `primaryDeep` ไม่มีจุดแยกแล้ว · พื้นแถบเป็น `background`
     │   ├── ScheduleTimetableSection.swift (89) `CardContainer(padding: 0)` + แถวจัด padding เอง → แถวพักเต็มขอบได้
     │   │                                     **ไม่มี headerRow แล้ว** · ถือ `TimelineView(.periodic by: 60)` **ชั้นเดียว**
@@ -582,20 +606,20 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                     "เหลือ N นาที" + progress bar — โผล่เมื่อ `isToday` เท่านั้น
     │   ├── ScheduleBreakRow.swift       (66)  แถบครีมเต็มขอบ · เวลาอยู่คอลัมน์เดียวกับแถวคาบ · ไม่มีวงกลม/ไอคอน
     │   ├── PeriodShiftBanner.swift      (77)  ตัวอักษร `textPrimary` ไอคอนเท่านั้นที่ `warning` (เดิมอำพันบนอำพัน)
-    │   ├── PeriodShiftSheet.swift      (281)  ฟอร์มร่นคาบจริง — ใช้ PeriodShiftCalculator ที่เดียว
+    │   ├── PeriodShiftSheet.swift      (282)  ฟอร์มร่นคาบจริง — ใช้ PeriodShiftCalculator ที่เดียว
     │   │                                     **เปิดตรงจากเมนู ⚙︎ ของ ScheduleView แล้ว** (ScheduleSettingsSheet ถูกลบ)
     │   ├── SubjectPickerFields.swift   (116)  กลุ่มสาระ→รายวิชา+ชื่อ+รหัส — **แถวล้วน ไม่มี Section**
     │   │                                     ใช้ร่วมโดย AddScheduleEntrySheet + ScheduleImportRowEditSheet ห้ามแยกกลับ
     │   ├── PeriodNumberField.swift      (76)  "คาบที่" 0–10 + กำหนดเอง — ใช้ร่วม 2 หน้า
-    │   ├── AddScheduleEntrySheet.swift (381)  add/edit ใช้ร่วม · section เรียง วิชา→เวลา→รายละเอียด ตรงกับหน้า import
-    │   ├── AddSubjectSheet.swift       (148)
-    │   └── ScheduleImportReviewSheet.swift (309) · ScheduleImportRowEditSheet.swift (200)
+    │   ├── AddScheduleEntrySheet.swift (382)  add/edit ใช้ร่วม · section เรียง วิชา→เวลา→รายละเอียด ตรงกับหน้า import
+    │   ├── AddSubjectSheet.swift       (149)
+    │   └── ScheduleImportReviewSheet.swift (309) · ScheduleImportRowEditSheet.swift (201)
     │                                     หน้าตรวจผลอ่านตารางจากรูป — ไม่เขียน SwiftData เอง ส่ง [ImportedPeriod]
     │                                     กลับทาง onSave ให้ AddScheduleEntrySheet เรียก ScheduleImportCommitter
     │   ❌ ลบแล้ว W2-B: `ScheduleTodayTasksSection.swift` (การ์ดงานวันนี้ — ซ้ำกับแท็บงานที่จัดกลุ่มตามวันแล้ว
     │                   และ taskRow เป็น Button ที่ action มีแค่ AppLog = ปุ่มหลอก)
     │                  `ScheduleSettingsSheet.swift` (ของข้างในเหลือ 3 อย่าง ยกขึ้น Menu ⚙︎ หมดแล้ว)
-    ├── QuickAdd/QuickAddSheet.swift       (124) **ยกเครื่อง W2-A** (`claude plan/docs/redesign/03_QuickAdd.md`)
+    ├── QuickAdd/QuickAddSheet.swift       (142) **ยกเครื่อง W2-A** (`claude plan/docs/redesign/03_QuickAdd.md`)
     │                                     half-sheet เมนู "เพิ่มอะไรดี?" ที่เด้งตอนกดปุ่ม `+` กลาง tab bar
     │                                     **3 ทาง เรียงลง 3 แถว** (16 ส.ค. 2569 — เดิมเป็นกริด 3 ช่องแถวเดียว
     │                                     ที่บีบชื่อจนต้องย่อฟอนต์) แถวละ `CardContainer` + IconTile 44 + chevron:
@@ -611,8 +635,8 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                                        ห้ามสั่ง dismiss() สองชั้นใน update เดียวกัน — sheet จะค้าง
     │                                     ⚠️ `onSaved:` ใน `EventFormSheet`/`PortfolioItemSheet`/`AddTaskSheet`
     │                                        (optional default nil) **ห้ามลบ** ไม่งั้นบันทึกแล้วเมนูค้าง
-    ├── Settings/  **ยกเครื่อง W2-D** (`claude plan/docs/redesign/05_Settings.md`) — 588 → 465 บรรทัด + แยก 3 ไฟล์
-    │   ├── SettingsView.swift             (470) **ยกเครื่องหน้าตา 16 ส.ค. 2569** — ทิ้ง `List`/`Section`
+    ├── Settings/  **ยกเครื่อง W2-D** (`claude plan/docs/redesign/05_Settings.md`) — แยก 3 ไฟล์แล้ว แต่รอบ 16 ส.ค. ทำให้ยาวขึ้นเป็น **582 บรรทัด**
+    │   ├── SettingsView.swift             (582) **ยกเครื่องหน้าตา 16 ส.ค. 2569** — ทิ้ง `List`/`Section`
     │   │                                         มาเป็น `ScrollView` + `CardContainer` บนพื้น Theme.Colors.background
     │   │                                         ประกาศ `SettingsRow` (private) แทน `LabeledContent`
     │   │                                         5 การ์ด: โปรไฟล์ · การเรียน · การแจ้งเตือน · การแสดงผล · เกี่ยวกับแอป
@@ -661,9 +685,9 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   ├── EditProfileView.swift                รูป + ชื่อ-นามสกุล + ชื่อเล่น + section "โรงเรียน"
     │   │                                         **15 ส.ค.: ช่อง "ห้อง" ถูกลบ · แผนการเรียนเป็น Picker (`StudyProgram`)**
     │   │                                         (เดิมเป็น TextField พิมพ์อิสระ — ชื่อแผนที่พิมพ์เองเทียบกันไม่ได้เลย)
-    │   ├── PendingNotificationsView.swift  (49) **แยกไฟล์ W2-D**
+    │   ├── PendingNotificationsView.swift  (50) **แยกไฟล์ W2-D**
     │   │   ❌ `SetupFlowTestContainer.swift` **ถูกลบ 15 ส.ค.** — โหมดทดสอบ setup ใช้ธง replay แทน (ดูกล่อง dev ด้านบน)
-    │   ├── TermManagementView.swift       (117) List เทอมที่**มีอยู่จริงในฐานข้อมูล**เท่านั้น (สร้างแบบ lazy) เรียงตาม
+    │   ├── TermManagementView.swift       (118) List เทอมที่**มีอยู่จริงในฐานข้อมูล**เท่านั้น (สร้างแบบ lazy) เรียงตาม
     │   │                                   `sortKey` · แตะแถว = TermStore.setActive + dismiss · ปัดซ้าย = alert ยืนยัน
     │   │                                   บอกจำนวนคาบ/งาน/คะแนนที่จะหาย แล้ว TermStore.delete + TermStore.bootstrap
     │   │                                   (การันตีมีเทอม active เสมอแม้ลบเทอมสุดท้าย)
@@ -673,7 +697,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                                      `classifySubjectCode` + รายการตารางที่ parse ได้จริง
     │                                      → เครื่องมือวัดผลของ PLAN_OCRAccuracy และ PLAN_OCRFix
     ├── Tasks/   หน้า "งาน / การบ้าน" — **ยกเครื่อง W2 ก้อน A** (`claude plan/docs/redesign/01_Tasks.md`)
-    │   ├── AssignmentListView.swift   (267) root — `List(.plain)` + `plainRow()` (ซ่อนเส้น/พื้นแถว) เพื่อให้ได้
+    │   ├── AssignmentListView.swift   (297) root — `List(.plain)` + `plainRow()` (ซ่อนเส้น/พื้นแถว) เพื่อให้ได้
     │   │                                     การ์ดลอย **และ** ปัดซ้ายลบได้ — **ห้ามเปลี่ยนเป็น ScrollView**
     │   │                                     โครง: chip → Section ตาม `TaskDayGroup` ที่ไม่ว่าง → กลุ่ม "เสร็จแล้ว" พับได้
     │   │                                     · default scope = `.notDone` (เดิม `.all`)
@@ -694,14 +718,14 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │   │                                     (ประเภท/วิชา/ล้างตัวกรอง) · มีจุดเล็กบนปุ่ม `+` เมื่อมีตัวกรองทำงานอยู่
     │   │                                     (แยกออกมาแทนที่จะแยก TaskDayGroupSection เพราะ Section กับ .swipeActions
     │   │                                      อยู่ใน List เดียวกัน ย้ายออกเสี่ยงปัดซ้ายลบพัง)
-    │   ├── TaskSearchSheet.swift       (80) **ไฟล์ใหม่ 16 ส.ค. 2569** sheet ค้นหางาน — `NavigationStack` ของตัวเอง
+    │   ├── TaskSearchSheet.swift       (87) **ไฟล์ใหม่ 16 ส.ค. 2569** sheet ค้นหางาน — `NavigationStack` ของตัวเอง
     │   │                                     + `.searchable(.navigationBarDrawer(.always))` ค้น `title`/`detail`/`subjectName`
     │   │                                     จากงานทั้งเทอม (ไม่สนชิป/วิชาที่เลือกค้างไว้) แถวใช้ `TaskRowCard`
     │   │                                     แตะแถว = เปิด `AddTaskSheet(editing:)` **ใน sheet นี้เอง** — เปิดจากหน้าหลัก
     │   │                                     หลังปิด sheet ค้นหาไม่ได้ (สั่ง sheet ใหม่ตอนตัวเก่ายังปิดไม่เสร็จ ฟอร์มจะไม่ขึ้น)
     │   ├── TaskRowCard.swift          (130) เหลือ 4 อย่าง: วงกลม toggle · ขีดสีวิชา 3pt · ชื่อ+"วิชา · เวลา" · PillLabel วัน
     │   │                                     ❌ ไม่มีไอคอน 36×36 · ไม่มีบรรทัดวันที่เต็ม · ไม่มีขอบแดงตอนเลยกำหนด
-    │   └── AddTaskSheet.swift         (290) `AddTaskSheet(editing:presetKind:onSaved:)` — ทุก parameter มี default
+    │   └── AddTaskSheet.swift         (307) `AddTaskSheet(editing:presetKind:onSaved:)` — ทุก parameter มี default
     │                                         ทางเข้า: QuickAddSheet · การ์ด "งานค้าง"/นับถอยหลังสอบ ใน Dashboard
     │                                         · ปุ่ม `+` ขวาบนของหน้านี้
     │                                         ⚠️ **งานใหม่อ่านค่าเริ่มต้นการเตือนจาก `SettingsView.reminderDefaultKey`**
@@ -714,7 +738,7 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
     │                                           ("คาบ 3 · คณิตศาสตร์") ชื่อวิชามาจาก `ScheduleEntry` เท่านั้น
     │                                         · โชว์ section วิชาเฉพาะ **การบ้าน** กับ **สอบแบบ "เก็บคะแนน"**
     │                                           (`needsSubject`) — กลางภาค/ปลายภาคไม่ผูกวิชา และ save เขียน `""` ให้
-    │   ├── TaskSubjectPeriodPicker.swift (155) **ไฟล์ใหม่ 16 ส.ค. 2569** — วัน+คาบเป็นแค่ทางไปหา `subjectName`
+    │   ├── TaskSubjectPeriodPicker.swift (166) **ไฟล์ใหม่ 16 ส.ค. 2569** — วัน+คาบเป็นแค่ทางไปหา `subjectName`
     │   │                                     **ไม่ได้ตั้งกำหนดส่ง** (กำหนดส่งยังเป็น DatePicker แยก)
     │   │                                     ค่าเริ่มต้น: วิชาเดิมของงานที่แก้อยู่ → คาบที่กำลังเรียนตอนนี้ →
     │   │                                     วันจันทร์คาบแรก → วันแรกที่มีคาบ → (1,1) ถ้าไม่มีตารางเลย
@@ -728,24 +752,24 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
         │        `TCASEntryDetailView` · `TCASPlannerView` · `TCASScoreEngineTests` — **ลบไฟล์ทิ้งหมดแล้ว**
         │        (PLAN_TCASPlanner.md กลายเป็นเอกสารประวัติศาสตร์ ห้ามใช้อ้างอิงสถานะ)
         │     · Free ทั้งหมด ไม่ gate
-        ├── SOPListView.swift            หน้า "SOP" — `ScrollView` การ์ดคณะ (`SOPTargetCard`) เรียงตาม
+        ├── SOPListView.swift      (105) หน้า "SOP" — `ScrollView` การ์ดคณะ (`SOPTargetCard`) เรียงตาม
         │                                `SOPTarget.sortOrder` · ปุ่ม ＋ ขวาบน → `NewSOPTargetSheet`
         │                                · ว่าง = `ContentUnavailableView` + ปุ่ม "เพิ่มคณะแรก"
         │                                · กดค้างการ์ด = เมนูลบ + alert เตือนว่า SOP หายด้วย (cascade)
-        ├── SOPTargetCard.swift          มหาวิทยาลัย(17) / คณะ · สาขา(13) / แถบล่างบอกสถานะ SOP:
+        ├── SOPTargetCard.swift     (56) มหาวิทยาลัย(17) / คณะ · สาขา(13) / แถบล่างบอกสถานะ SOP:
         │                                "ยังไม่ได้เขียน SOP — แตะเพื่อเริ่ม" หรือ
         │                                "เขียนแล้ว N ตัวอักษร — แตะเพื่อแก้" (สีส้ม = สัญญาณว่ากดได้)
-        ├── NewSOPTargetSheet.swift      3 ช่อง: มหาวิทยาลัย · คณะ · สาขา (ไม่บังคับ)
+        ├── NewSOPTargetSheet.swift (71) 3 ช่อง: มหาวิทยาลัย · คณะ · สาขา (ไม่บังคับ)
         │                                **บันทึกแล้วปิด sheet กลับลิสต์เลย** ❌ ไม่มี "รอบที่ตั้งใจยื่น"
         │                                ❌ ไม่พาไปหน้าตั้งน้ำหนักต่อ (ไม่มีแล้ว)
-        ├── SOPEditorView.swift          รวม `TCASEntryDetailView` + `SOPEditorView` เดิมเป็นหน้าเดียว:
+        ├── SOPEditorView.swift    (240) รวม `TCASEntryDetailView` + `SOPEditorView` เดิมเป็นหน้าเดียว:
         │                                การ์ดหัว (มหาลัย/คณะ·สาขา) → การ์ดเขียน (`TextEditor` ≥320pt +
         │                                นับตัวอักษร + ปุ่มคัดลอกทั้งฉบับ `UIPasteboard` + toast) →
         │                                การ์ดคำแนะนำ 13 หัวข้อ → `SOPGuideSheet`
         │                                ⚠️ **autosave ระหว่างพิมพ์** (`onChange(of: text)`) จึง**ไม่มีปุ่ม
         │                                "บันทึก"** และไม่มี confirmationDialog "ยังไม่ได้บันทึก" อีกแล้ว
         │                                · `SOPDocument` ถูกสร้างตอนเปิดหน้าครั้งแรก — ไม่มีหน้าเลือกโหมด
-        ├── SOPGuideSheet.swift          `TabView(.page)` 13 หน้า ปัดซ้ายขวา + page dots เริ่มที่หน้าที่กด
+        ├── SOPGuideSheet.swift     (46) `TabView(.page)` 13 หน้า ปัดซ้ายขวา + page dots เริ่มที่หน้าที่กด
         └── `Core/SOP/SOPGuideContent.swift`   13 หน้าคำแนะนำ static let เนื้อหาจาก Few 2026-08-10 ตรงๆ
                                             logic ล้วน ไม่มี View/SwiftData
                                             ⚠️ หน้า 11 "โครงสร้างที่แนะนำ" คำอธิบายรายส่วนผมเขียนเสริมเอง
@@ -754,9 +778,11 @@ StudiiOS/                      ← โฟลเดอร์ซอร์ส (ช�
 
 ---
 
-## 3. SwiftData Models (23 @Model — ทั้งหมดต้องอยู่ใน Schema)
+## 3. SwiftData Models (**22 @Model** — ทั้งหมดต้องอยู่ใน Schema · นับใหม่ 16 ส.ค. 2569)
 
-Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
+Schema ประกาศที่ `App/StudiiOSApp.swift:15-38` · ไฟล์ใน `Core/Models/` มี 19 ตัว
+ส่วนอีก 3 ตัว (`CalendarEvent`/`CalendarTag`/`CalendarAttachmentItem`) อยู่ `Features/Calendar/CalendarModels.swift`
+`SettingsView.resetAllData()` ลบครบทั้ง 22 ตัวแล้ว (ตรวจแล้ว 16 ส.ค. 2569)
 
 | Model | ไฟล์ |
 |---|---|
@@ -779,7 +805,7 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
 | SOPTarget | Core/Models/SOPTarget.swift — **ใหม่ 16 ส.ค. 2569 แทน `TCASEntry`** คณะที่ตั้งใจยื่น 1 แห่ง: `universityName`/`facultyName`/`majorName`(ใหม่)/`sortOrder`/`createdAt` · `sopStore: [SOPDocument]` (cascade, มีได้ 0-1 ตัว) · `sop` computed คืน `sopStore.first` (SwiftData ยังงอแงกับ to-one optional relationship) · `facultyLine` = "คณะ · สาขา"<br>❌ ตัดทิ้ง: `roundRaw` · `targetScore` · `admissionURL` · `notes` · `weights` |
 | SOPDocument | Core/Models/SOPDocument.swift — **ใหม่ 16 ส.ค. 2569 แทน `TCASSOP`** เรียงความ SOP ก้อนเดียว: `fullText`/`updatedAt`/`target` · `characterCount` computed<br>❌ ตัดทิ้ง: `modeRaw` · `isMerged` · `s1Intro`–`s6Conclusion` (โหมดเขียนทีละส่วนไม่มีแล้ว) |
 | SemesterRecord | Core/Models/SemesterRecord.swift |
-| CalendarEvent + CalendarTag + CalendarAttachmentItem | Features/Calendar/CalendarView.swift ⚠️ model ฝังอยู่ในไฟล์ view |
+| CalendarEvent + CalendarTag + CalendarAttachmentItem | `Features/Calendar/CalendarModels.swift` (114) — แยกออกจาก `CalendarView.swift` ตั้งแต่ Round 4 แล้ว ยังไม่ได้ย้ายเข้า `Core/Models/` |
 
 `CalendarView` (10 ส.ค. 2569, Round 2) รวม `CalendarEvent` + `Assignment.inTerm(activeTerm)` เป็น `CalendarItem` (struct ธรรมดา ไม่ใช่ `@Model` — `Features/Calendar/CalendarItem.swift`) index เป็น `[Date: [CalendarItem]]` คีย์ `startOfDay` ครั้งเดียวต่อ render (ไม่ใช่วน filter 42 รอบแบบเดิม) — ช่องวันแสดง pill สูงสุด 2 + "+X" เรียง สอบ→การบ้าน/งานทั่วไป→กิจกรรม, assignment ที่ `hasDueDate == false` ไม่ขึ้นในปฏิทิน
 
@@ -822,7 +848,8 @@ Schema ประกาศที่ `App/StudiiOSApp.swift:15-36`
   **เปิดเมนูเดียวกันทุกแท็บ** (Few ตัดสิน 14 ส.ค. — ล้มแผนเดิมที่จะให้ `+` เปลี่ยนตามแท็บ)
   เหตุผล: ปุ่มเดียวควรทำอย่างเดียวเสมอ · หน้าที่มีทางเพิ่มของตัวเองเก็บทางลัดไว้ที่ **ปุ่ม `+` ขวาบน** แทน
   → เมนูมี 3 ทาง: งาน · กิจกรรมปฏิทิน · ผลงาน — **นี่คือทางเข้าเดียวของกิจกรรมปฏิทินและผลงาน**
-- Dashboard push ต่อผ่าน `DashboardDestination`: `.assignments` `.calendar` `.gradeCenter` `.tcasPlanner` `.portfolio` `.careerDiscovery` `.focusMode`
+- Dashboard push ต่อผ่าน `DashboardDestination`: `.assignments` `.calendar` `.gradeCenter` **`.sop`** `.portfolio` `.careerDiscovery` `.focusMode`
+  (`.tcasPlanner` ถูกเปลี่ยนชื่อเป็น `.sop` 16 ส.ค. 2569)
   **`CalendarView` เข้าได้ทางเมนูหลักทางเดียวแล้ว** (ไม่มีแท็บของตัวเอง) — push เข้า NavigationStack ของ Dashboard
 - Onboarding gate อยู่ที่ `RootContainerView` (`StudiiOSApp.swift`) — **เหลือ `if` เดียว** อ่าน
   `@AppStorage(OnboardingGate.Key.completed)` (+ ธง replay ใน DEBUG) → `OnboardingFlowView` หรือ `RootTabView`
@@ -907,18 +934,21 @@ Components:    CardContainer<Content>(padding:) (stroke(cardStroke) + เงา�
 `EntitlementStore.shared.isUnlocked(.pro)` — ปัจจุบันเป็น toggle ทดสอบใน Settings ยังไม่มี StoreKit จริง
 Gated: **ไม่มีหน้าไหน gate จริงเลยตอนนี้** — grep 15 ส.ค. เจอ `isUnlocked` แค่ในคอมเมนต์ของ `CareerDiscoveryView`
 (เอกสารเดิมเขียนว่า `PortfolioView` ถูก gate — ผิด โค้ดไม่เคยมี gate · คอมเมนต์ "Pro feature" ใน `PortfolioItem.swift` ถูกลบแล้วก้อน F)
-`TCASPlannerView` เป็น **Free ทั้งหมด** (PLAN_TCASPlanner.md §0.4 — โค้ดจริงไม่เคย gate มาก่อน เอกสารเดิมผิด)
+`SOPListView` (เดิม `TCASPlannerView`) เป็น **Free ทั้งหมด** — โค้ดจริงไม่เคย gate มาก่อน
+`ProUpsellView.swift` ยังอยู่แต่**ไม่มีใครเรียก** และเมนูหน้าแรกเป็น `.free` ทุกช่อง → `TierBadge` ไม่โผล่ที่ไหนเลย
 
 ---
 
 ## 7. เอกสารในโปรเจกต์ — ระวังของเก่า
 
+ตรวจรายชื่อไฟล์จริงใหม่ 16 ส.ค. 2569 — **นอก `claude plan/docs/` เหลือ .md แค่ 3 ไฟล์**
+
 | ไฟล์ | สถานะ |
 |---|---|
-| `StudentOS_รวมเอกสาร.md` | **สโคป/vision — ยังใช้อ้างอิงได้** (เป้าหมาย ไม่ใช่สถานะจริง) |
-| `session-2026-07-28-restructure.md` | log เก่า — อธิบายเวอร์ชันที่ยังมี Subject/Chapter/BinderAttachment |
-| `StudiiOS/StudiiOS_Audit_Report.md` | ⚠️ **ล้าสมัย** อ้างถึง 45 ไฟล์/6,857 บรรทัด และไฟล์ที่ไม่มีแล้ว (`SubjectDetailView`, `DigitalBinderView`, `GPAPlannerView`, `Subject.swift`) — **ห้ามเชื่อโดยไม่ verify กับซอร์สจริง** |
+| `PROJECT_MAP.md` (ไฟล์นี้) | แผนที่ปัจจุบัน |
+| `StudiiOS/PrototypeApp_Audit_Report.md` | ⚠️ **ล้าสมัย** ยังใช้ชื่อเก่า PrototypeApp · อ้าง 45 ไฟล์/6,857 บรรทัด และไฟล์ที่ไม่มีแล้ว (`SubjectDetailView`, `DigitalBinderView`, `GPAPlannerView`) — **ห้ามเชื่อโดยไม่ verify กับซอร์สจริง** |
 | `StudiiOS/SchedulePage_Prompt.md` | prompt ของหน้า Schedule |
+| ~~`StudentOS_รวมเอกสาร.md`~~ · ~~`session-2026-07-28-restructure.md`~~ | **ไม่มีไฟล์นี้แล้ว** (เอกสารเดิมเขียนผิด) |
 
 ---
 
@@ -928,13 +958,14 @@ Gated: **ไม่มีหน้าไหน gate จริงเลยตอ�
 - ~~`FocusModeView.swift` อยู่ใน `Features/Portfolio/`~~ **แก้แล้ว** — ย้ายมา `Features/FocusMode/` และเขียนใหม่ทั้งโมดูล
 - **ระบบบล็อกแอปยังไม่มี `DeviceActivityMonitor` extension** — ถ้าผู้ใช้บังคับปิด Student OS ทิ้ง แอปที่บล็อกไว้จะยังถูกบล็อกจนกว่าจะเปิด Student OS อีกครั้ง (`reconcile()` ปลดให้) **ปุ่มปลดฉุกเฉินถูกลบทิ้งแล้ว 15 ส.ค. 2569** (Few สั่ง) — ทางออกเดียวคือเปิดแอปแล้วให้ `reconcile()` ปลดให้
 - **แจ้งเตือนจบรอบโฟกัสยังไม่ใช่ `.timeSensitive`** — เด้งทะลุโหมดห้ามรบกวนไม่ได้ ต้องเพิ่ม capability "Time Sensitive Notifications" ก่อน
-- Calendar models ฝังใน `CalendarView.swift` แทนที่จะอยู่ `Core/Models/`
+- ~~Calendar models ฝังใน `CalendarView.swift`~~ **ย้ายแล้วตั้งแต่ Round 4** — อยู่ `Features/Calendar/CalendarModels.swift`
+  (ยังไม่ได้ย้ายเข้า `Core/Models/` แต่ไม่ได้ปนกับ View แล้ว)
 - ~~ไม่มี unit test จริงเลย~~ **มีแล้วบางส่วน** — `StudiiOSTests/GPAXCalculatorTests.swift` (152 บรรทัด) ครอบ `GPAXCalculator`
   ทั้ง 6 state + fixture §3.3 ของ PLAN_GPA.md + cumulative mode · `StudiiOSTests/RIASECScorerTests.swift` ครอบ `RIASECScorer`
   9 เคส (worked example §3.3, invariant น้ำหนักรวม, flat profiles, straight-lining, missing answer, deterministic tie-break)
-  ของ PLAN_RIASEC.md · `StudiiOSTests/TCASScoreEngineTests.swift` ครอบ `TCASScoreEngine` 10 เคส (คะแนนปกติ,
-  gap, น้ำหนักไม่ครบ 100, โหมดกลุ่ม × 2, โหมดล็อกตรงกับ worked example §4.3, required > 100%, ล็อกครบทุกวิชา,
-  ไม่มีคะแนนเลย) ของ PLAN_TCASPlanner.md ส่วนที่เหลือของแอปยังไม่มีเทสต์
+  ของ PLAN_RIASEC.md · `StudiiOSTests/MonthLayoutEngineTests.swift` ครอบการจัดเลนแถบปฏิทิน 10 เคส
+  ❌ `TCASScoreEngineTests.swift` **ถูกลบแล้ว 16 ส.ค. 2569** พร้อม `TCASScoreEngine`
+  ส่วนที่เหลือของแอปยังไม่มีเทสต์
 - **`CareerInterestResult` เพิ่ม field ใหม่ (RIASEC v2)** — ถ้าเครื่อง/simulator มีแถวเก่าอยู่แล้วต้อง **ลบแอปก่อนติดตั้งรุ่นนี้**
   (lightweight migration เพิ่ม property ปกติมักผ่าน แต่ไม่การันตี 100% — ดู PLAN_RIASEC.md §4)
 - ~~`QuickAddSheet`'s `calendarFields` มี label ภาษาอังกฤษหลงเหลือ~~ **แก้แล้ว W2-A** — `CaptureDetailSheet` ถูกลบทั้ง struct
@@ -944,7 +975,7 @@ Gated: **ไม่มีหน้าไหน gate จริงเลยตอ�
   เส้นเดียวกับ `AddScheduleEntrySheet` และใช้ `ScheduleOCRResult.problem` เป็นข้อความจริงแล้ว
 - **`resolveSubject` มีตรรกะซ้ำ 2 ที่**: `ScheduleConstants.resolveSubject` (ฟอร์มคาบ) กับ `ScheduleImportCommitter.resolveSubject` (นำเข้า, มี `inout` cache ของตัวเอง) — กติกาเดียวกัน (รหัสก่อน→ชื่อ) แต่คนละ signature จงใจไม่รวมในรอบนี้
 - `refreshAssignmentReminders` ตัดที่ 16 งานแรก (× 3 จุด = 48 pending) กันชน 64 ของ iOS — งานที่กำหนดส่งไกลกว่านั้นจะยังไม่ถูกตั้งจนกว่าจะขยับเข้ามาในหน้าต่าง 14 วัน
-- **GPAX `.outOfReach` ยังไม่มีปุ่ม forward action** (§6.5/§11 ของ PLAN_GPA.md ต้องการอย่างน้อย 2 ปุ่ม เช่น ลิงก์ TCASPlannerView/PortfolioView/ปรับเป้า) — ตอนนี้การ์ดโชว์แค่ข้อความ copy เฉยๆ
+- **GPAX `.outOfReach` ยังไม่มีปุ่ม forward action** (§6.5/§11 ของ PLAN_GPA.md ต้องการอย่างน้อย 2 ปุ่ม เช่น ลิงก์ SOPListView/PortfolioView/ปรับเป้า) — ตอนนี้การ์ดโชว์แค่ข้อความ copy เฉยๆ
 - ~~ช่องตั้งเป้า GPAX ตั้งได้ 2 ที่~~ **แก้แล้ว W2-C/D** — เหลือ `GPAXTargetSheet` ที่เดียว (`TargetQuickSetter` และ section ใน Settings ถูกลบทั้งคู่)
 
 **`PLAN_GPA.md` ครบทั้ง 7 step แล้ว** (logic+เทสต์ → model → read-only display → input → Dashboard → Settings → เอกสารนี้) — ฟีเจอร์ GPAX Level 1 ถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป (Level 2/3 อยู่ใน §12 ของแผน ยังไม่เริ่ม)
@@ -955,7 +986,7 @@ Gated: **ไม่มีหน้าไหน gate จริงเลยตอ�
   build เขียวและใช้งานได้ แต่ยังไม่ระบุจุด **ต้องถามก่อนแก้ ห้ามเดาแล้วรื้อเอง**
 - **มุมแท่งกราฟใน `TermGradeChart` ใช้ `Theme.Radius.icon` (11)** ทั้งที่อยากได้ ~6 — ไม่มี token ที่เล็กกว่านี้
   ถ้าดูแล้วมนเกินไปต้องเพิ่ม `Radius.bar` ใน `Theme.swift` ก่อน
-- **`SettingsView.swift` 465 บรรทัด** เกินแนว ~250 ที่แผนตั้งไว้ (แยก 3 ไฟล์ไปแล้วยังเกิน เพราะรอบ 2 เพิ่ม 2 section)
+- **`SettingsView.swift` 582 บรรทัด** เกินแนว ~250 ที่แผนตั้งไว้ไปมาก (แยก 3 ไฟล์ไปแล้วยังเกิน — รอบ 16 ส.ค. เขียนการ์ดใหม่ทั้งหน้า)
   `body` ถูกซอยเป็น 6 computed property แล้ว ความเสี่ยง type-check ต่ำ — ยังไม่แยกเพิ่ม รอ Few ตัดสิน
 - **ยังไม่มีไฟล์ฟอนต์ IBM Plex Sans Thai ใน `StudiiOS/Resources/Fonts/`** — `Theme.Font` fallback เป็นฟอนต์ระบบ
   ดู log `[Theme]` ตอนเปิดแอปว่าโหลดเจอหรือยัง
@@ -972,4 +1003,18 @@ Gated: **ไม่มีหน้าไหน gate จริงเลยตอ�
 
 **`PLAN_ScheduleView.md` ครบทั้ง 3 รอบแล้ว** (Models/Schema → UI ตาราง+ฟอร์ม → งานวันนี้+ร่นคาบ) — ฟีเจอร์ตารางเรียนถือว่าสมบูรณ์ตามแผน รอ Few verify build จริงก่อนตัดสินใจงานต่อไป
 
-**`PLAN_TCASPlanner.md` ครบทั้ง 4 รอบแล้ว** (Models/Schema+resetAllData → TCASScoreEngine+เทสต์ → ลิสต์คณะ/ตั้งน้ำหนัก/คะแนนของฉัน → SOPEditorView/SOPGuideSheet) — โมดูล TCAS Planner ทั้งหมดถือว่าสมบูรณ์ตามแผน · **ยกเครื่องหน้าตาใหม่ทั้งโมดูลใน W2 ก้อน E (15 ส.ค.) ตาม `claude plan/docs/redesign/06_TCAS.md`** — logic ไม่ถูกแตะเลย (จุดอ่อนที่รู้อยู่แล้ว: swipe-back gesture ใน SOPEditorView ยังไม่ถูกดักด้วย confirmationDialog เตือนไม่บันทึก, ต้องใช้ปุ่ม back ที่ทำเองถึงจะเตือน — ดู §2 บรรทัด SOPEditorView.swift)
+❌ **`PLAN_TCASPlanner.md` และ `claude plan/docs/redesign/06_TCAS.md` เป็นเอกสารประวัติศาสตร์แล้ว**
+ระบบคิดคะแนน TCAS ถูกตัดทิ้งทั้งชุด 16 ส.ค. 2569 เหลือแค่โมดูล SOP (ดู §2 กลุ่ม `Features/SOP/`)
+**ห้ามใช้ 2 ไฟล์นั้นอ้างสถานะปัจจุบันของแอป** — เนื้อหาส่วนคำแนะนำเขียน SOP (§6.2) ยังใช้ได้อยู่ที่เดียว
+คือถูกคัดลอกไปอยู่ใน `Core/SOP/SOPGuideContent.swift` แล้ว
+
+### จุดที่ตรวจเจอ 16 ส.ค. 2569 ยังไม่ได้แก้ (เสี่ยงตอนเดโม่)
+
+- **แตะ object ที่ลบไปแล้ว** (SwiftData invalidation crash) 4 จุด: `TermStore.delete` อ่าน `term.displayName`
+  หลัง `save()` (เรียกจาก `pruneEmptyTerms` ตอน setup) · `SOPListView.delete` · `PortfolioDetailView.deleteItem`
+  (ลบก่อน `dismiss()`) · `TermGradeEditView.delete(subject)`
+  ✅ ต้นแบบที่ทำถูกคือ `SOPEditorView.deleteTarget()` — เก็บชื่อ → `dismiss()` → ค่อยลบใน `Task { @MainActor }`
+- **โหมดโฟกัสไม่มีทางออกฉุกเฉิน** — cover เด้งทับทั้งแอปเมื่อ `isRunning || isAskingForBreak`
+  ออกได้ทางเดียวคือกดค้าง 3 วิ · force-quit ไม่ช่วยเพราะ `restore()` อ่านสถานะกลับจาก UserDefaults
+- **`isAskingForBreak` ค้างข้ามการเปิดแอป** — `syncToNow()` มี `breakPromptGrace` 5 นาที แต่ `restore()` ไม่เช็ค
+  → เปิดแอปมาอีกวันยังเจอกล่องถามพักทับทั้งจอ
