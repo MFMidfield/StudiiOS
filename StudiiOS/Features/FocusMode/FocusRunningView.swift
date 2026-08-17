@@ -1,0 +1,119 @@
+//
+//  FocusRunningView.swift
+//  หน้ากำลังโฟกัส — มีแค่เวลา ไม่มีปุ่มควบคุมเลย
+//
+//  หยุดได้ทางเดียว: **กดค้างที่ไหนก็ได้บนจอ 3 วินาที** จนแถบเต็ม
+//  **ไม่มีปุ่มใดๆ บนหน้านี้เลย** (16 ส.ค. 2569 — ปุ่มย้อนกลับถูกเอาออก): ปุ่มย้อนกลับ
+//  เคยพาออกจากหน้าไปทั้งที่เซสชันยังเดินอยู่ ซึ่งทำให้ผู้ใช้คิดว่าโฟกัสจบแล้ว
+//  **นาฬิกาไม่หยุด** (ตั้งใจ: PomodoroEngine นับจาก Date กลับเข้ามาเมื่อไหร่ก็ยังตรง)
+//
+//  โครง ZStack เรียงจากล่างขึ้นบน: พื้นหลัง → เนื้อหา (ปิด hit-test)
+//  → ตัวรับการกดค้างเต็มจอ
+//  ลำดับนี้จำเป็น: ถ้าเนื้อหาอยู่บนตัวรับ การกดค้างบนตัวเลขจะไม่ทำงาน
+//
+
+import SwiftUI
+
+struct FocusRunningView: View {
+    @State private var engine = PomodoroEngine.shared
+    @State private var holdProgress: Double = 0
+    @State private var isHolding = false
+    @State private var holdTask: Task<Void, Never>?
+
+    /// ต้องกดค้างนานเท่านี้ถึงจะหยุด
+    private let holdSeconds: Double = 3
+
+    var body: some View {
+        ZStack {
+            Theme.Colors.focusBackdrop.ignoresSafeArea()
+
+            content
+                .allowsHitTesting(false)
+
+            holdCatcher
+        }
+        .statusBarHidden(true)
+        .onDisappear { cancelHold() }
+    }
+
+    // MARK: - เนื้อหา
+
+    private var content: some View {
+        VStack(spacing: Theme.Spacing.lg) {
+            Spacer()
+
+            if engine.isBreak {
+                Text("พัก")
+                    .font(Theme.Font.body)
+                    .foregroundStyle(Theme.Colors.onFocusBackdropMuted)
+            } else if let tag = engine.activeTag {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Circle()
+                        .fill(Color(hex: tag.colorHex))
+                        .frame(width: 8, height: 8)
+                    Text(tag.name)
+                        .font(Theme.Font.body)
+                        .foregroundStyle(Theme.Colors.onFocusBackdropMuted)
+                }
+            }
+
+            // อ่าน tickToken เพื่อให้ @Observable รู้ว่าต้องวาดใหม่ทุก tick
+            // (secondsRemaining คำนวณจาก Date.now ซึ่งไม่ใช่ค่าที่สังเกตได้)
+            let _ = engine.tickToken
+
+            Text(engine.timeString)
+                .font(.system(size: 68, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Theme.Colors.onFocusBackdrop)
+                // เลขเลื่อนขึ้น/ลงแทนการกระพริบ — ผูกกับ displaySeconds ไม่ใช่ tickToken
+                // (tick เดิน 2 ครั้งต่อวินาที จะสั่ง animation ทิ้งรอบละครั้งเปล่าๆ)
+                .contentTransition(.numericText(countsDown: engine.mode == .countdown))
+                .animation(.smooth(duration: 0.35), value: engine.displaySeconds)
+
+            Spacer()
+
+            FocusHoldToStopBar(progress: holdProgress, isHolding: isHolding)
+                .padding(.bottom, Theme.Spacing.xxxl)
+        }
+    }
+
+    // MARK: - ตัวรับการกดค้าง
+
+    private var holdCatcher: some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in beginHold() }
+                    .onEnded { _ in cancelHold() }
+            )
+    }
+
+    private func beginHold() {
+        guard !isHolding else { return }
+        isHolding = true
+        withAnimation(.linear(duration: holdSeconds)) { holdProgress = 1 }
+
+        holdTask = Task {
+            try? await Task.sleep(for: .seconds(holdSeconds))
+            guard !Task.isCancelled else { return }
+            await MainActor.run { finishHold() }
+        }
+    }
+
+    /// ปล่อยนิ้วก่อนครบ — แถบไหลกลับ 0 แล้วเริ่มนับใหม่รอบหน้า
+    private func cancelHold() {
+        holdTask?.cancel()
+        holdTask = nil
+        guard isHolding else { return }
+        isHolding = false
+        withAnimation(.easeOut(duration: 0.25)) { holdProgress = 0 }
+    }
+
+    private func finishHold() {
+        holdTask = nil
+        isHolding = false
+        holdProgress = 0
+        engine.stop()
+    }
+}

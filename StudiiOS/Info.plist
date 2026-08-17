@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Studii OS</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>IBMPlexSansThai-Regular.ttf</string>
+		<string>IBMPlexSansThai-Medium.ttf</string>
+		<string>IBMPlexSansThai-SemiBold.ttf</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>ใช้กล้องเพื่อถ่ายและสแกนรูปโปรไฟล์และผลงานของคุณ</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>เลือกรูปจากคลังภาพเพื่อใช้เป็นรูปโปรไฟล์หรือผลงานของคุณ</string>
+</dict>
+</plist>

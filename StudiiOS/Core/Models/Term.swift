@@ -1,0 +1,75 @@
+//
+//  Term.swift
+//  One school term: a grade level (ม.4–ม.6) plus a term number (1 or 2).
+//  Every timetable, task and score sheet hangs off exactly one of these.
+//
+//  There is no academic-year field on purpose: a student passes through each
+//  of the 6 slots exactly once, so gradeLevel + termNumber is already unique
+//  for one student. Terms are created lazily — see TermStore.findOrCreate.
+//
+//  ม.ต้นถูกตัดออกจากแอปแล้ว — the app only serves ม.ปลาย, because GPAX for TCAS
+//  counts nothing else. Rows already stored with gradeLevel 1–3 still load fine;
+//  they simply never appear in a picker again.
+//
+//  Trap: do not add @Relationship arrays (e.g. var entries: [ScheduleEntry])
+//  here. Children point up to the term (var term: Term?) and deletion is
+//  done manually in TermStore.delete.
+//
+
+import Foundation
+import SwiftData
+
+/// Which half of Thai secondary school a grade level belongs to.
+/// Used only to split the term picker into two dropdowns.
+enum SchoolBand: String, CaseIterable, Identifiable {
+    case lower   // ม.ต้น — ม.1, ม.2, ม.3
+    case upper   // ม.ปลาย — ม.4, ม.5, ม.6
+
+    var id: String { rawValue }
+    var label: String { self == .lower ? "ม.ต้น" : "ม.ปลาย" }
+    var gradeLevels: [Int] { self == .lower ? [1, 2, 3] : [4, 5, 6] }
+
+    static func containing(gradeLevel: Int) -> SchoolBand {
+        gradeLevel <= 3 ? .lower : .upper
+    }
+}
+
+@Model
+final class Term {
+    /// Stable id. Stored (as a string) in @AppStorage to remember the active
+    /// term. SwiftData's PersistentIdentifier is not safe to persist in
+    /// UserDefaults, so we carry our own UUID.
+    var id: UUID = UUID()
+
+    /// 4...6 → ม.4 ... ม.6 (rows created by older builds may hold 1...3)
+    var gradeLevel: Int = 4
+    /// 1 or 2
+    var termNumber: Int = 1
+    var createdAt: Date = Date.now
+
+    /// เกรดเฉลี่ยของเทอมนี้ 0.00–4.00 — nil = ยังไม่กรอก (ดู GPAXCalculator)
+    var gpa: Double? = nil
+    /// หน่วยกิตรวมของเทอมนี้ — nil = ไม่ทราบ, GPAXCalculator จะแทนด้วยค่า default (D2)
+    var totalCredits: Double? = nil
+
+    /// true = กรอกเกรดแบบรายวิชา (TermGradeSubject) แล้วคำนวณ gpa/totalCredits ให้เอง
+    /// false = กรอก gpa/totalCredits ตรงๆ (ค่าเริ่มต้น, ตามพฤติกรรมเดิม)
+    var usesDetailedGrades: Bool = false
+
+    init(gradeLevel: Int, termNumber: Int, id: UUID = UUID(), createdAt: Date = .now) {
+        self.id = id
+        self.gradeLevel = gradeLevel
+        self.termNumber = termNumber
+        self.createdAt = createdAt
+    }
+
+    /// "ม.4 เทอม 1"
+    var displayName: String { "ม.\(gradeLevel) เทอม \(termNumber)" }
+
+    var band: SchoolBand { SchoolBand.containing(gradeLevel: gradeLevel) }
+
+    /// Chronological order: ม.1เทอม1 = 11 … ม.6เทอม2 = 62.
+    /// Use this for every `sort:` on Term. It is a stored-value computation,
+    /// so it CANNOT be used inside a #Predicate — sort in Swift instead.
+    var sortKey: Int { gradeLevel * 10 + termNumber }
+}
